@@ -1,0 +1,74 @@
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version VARCHAR(100) PRIMARY KEY,
+  applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS rooms (
+  id VARCHAR(32) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  slug VARCHAR(100) NOT NULL UNIQUE,
+  price DECIMAL(12,0) NOT NULL,
+  max_guests TINYINT UNSIGNED NOT NULL DEFAULT 2,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS room_availability (
+  id CHAR(32) PRIMARY KEY,
+  room_id VARCHAR(32) NOT NULL,
+  `date` DATE NOT NULL,
+  available TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY uq_room_date (room_id, `date`),
+  CONSTRAINT fk_availability_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS bookings (
+  id CHAR(32) PRIMARY KEY,
+  booking_code VARCHAR(24) NOT NULL UNIQUE,
+  room_id VARCHAR(32) NOT NULL,
+  check_in DATETIME NOT NULL,
+  check_out DATETIME NOT NULL,
+  stay_package VARCHAR(16) NOT NULL,
+  hold_expires_at DATETIME NULL,
+  access_token CHAR(64) NOT NULL UNIQUE,
+  order_code BIGINT UNSIGNED NULL UNIQUE,
+  total_price DECIMAL(12,0) NOT NULL,
+  number_of_guests TINYINT UNSIGNED NOT NULL,
+  guest_name VARCHAR(100) NOT NULL,
+  guest_email VARCHAR(254) NOT NULL DEFAULT '',
+  guest_phone VARCHAR(20) NOT NULL,
+  guest_note TEXT NULL,
+  status ENUM('PENDING','CONFIRMED','CHECKED_IN','CHECKED_OUT','CANCELLED') NOT NULL DEFAULT 'PENDING',
+  payment_status ENUM('UNPAID','PENDING','PAID','FAILED','REFUNDED') NOT NULL DEFAULT 'UNPAID',
+  payment_method VARCHAR(30) NULL,
+  transaction_id VARCHAR(100) NULL UNIQUE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_booking_overlap (room_id, check_in, check_out),
+  KEY idx_booking_phone (guest_phone, status, hold_expires_at),
+  CONSTRAINT fk_booking_room FOREIGN KEY (room_id) REFERENCES rooms(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS payments (
+  id CHAR(32) PRIMARY KEY,
+  booking_id CHAR(32) NOT NULL UNIQUE,
+  amount DECIMAL(12,0) NOT NULL,
+  currency CHAR(3) NOT NULL DEFAULT 'VND',
+  payment_method VARCHAR(30) NOT NULL,
+  status ENUM('UNPAID','PENDING','PAID','FAILED','REFUNDED') NOT NULL DEFAULT 'UNPAID',
+  transaction_id VARCHAR(100) NULL UNIQUE,
+  checkout_url TEXT NULL,
+  qr_code TEXT NULL,
+  failure_reason TEXT NULL,
+  paid_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_payment_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO rooms (id,name,slug,price,max_guests) VALUES
+('pink','Pink Room','pink',330000,2),
+('white','White Room','white',250000,2),
+('black','Black Room','black',320000,2)
+ON DUPLICATE KEY UPDATE name=VALUES(name);

@@ -1,5 +1,0 @@
-Lặng Home — Next.js / PostgreSQL / Prisma / NextAuth / payOS
-Hướng dẫn hiện hành: README.md
-Chạy giao diện: npm install rồi npm run dev
-Kiểm tra: npm test, npm run lint, npm run build
-Không cần database để xem giao diện; đặt phòng thật cần cấu hình theo .env.example.
