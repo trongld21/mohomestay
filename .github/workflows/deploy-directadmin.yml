@@ -24,6 +24,8 @@ jobs:
           mkdir -p .deploy/public_html
           cp -R public/. .deploy/public_html/
           cp -R src database .deploy/
+          # DirectAdmin/ModSecurity commonly blocks .htaccess in HTTP multipart uploads.
+          rm -f .deploy/public_html/.htaccess
       - name: Upload through signed HTTPS hook
         env:
           DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
@@ -39,6 +41,7 @@ jobs:
             curl --fail-with-body --silent --show-error --retry 2 \
               -H "X-Deploy-Signature: $signature" \
               -F "path=$path" -F "file=@$file" "$DEPLOY_HOOK_URL"
+            echo
           done
       - name: Run database migrations
         env:
