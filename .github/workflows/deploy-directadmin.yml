@@ -25,20 +25,22 @@ jobs:
           cp -R public/. .deploy/public_html/
           cp -R src database tools .deploy/
           cp .env.example .deploy/.env.example
-      - name: Upload through FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
-          local-dir: ./.deploy/
-          server-dir: ${{ secrets.DEPLOY_REMOTE_DIR }}
-          state-name: .langhome-deploy-state.json
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/.env
+      - name: Upload through signed HTTPS hook
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
+          DEPLOY_HOOK_KEY: ${{ secrets.DEPLOY_HOOK_KEY }}
+        run: |
+          test -n "$DEPLOY_HOOK_URL"
+          test -n "$DEPLOY_HOOK_KEY"
+          find .deploy -type f -print0 | while IFS= read -r -d '' file; do
+            path="${file#.deploy/}"
+            digest="$(sha256sum "$file" | cut -d ' ' -f 1)"
+            signature="$(printf '%s\n%s' "$path" "$digest" | openssl dgst -sha256 -hmac "$DEPLOY_HOOK_KEY" -hex | sed 's/^.* //')"
+            echo "Uploading $path"
+            curl --fail-with-body --silent --show-error --retry 2 \
+              -H "X-Deploy-Signature: $signature" \
+              -F "path=$path" -F "file=@$file" "$DEPLOY_HOOK_URL"
+          done
       - name: Run database migrations
         env:
           DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}

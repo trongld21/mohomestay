@@ -22,7 +22,7 @@ php tools/test.php
 
 ## Deploy
 
-Xem [DEPLOY_DIRECTADMIN.md](DEPLOY_DIRECTADMIN.md). Push lên nhánh `main` sẽ chạy workflow FTPS và migration tự động sau khi GitHub Secrets đã được cấu hình.
+Xem [DEPLOY_DIRECTADMIN.md](DEPLOY_DIRECTADMIN.md). Push lên nhánh `main` sẽ upload qua deploy hook HTTPS có chữ ký và tự chạy migration.
 
 Mã chính:
 

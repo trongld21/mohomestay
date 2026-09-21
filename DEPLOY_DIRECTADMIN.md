@@ -1,71 +1,66 @@
 # Deploy Lặng Home lên DirectAdmin
 
-Ứng dụng production là PHP 8.1+ thuần, MySQL/MariaDB và không cần Node.js hay Composer trên hosting.
+Ứng dụng dùng PHP 8.1+ và MySQL/MariaDB. Workflow deploy qua HTTPS vì hosting không mở FTP/SFTP ra Internet.
 
-## 1. Tạo database
-
-Trong DirectAdmin, vào **Account Manager → MySQL Management** rồi tạo database và user. Ghi lại hostname (thường là `localhost`), tên database, user và mật khẩu.
-
-## 2. Deploy lần đầu
-
-Workflow upload theo cấu trúc:
+## Cấu trúc trên server
 
 ```text
 domains/ten-mien-cua-ban/
-├── .env                       # nằm ngoài public_html
+├── .env                       # không nằm trong public_html
 ├── src/
 ├── database/
 ├── tools/
 └── public_html/
+    ├── deploy-hook.php
     ├── index.php
     ├── .htaccess
     ├── assets/
     └── images/
 ```
 
-Trong GitHub repository, vào **Settings → Secrets and variables → Actions**, tạo:
+## Cài đặt lần đầu
+
+1. Trong DirectAdmin tạo database và user MySQL.
+2. Upload `.env` vào `domains/<domain>/.env`.
+3. Upload duy nhất file `public/deploy-hook.php` của repository vào `domains/<domain>/public_html/deploy-hook.php`.
+4. Nếu DirectAdmin hỏi ghi đè file, chọn xác nhận.
+5. Đảm bảo website đã có HTTPS hợp lệ.
+
+Deploy hook là file độc lập, nên lần đầu chưa cần upload `src` hoặc các file khác. PHP cần cho phép upload ít nhất 10 MB; gói hiện tại nhỏ hơn giới hạn này.
+
+## GitHub Secrets
+
+Vào **Settings → Secrets and variables → Actions** và tạo:
 
 | Secret | Giá trị |
 |---|---|
-| `FTP_SERVER` | Host FTP DirectAdmin, không thêm `ftp://` |
-| `FTP_USERNAME` | Tài khoản FTP |
-| `FTP_PASSWORD` | Mật khẩu FTP |
-| `DEPLOY_REMOTE_DIR` | Ví dụ `domains/example.com/` — phải có `/` cuối |
 | `DEPLOY_HOOK_URL` | `https://example.com/deploy-hook.php` |
-| `DEPLOY_HOOK_KEY` | Giống `DEPLOY_HOOK_KEY` trong `.env` |
+| `DEPLOY_HOOK_KEY` | Giống chính xác `DEPLOY_HOOK_KEY` trong `.env` |
 
-Workflow dùng FTPS explicit. Nếu host chỉ bật FTP thường, đổi `protocol: ftps` thành `ftp` (không khuyến nghị vì dữ liệu truyền không được mã hóa).
+Các secret FTP cũ không còn được sử dụng và có thể xóa.
 
-Push nhánh `main` hoặc chọn **Actions → Deploy PHP to DirectAdmin → Run workflow**. Lần đầu sẽ upload mã nguồn; deploy hook chỉ hoạt động sau khi tạo `.env`.
+## Chạy deploy
 
-## 3. Tạo `.env`
+Push nhánh `main`, hoặc chọn **Actions → Deploy PHP to DirectAdmin → Run workflow**. Workflow sẽ:
 
-Trong File Manager, tại thư mục domain (cùng cấp `public_html`), sao chép `.env.example` thành `.env`, rồi điền:
+1. Kiểm tra PHP và chạy unit test.
+2. Đóng gói đúng cấu trúc DirectAdmin.
+3. Upload từng file qua HTTPS với chữ ký HMAC SHA-256.
+4. Gọi deploy hook để tự chạy migration MySQL.
 
-- `APP_URL`: domain HTTPS thật, không có `/` cuối.
-- `APP_KEY`, `DEPLOY_HOOK_KEY`: hai chuỗi ngẫu nhiên khác nhau, tối thiểu 32 ký tự.
-- Các biến `DB_*`: thông tin database DirectAdmin.
-- `ADMIN_EMAIL` và `ADMIN_PASSWORD_HASH`.
-- giờ qua đêm, điều khoản và khóa payOS.
+Deploy hook chỉ nhận các đường dẫn nằm trong danh sách cho phép, từ chối `.env`, giới hạn kích thước file và kiểm tra chữ ký trước khi ghi.
 
-Tạo hash mật khẩu ở máy có PHP: `php tools/password.php`.
+## Kiểm tra
 
-Giữ `BOOKINGS_ENABLED=false` cho đến khi migration, payOS, giờ nhận/trả phòng và điều khoản đều đúng. `.env` bị Git ignore và workflow loại trừ nên deploy không ghi đè bí mật.
-
-## 4. Khởi tạo database và auto deploy
-
-Sau khi có `.env`, chạy lại workflow. Bước cuối gọi deploy hook và tự áp dụng migration. Kiểm tra:
-
-- `https://example.com/api/health` trả JSON `status: ok`.
-- Trang `/calendar`, `/bookings`, `/auth/login` hoạt động.
-- PHP có `pdo_mysql`, `curl`, `mbstring`, `openssl`.
-- Webhook payOS là `https://example.com/api/payments/webhook`.
-
-Khi hoàn tất, đổi `BOOKINGS_ENABLED=true`. Mỗi push sau sẽ kiểm tra syntax, upload phần thay đổi và chạy migration.
+- `https://example.com/api/health` trả JSON có `status: ok`.
+- Kiểm tra `/`, `/calendar`, `/bookings`, `/auth/login`.
+- Webhook payOS: `https://example.com/api/payments/webhook`.
+- Giữ `BOOKINGS_ENABLED=false` đến khi payOS, giờ qua đêm và điều khoản được cấu hình xong.
 
 ## Lưu ý
 
-- Không đặt `.env` trong `public_html`.
-- Bật SSL/Let's Encrypt trước khi nhận thanh toán.
-- Nếu route 404, kiểm tra Apache cho phép `.htaccess` và rewrite.
-- Workflow không dùng “clean slate”, nhưng vẫn cần backup database định kỳ.
+- Không commit hoặc đặt `.env` trong `public_html`.
+- Nếu upload báo HTTP 413, tăng `upload_max_filesize` và `post_max_size` trong PHP Settings của DirectAdmin.
+- Nếu báo 404 ở bước upload, kiểm tra `DEPLOY_HOOK_KEY` trên server/GitHub và chắc chắn file hook mới đã được upload thủ công.
+- Nếu migration lỗi, kiểm tra các biến `DB_*` và extension `pdo_mysql`.
+- Workflow không tự xóa file cũ; cần backup database định kỳ.
