@@ -69,5 +69,19 @@ room_check($hydrated['r1']['packages'][0]['durationMinutes'] === 120, 'DTO phai 
 room_check(select_package_id('owned-id', ['owned-id']) === 'owned-id', 'Cap nhat phai giu package id cua phong');
 room_check(select_package_id('foreign-id', ['owned-id']) !== 'foreign-id', 'Khong duoc chiem package id cua phong khac');
 
+$bookableRoom = $hydrated['r1'];
+$selectedPackage = resolve_bookable_package($bookableRoom, 'p1');
+room_check($selectedPackage['price'] === 200000, 'Phai tim dung goi gia cua phong');
+room_throws(fn()=>resolve_bookable_package($bookableRoom, 'missing'), 'G', 'Phai tu choi package khong thuoc phong');
+$disabledRoom = $bookableRoom;
+$disabledRoom['packages'][0]['enabled'] = false;
+room_throws(fn()=>resolve_bookable_package($disabledRoom, 'p1'), 'G', 'Phai tu choi package da tat');
+$comingSoonRoom = $bookableRoom;
+$comingSoonRoom['status'] = 'COMING_SOON';
+room_throws(fn()=>assert_room_bookable($comingSoonRoom), 'ra', 'Phong coming soon khong duoc dat');
+$snapshot = booking_package_snapshot($selectedPackage);
+$selectedPackage['price'] = 999;
+room_check($snapshot['packagePrice'] === 200000 && $snapshot['packageId'] === 'p1', 'Snapshot goi phai bat bien sau khi dat');
+
 if ($failures) { fwrite(STDERR, implode(PHP_EOL, $failures).PHP_EOL); exit(1); }
 echo "Room domain tests: OK\n";

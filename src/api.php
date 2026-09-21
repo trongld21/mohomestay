@@ -4,7 +4,12 @@ function handle_api(string $path, string $method): never
 {
     try {
         if ($path === '/api/health' && $method === 'GET') json_response(['status'=>'ok','service'=>'lang-home-php']);
-        if ($path === '/api/rooms' && $method === 'GET') json_response(['rooms'=>array_values(rooms()),'packages'=>packages()]);
+        if ($path === '/api/rooms' && $method === 'GET') json_response(['rooms'=>array_values(room_repository()->publicRooms())]);
+        if ($method === 'GET' && preg_match('#^/api/rooms/([a-z0-9-]+)$#', $path, $matches)) {
+            $room = room_repository()->findPublicBySlug($matches[1]);
+            if (!$room) json_response(['error'=>'Không tìm thấy phòng.'], 404);
+            json_response(['room'=>$room]);
+        }
         if ($path === '/api/availability' && $method === 'GET') availability_api();
         if ($path === '/api/bookings' && $method === 'POST') create_booking_api();
         if ($path === '/api/bookings/lookup' && $method === 'POST') lookup_booking_api();
@@ -28,7 +33,7 @@ function availability_api(): never
     $blocks->execute([$date,$d->modify('+2 days')->format('Y-m-d')]); $blocked = $blocks->fetchAll();
     $inventory = db()->query('SELECT id,is_active FROM rooms')->fetchAll();
     $result = [];
-    foreach (rooms() as $room) {
+    foreach (room_repository()->publicRooms() as $room) {
         $intervals = [];
         foreach ($bookings as $b) if ($b['room_id']===$room['id']) $intervals[]=['start'=>gmdate('c',strtotime($b['check_in'].' UTC')),'end'=>gmdate('c',strtotime($b['check_out'].' UTC')),'status'=>$b['status']];
         foreach ($blocked as $b) if ($b['room_id']===$room['id']) { $s=new DateTimeImmutable($b['date'].' 00:00',new DateTimeZone('Asia/Ho_Chi_Minh')); $intervals[]=['start'=>$s->format(DATE_ATOM),'end'=>$s->modify('+1 day')->format(DATE_ATOM),'status'=>'BLOCKED']; }
@@ -43,7 +48,14 @@ function create_booking_api(): never
     if (!payment_enabled()) throw new BookingException('Đặt phòng trực tuyến chưa mở. Vui lòng gọi 0357 907 153 hoặc nhắn Zalo để đặt phòng.', 503);
     $q = quote_booking(json_body()); $pdo = db(); $pdo->beginTransaction();
     try {
-        $lock = $pdo->prepare('SELECT id,is_active FROM rooms WHERE id=? FOR UPDATE'); $lock->execute([$q['room']['id']]); $room = $lock->fetch();
+        $lock = $pdo->prepare("SELECT id,status,(status='ACTIVE') is_active FROM rooms WHERE id=? FOR UPDATE"); $lock->execute([$q['room']['id']]); $room = $lock->fetch();
+        $packageLock = $pdo->prepare('SELECT id,name,timing_mode,duration_minutes,check_in_time,check_out_time,price,is_enabled FROM room_packages WHERE id=? AND room_id=? FOR UPDATE');
+        $packageLock->execute([$q['packageId'],$q['room']['id']]); $freshPackage = $packageLock->fetch();
+        if (!$freshPackage || !(bool)$freshPackage['is_enabled']) throw new BookingException('Gói giá vừa được thay đổi. Vui lòng chọn lại.', 409);
+        $freshPackageDto=['id'=>$freshPackage['id'],'name'=>$freshPackage['name'],'mode'=>$freshPackage['timing_mode'],'durationMinutes'=>$freshPackage['duration_minutes']===null?null:(int)$freshPackage['duration_minutes'],'checkInTime'=>$freshPackage['check_in_time']===null?null:substr((string)$freshPackage['check_in_time'],0,5),'checkOutTime'=>$freshPackage['check_out_time']===null?null:substr((string)$freshPackage['check_out_time'],0,5),'price'=>(int)$freshPackage['price'],'enabled'=>true];
+        [$freshStart,$freshEnd]=package_window($freshPackageDto,$q['start']->format('Y-m-d'),$freshPackageDto['mode']==='DURATION'?$q['start']->format('H:i'):'');
+        $q['package']=$freshPackageDto;$q['start']=$freshStart;$q['end']=$freshEnd;$q['total']=(int)$freshPackageDto['price'];
+        $q=array_replace($q,booking_package_snapshot($freshPackageDto));
         if (!$room || !$room['is_active']) throw new BookingException('Phòng đang tạm ngưng nhận khách.', 409);
         $conflict = $pdo->prepare("SELECT id FROM bookings WHERE room_id=? AND check_in<? AND check_out>? AND (status IN ('CONFIRMED','CHECKED_IN') OR (status='PENDING' AND hold_expires_at>UTC_TIMESTAMP())) LIMIT 1");
         $conflict->execute([$q['room']['id'],mysql_datetime($q['end']),mysql_datetime($q['start'])]);
@@ -54,8 +66,8 @@ function create_booking_api(): never
         $holds=$pdo->prepare("SELECT COUNT(*) FROM bookings WHERE guest_phone=? AND status='PENDING' AND hold_expires_at>UTC_TIMESTAMP()");$holds->execute([$q['phone']]);
         if ((int)$holds->fetchColumn()>=2) throw new BookingException('Bạn đang có đơn chờ thanh toán. Vui lòng hoàn tất hoặc đợi hết thời gian giữ phòng.',429);
         $booking=['id'=>uuid(),'bookingCode'=>'LANG-'.strtoupper(bin2hex(random_bytes(5))),'accessToken'=>bin2hex(random_bytes(32)),'orderCode'=>(int)(floor(microtime(true)*1000)*1000+random_int(0,999)),'holdExpiresAt'=>gmdate('Y-m-d H:i:s',time()+900),'totalPrice'=>$q['total']];
-        $sql='INSERT INTO bookings(id,booking_code,room_id,check_in,check_out,stay_package,hold_expires_at,access_token,order_code,total_price,number_of_guests,guest_name,guest_email,guest_phone,guest_note,payment_method) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,\'payos\')';
-        $pdo->prepare($sql)->execute([$booking['id'],$booking['bookingCode'],$q['room']['id'],mysql_datetime($q['start']),mysql_datetime($q['end']),$q['package'],$booking['holdExpiresAt'],$booking['accessToken'],$booking['orderCode'],$q['total'],$q['guests'],$q['name'],$q['email'],$q['phone'],$q['note']]);
+        $sql='INSERT INTO bookings(id,booking_code,room_id,check_in,check_out,stay_package,package_id,package_name_snapshot,package_mode_snapshot,package_duration_snapshot,package_check_in_snapshot,package_check_out_snapshot,package_price_snapshot,hold_expires_at,access_token,order_code,total_price,number_of_guests,guest_name,guest_email,guest_phone,guest_note,payment_method) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,\'payos\')';
+        $pdo->prepare($sql)->execute([$booking['id'],$booking['bookingCode'],$q['room']['id'],mysql_datetime($q['start']),mysql_datetime($q['end']),$q['packageId'],$q['packageId'],$q['packageName'],$q['packageMode'],$q['packageDuration'],$q['packageCheckIn'],$q['packageCheckOut'],$q['packagePrice'],$booking['holdExpiresAt'],$booking['accessToken'],$booking['orderCode'],$q['total'],$q['guests'],$q['name'],$q['email'],$q['phone'],$q['note']]);
         $pdo->commit();
     } catch (Throwable $e) { if($pdo->inTransaction())$pdo->rollBack(); throw $e; }
     try {
