@@ -1,0 +1,6 @@
+import Link from 'next/link'
+import { ArrowUpRight, Phone, MapPin } from 'lucide-react'
+import Logo from '@/components/Logo'
+export default function Footer() {
+return <footer id="lien-he" className="site-footer"><div className="container footer-top"><div><Link href="/" aria-label="Lặng Home"><Logo light/></Link><p>Một chốn riêng. Một nhịp chậm.<br/>Một chút bình yên dành cho bạn.</p></div><div><span className="eyebrow">KHÁM PHÁ LẶNG</span><Link href="/rooms">Phòng & bảng giá</Link><Link href="/calendar">Xem lịch phòng</Link><Link href="/bookings#tra-cuu">Tra cứu đặt phòng</Link></div><div><span className="eyebrow">MÌNH KẾT NỐI NHÉ</span><a className="footer-phone" href="tel:0357907153"><Phone size={19}/>0357 907 153</a><p>82 đường B18, KDC 91B<br/>Ninh Kiều, Cần Thơ</p><a href="https://www.google.com/maps/search/?api=1&query=82+đường+B18+KDC+91B+Ninh+Kiều+Cần+Thơ" target="_blank" rel="noreferrer"><MapPin size={16}/> Chỉ đường đến Lặng <ArrowUpRight size={16}/></a><a href="https://zalo.me/0357907153" target="_blank" rel="noreferrer">Trò chuyện qua Zalo <ArrowUpRight size={16}/></a></div></div><div className="container footer-bottom"><span>© {new Date().getFullYear()} Lặng Home. All rights reserved.</span><span>Được chăm chút, từ những điều nhỏ nhất.</span></div></footer>
+}
