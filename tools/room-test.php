@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/src/bootstrap.php';
 require_once APP_ROOT . '/src/rooms.php';
+require_once APP_ROOT . '/src/room-repository.php';
 
 $failures = [];
 function room_check(bool $condition, string $message): void
@@ -52,6 +53,21 @@ foreach (['room_images','room_tags','room_packages','COMING_SOON','package_id','
 foreach (['pink-3h','pink-6h','pink-overnight','white-3h','white-6h','white-overnight','black-3h','black-6h','black-overnight'] as $seedId) {
     room_check(str_contains($migration, $seedId), 'Migration phai seed goi '.$seedId);
 }
+
+room_check(room_deletion_allowed(0) === true, 'Phong chua co don phai xoa duoc');
+room_check(room_deletion_allowed(1) === false, 'Phong co don khong duoc xoa vat ly');
+room_check(room_is_public('ACTIVE') && room_is_public('COMING_SOON') && !room_is_public('HIDDEN'), 'Chi active va coming soon duoc cong khai');
+$hydrated = hydrate_room_rows(
+    [['id'=>'r1','name'=>'Mây','slug'=>'may','subtitle'=>'êm','description'=>'dài','tag'=>'','status'=>'ACTIVE','max_guests'=>2,'bedrooms'=>1,'bathrooms'=>1,'sort_order'=>10,'created_at'=>'x','updated_at'=>'x']],
+    [['id'=>'i1','room_id'=>'r1','path'=>'/a.jpg','caption'=>'A','is_cover'=>1,'sort_order'=>2]],
+    [['id'=>'t1','room_id'=>'r1','label'=>'Netflix','sort_order'=>1]],
+    [['id'=>'p1','room_id'=>'r1','name'=>'2 giờ','timing_mode'=>'DURATION','duration_minutes'=>120,'check_in_time'=>null,'check_out_time'=>null,'price'=>200000,'is_enabled'=>1,'sort_order'=>1]]
+);
+room_check($hydrated['r1']['image'] === '/a.jpg', 'DTO phai chon cover image');
+room_check($hydrated['r1']['tags'] === ['Netflix'], 'DTO phai gom tags theo phong');
+room_check($hydrated['r1']['packages'][0]['durationMinutes'] === 120, 'DTO phai map package linh hoat');
+room_check(select_package_id('owned-id', ['owned-id']) === 'owned-id', 'Cap nhat phai giu package id cua phong');
+room_check(select_package_id('foreign-id', ['owned-id']) !== 'foreign-id', 'Khong duoc chiem package id cua phong khac');
 
 if ($failures) { fwrite(STDERR, implode(PHP_EOL, $failures).PHP_EOL); exit(1); }
 echo "Room domain tests: OK\n";

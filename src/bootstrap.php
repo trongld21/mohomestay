@@ -65,13 +65,27 @@ function db(): PDO
     return $pdo;
 }
 
-function rooms(): array
+function fallback_rooms(): array
 {
     return [
         'pink' => ['id'=>'pink','name'=>'Pink','subtitle'=>'Một chút ngọt ngào, một chút mơ mộng.','description'=>'Dành một khoảng thời gian thật riêng cho nhau, trong không gian dịu dàng và ấm áp.','tag'=>'Dịu dàng & lãng mạn','image'=>'/images/pink-illustration.jpg','prices'=>['3h'=>200000,'6h'=>380000,'overnight'=>330000]],
         'white' => ['id'=>'white','name'=>'White','subtitle'=>'Nhẹ nhàng như một ngày không vội.','description'=>'Một căn phòng sáng, tinh giản và dễ chịu. Tạm gác những bộn bề để tận hưởng khoảng thời gian của riêng bạn.','tag'=>'Tinh giản & thư thái','image'=>'/images/white-illustration.jpg','prices'=>['3h'=>150000,'6h'=>350000,'overnight'=>250000]],
         'black' => ['id'=>'black','name'=>'Black','subtitle'=>'Một không gian, một sắc thái riêng.','description'=>'Không gian trầm ấm dành cho những ai yêu sự riêng tư. Thả mình nghỉ ngơi và để nhịp sống chậm lại.','tag'=>'Cá tính & riêng tư','image'=>'/images/black-illustration.jpg','prices'=>['3h'=>180000,'6h'=>300000,'overnight'=>320000]],
     ];
+}
+
+function rooms(bool $includeHidden = false): array
+{
+    try { return $includeHidden ? room_repository()->allRooms() : room_repository()->publicRooms(); }
+    catch (Throwable $e) { error_log('Room repository fallback: '.$e->getMessage()); return fallback_rooms(); }
+}
+
+function find_room(string $idOrSlug, bool $includeHidden = false): ?array
+{
+    try {
+        if ($includeHidden) return room_repository()->findById($idOrSlug) ?? current(array_filter(room_repository()->allRooms(),fn($room)=>$room['slug']===$idOrSlug)) ?: null;
+        return room_repository()->findPublicBySlug($idOrSlug) ?? room_repository()->findById($idOrSlug);
+    } catch (Throwable) { foreach(fallback_rooms() as $room)if($room['id']===$idOrSlug)return $room;return null; }
 }
 
 function packages(): array { return ['3h'=>'Gói 3 giờ','6h'=>'Gói 6 giờ','overnight'=>'Qua đêm']; }
@@ -113,4 +127,5 @@ function payment_enabled(): bool
 
 require_once APP_ROOT . '/src/booking.php';
 require_once APP_ROOT . '/src/rooms.php';
+require_once APP_ROOT . '/src/room-repository.php';
 require_once APP_ROOT . '/src/payment.php';
