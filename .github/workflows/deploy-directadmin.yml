@@ -24,7 +24,6 @@ jobs:
           mkdir -p .deploy/public_html
           cp -R public/. .deploy/public_html/
           cp -R src database .deploy/
-          cp .env.example .deploy/.env.example
       - name: Upload through signed HTTPS hook
         env:
           DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}

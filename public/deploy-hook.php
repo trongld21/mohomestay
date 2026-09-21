@@ -2,10 +2,20 @@
 
 declare(strict_types=1);
 
-// Standalone bootstrap endpoint: this file can be uploaded before the rest of the app.
-$root = dirname(__DIR__);
-$envFile = $root . '/.env';
-if (is_file($envFile)) {
+// DirectAdmin may expose public_html as a symlink. Locate .env without exposing it.
+$host = preg_replace('/:\d+$/', '', strtolower((string)($_SERVER['HTTP_HOST'] ?? '')));
+$documentRoot = realpath((string)($_SERVER['DOCUMENT_ROOT'] ?? '')) ?: __DIR__;
+$candidates = array_unique([
+    dirname(__DIR__) . '/.env',
+    dirname($documentRoot) . '/.env',
+    dirname(__DIR__) . '/domains/' . $host . '/.env',
+]);
+$envFile = '';
+foreach ($candidates as $candidate) {
+    if (is_file($candidate)) { $envFile = $candidate; break; }
+}
+$root = $envFile !== '' ? dirname($envFile) : dirname(__DIR__);
+if ($envFile !== '') {
     $values = parse_ini_file($envFile, false, INI_SCANNER_RAW);
     if (is_array($values)) {
         foreach ($values as $name => $value) {
@@ -15,6 +25,9 @@ if (is_file($envFile)) {
 }
 
 $deployKey = (string)(getenv('DEPLOY_HOOK_KEY') ?: '');
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['check'] ?? '') === '1') {
+    respond(['hook'=>'https-v2', 'envLoaded'=>$envFile !== '', 'keyConfigured'=>strlen($deployKey) >= 32]);
+}
 if (strlen($deployKey) < 32) not_found();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {

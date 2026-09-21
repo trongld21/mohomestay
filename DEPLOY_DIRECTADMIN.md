@@ -24,6 +24,7 @@ domains/ten-mien-cua-ban/
 3. Upload duy nhất file `public/deploy-hook.php` của repository vào `domains/<domain>/public_html/deploy-hook.php`.
 4. Nếu DirectAdmin hỏi ghi đè file, chọn xác nhận.
 5. Đảm bảo website đã có HTTPS hợp lệ.
+6. Mở `https://<domain>/deploy-hook.php?check=1`; phải thấy `hook: https-v2`, `envLoaded: true`, `keyConfigured: true`.
 
 Deploy hook là file độc lập, nên lần đầu chưa cần upload `src` hoặc các file khác. PHP cần cho phép upload ít nhất 10 MB; gói hiện tại nhỏ hơn giới hạn này.
 
