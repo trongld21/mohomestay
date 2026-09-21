@@ -44,5 +44,14 @@ room_throws(fn()=>validate_packages([['name'=>'Ngắn','mode'=>'DURATION','durat
 room_throws(fn()=>validate_packages([['name'=>'Sai','mode'=>'FIXED_TIME','checkInTime'=>'25:00','checkOutTime'=>'10:00','price'=>1]]), 'Giờ', 'Phai tu choi gio sai');
 room_throws(fn()=>validate_packages([['name'=>'Đắt','mode'=>'DURATION','durationMinutes'=>60,'price'=>1000000001]]), 'Giá', 'Phai tu choi gia qua gioi han');
 
+$migrationPath = APP_ROOT . '/database/migrations/002_room_management.sql';
+$migration = is_file($migrationPath) ? (string)file_get_contents($migrationPath) : '';
+foreach (['room_images','room_tags','room_packages','COMING_SOON','package_id','package_name_snapshot','package_price_snapshot','FIXED_TIME','DURATION'] as $contract) {
+    room_check(str_contains($migration, $contract), 'Migration phai co contract '.$contract);
+}
+foreach (['pink-3h','pink-6h','pink-overnight','white-3h','white-6h','white-overnight','black-3h','black-6h','black-overnight'] as $seedId) {
+    room_check(str_contains($migration, $seedId), 'Migration phai seed goi '.$seedId);
+}
+
 if ($failures) { fwrite(STDERR, implode(PHP_EOL, $failures).PHP_EOL); exit(1); }
 echo "Room domain tests: OK\n";
