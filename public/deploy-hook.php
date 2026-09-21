@@ -37,8 +37,8 @@ try {
 function receive_file(string $root, string $deployKey): never
 {
     $path = str_replace('\\', '/', (string)($_POST['path'] ?? ''));
-    $allowed = '#^(?:\.env\.example|src/[A-Za-z0-9_.-]+\.php|tools/[A-Za-z0-9_.-]+\.php|database/migrations/[A-Za-z0-9_.-]+\.sql|public_html/(?:index\.php|\.htaccess|deploy-hook\.php|assets/[A-Za-z0-9_./-]+\.(?:css|js)|images/[A-Za-z0-9_./-]+\.(?:jpg|jpeg|png|webp|svg)))$#i';
-    if (!preg_match($allowed, $path) || str_contains($path, '..')) not_found();
+    $allowed = '#^(?:\.env\.example|src/[A-Za-z0-9_.-]+\.php|database/migrations/[A-Za-z0-9_.-]+\.sql|public_html/(?:index\.php|\.htaccess|deploy-hook\.php|assets/[A-Za-z0-9_./-]+\.(?:css|js)|images/[A-Za-z0-9_./-]+\.(?:jpg|jpeg|png|webp|svg)))$#i';
+    if (!preg_match($allowed, $path) || str_contains($path, '..')) respond(['error'=>'Unsupported deploy path'], 422);
 
     $upload = $_FILES['file'];
     if (($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string)$upload['tmp_name'])) {
@@ -49,7 +49,7 @@ function receive_file(string $root, string $deployKey): never
     $digest = hash_file('sha256', (string)$upload['tmp_name']);
     $expected = hash_hmac('sha256', $path . "\n" . $digest, $deployKey);
     $provided = strtolower((string)($_SERVER['HTTP_X_DEPLOY_SIGNATURE'] ?? ''));
-    if (!preg_match('/^[a-f0-9]{64}$/', $provided) || !hash_equals($expected, $provided)) not_found();
+    if (!preg_match('/^[a-f0-9]{64}$/', $provided) || !hash_equals($expected, $provided)) respond(['error'=>'Invalid deploy signature'], 401);
 
     $target = $root . '/' . $path;
     $directory = dirname($target);

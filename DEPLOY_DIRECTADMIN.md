@@ -9,7 +9,6 @@ domains/ten-mien-cua-ban/
 ├── .env                       # không nằm trong public_html
 ├── src/
 ├── database/
-├── tools/
 └── public_html/
     ├── deploy-hook.php
     ├── index.php

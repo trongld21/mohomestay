@@ -23,7 +23,7 @@ jobs:
         run: |
           mkdir -p .deploy/public_html
           cp -R public/. .deploy/public_html/
-          cp -R src database tools .deploy/
+          cp -R src database .deploy/
           cp .env.example .deploy/.env.example
       - name: Upload through signed HTTPS hook
         env:
