@@ -108,6 +108,48 @@ final class RoomRepository
         }catch(Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
     }
 
+    public function imageCount(string $roomId): int
+    {
+        $stmt=$this->pdo->prepare('SELECT COUNT(*) FROM room_images WHERE room_id=?');$stmt->execute([$roomId]);return (int)$stmt->fetchColumn();
+    }
+
+    public function addImage(string $roomId,string $path,string $caption=''):array
+    {
+        $this->pdo->beginTransaction();
+        try{
+            $lock=$this->pdo->prepare('SELECT id FROM rooms WHERE id=? FOR UPDATE');$lock->execute([$roomId]);if(!$lock->fetch())throw new BookingException('Không tìm thấy phòng.',404);
+            $count=$this->imageCount($roomId);assert_room_image_limit($count);$id=uuid();
+            $stmt=$this->pdo->prepare('INSERT INTO room_images(id,room_id,path,caption,is_cover,sort_order) VALUES(?,?,?,?,?,?)');$stmt->execute([$id,$roomId,$path,limited_text($caption,255,'Chú thích ảnh'),$count===0?1:0,($count+1)*10]);
+            $this->pdo->commit();
+        }catch(Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
+        foreach(($this->findById($roomId)['images']??[])as $image)if($image['id']===$id)return $image;throw new RuntimeException('Image create failed');
+    }
+
+    public function updateImage(string $roomId,string $imageId,array $input):array
+    {
+        $this->pdo->beginTransaction();
+        try{
+            $lock=$this->pdo->prepare('SELECT id FROM rooms WHERE id=? FOR UPDATE');$lock->execute([$roomId]);if(!$lock->fetch())throw new BookingException('Không tìm thấy phòng.',404);
+            $find=$this->pdo->prepare('SELECT id FROM room_images WHERE id=? AND room_id=?');$find->execute([$imageId,$roomId]);if(!$find->fetch())throw new BookingException('Không tìm thấy ảnh.',404);
+            if(filter_var($input['isCover']??false,FILTER_VALIDATE_BOOL)){$this->pdo->prepare('UPDATE room_images SET is_cover=0 WHERE room_id=?')->execute([$roomId]);$this->pdo->prepare('UPDATE room_images SET is_cover=1 WHERE id=?')->execute([$imageId]);}
+            if(array_key_exists('caption',$input)||array_key_exists('sortOrder',$input)){$caption=limited_text($input['caption']??'',255,'Chú thích ảnh');$order=bounded_integer($input['sortOrder']??0,-100000,100000,'Thứ tự ảnh');$this->pdo->prepare('UPDATE room_images SET caption=?,sort_order=? WHERE id=?')->execute([$caption,$order,$imageId]);}
+            $this->pdo->commit();
+        }catch(Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
+        foreach(($this->findById($roomId)['images']??[])as $image)if($image['id']===$imageId)return $image;throw new RuntimeException('Image update failed');
+    }
+
+    public function deleteImage(string $roomId,string $imageId):string
+    {
+        $this->pdo->beginTransaction();
+        try{
+            $lock=$this->pdo->prepare('SELECT id FROM rooms WHERE id=? FOR UPDATE');$lock->execute([$roomId]);if(!$lock->fetch())throw new BookingException('Không tìm thấy phòng.',404);
+            $find=$this->pdo->prepare('SELECT path,is_cover FROM room_images WHERE id=? AND room_id=? FOR UPDATE');$find->execute([$imageId,$roomId]);$image=$find->fetch();if(!$image)throw new BookingException('Không tìm thấy ảnh.',404);
+            $this->pdo->prepare('DELETE FROM room_images WHERE id=?')->execute([$imageId]);
+            if((bool)$image['is_cover'])$this->pdo->prepare('UPDATE room_images SET is_cover=1 WHERE room_id=? ORDER BY sort_order,created_at LIMIT 1')->execute([$roomId]);
+            $this->pdo->commit();return (string)$image['path'];
+        }catch(Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}
+    }
+
     private function load(string $where, array $params=[]): array
     {
         $stmt=$this->pdo->prepare('SELECT id,name,slug,subtitle,description,tag,status,max_guests,bedrooms,bathrooms,sort_order,created_at,updated_at FROM rooms WHERE '.$where.' ORDER BY sort_order,created_at');$stmt->execute($params);$rows=$stmt->fetchAll();

@@ -128,4 +128,5 @@ function payment_enabled(): bool
 require_once APP_ROOT . '/src/booking.php';
 require_once APP_ROOT . '/src/rooms.php';
 require_once APP_ROOT . '/src/room-repository.php';
+require_once APP_ROOT . '/src/uploads.php';
 require_once APP_ROOT . '/src/payment.php';

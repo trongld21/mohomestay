@@ -14,6 +14,13 @@ function handle_api(string $path, string $method): never
         if ($path === '/api/bookings' && $method === 'POST') create_booking_api();
         if ($path === '/api/bookings/lookup' && $method === 'POST') lookup_booking_api();
         if ($path === '/api/payments/webhook' && $method === 'POST') payment_webhook_api();
+        if ($path === '/api/admin/rooms' && $method === 'GET') admin_rooms_api();
+        if ($path === '/api/admin/rooms' && $method === 'POST') create_room_api();
+        if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)/images$#',$path,$matches) && $method === 'POST') upload_room_image_api($matches[1]);
+        if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)/images/([a-zA-Z0-9_-]+)$#',$path,$matches) && $method === 'PATCH') update_room_image_api($matches[1],$matches[2]);
+        if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)/images/([a-zA-Z0-9_-]+)$#',$path,$matches) && $method === 'DELETE') delete_room_image_api($matches[1],$matches[2]);
+        if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)$#',$path,$matches) && $method === 'PATCH') update_room_api($matches[1]);
+        if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)$#',$path,$matches) && $method === 'DELETE') delete_room_api($matches[1]);
         if ($path === '/api/admin/bookings' && $method === 'GET') admin_bookings_api();
         if ($path === '/api/admin/bookings' && $method === 'PATCH') update_booking_api();
         json_response(['error'=>'Không tìm thấy API.'], 404);
@@ -111,4 +118,44 @@ function update_booking_api(): never
 {
     require_admin();require_csrf();$body=json_body();$id=(string)($body['id']??'');$status=(string)($body['status']??'');$pdo=db();$pdo->beginTransaction();
     try{$s=$pdo->prepare('SELECT * FROM bookings WHERE id=? FOR UPDATE');$s->execute([$id]);$b=$s->fetch();if(!$b)json_response(['error'=>'Không tìm thấy đơn.'],404);$allowed=['PENDING'=>['CANCELLED'],'CONFIRMED'=>['CHECKED_IN','CANCELLED'],'CHECKED_IN'=>['CHECKED_OUT']];if(!in_array($status,$allowed[$b['status']]??[],true))throw new BookingException('Thao tác không hợp lệ.',409);$pdo->prepare('UPDATE bookings SET status=? WHERE id=?')->execute([$status,$id]);$pdo->commit();json_response(['ok'=>true]);}catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+}
+
+function admin_rooms_api():never
+{
+    require_admin();json_response(['rooms'=>array_values(room_repository()->allRooms()),'csrf'=>csrf_token()]);
+}
+
+function create_room_api():never
+{
+    require_admin();require_csrf();$room=room_repository()->create(json_body());json_response(['room'=>$room],201);
+}
+
+function update_room_api(string $roomId):never
+{
+    require_admin();require_csrf();$room=room_repository()->update($roomId,json_body());json_response(['room'=>$room]);
+}
+
+function delete_room_api(string $roomId):never
+{
+    require_admin();require_csrf();$paths=room_repository()->delete($roomId);foreach($paths as $path)delete_managed_upload((string)$path,$roomId);json_response(['ok'=>true]);
+}
+
+function upload_room_image_api(string $roomId):never
+{
+    require_admin();require_csrf();
+    if(!isset($_FILES['image'])||!is_array($_FILES['image']))throw new BookingException('Vui lòng chọn một ảnh.',422);
+    assert_room_image_limit(room_repository()->imageCount($roomId));$stored=store_room_upload($_FILES['image'],$roomId);
+    try{$image=room_repository()->addImage($roomId,$stored['path'],(string)($_POST['caption']??''));}
+    catch(Throwable $e){delete_managed_upload($stored['path'],$roomId);throw $e;}
+    json_response(['image'=>$image],201);
+}
+
+function update_room_image_api(string $roomId,string $imageId):never
+{
+    require_admin();require_csrf();$image=room_repository()->updateImage($roomId,$imageId,json_body());json_response(['image'=>$image]);
+}
+
+function delete_room_image_api(string $roomId,string $imageId):never
+{
+    require_admin();require_csrf();$path=room_repository()->deleteImage($roomId,$imageId);delete_managed_upload($path,$roomId);json_response(['ok'=>true]);
 }
