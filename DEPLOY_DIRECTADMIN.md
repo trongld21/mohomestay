@@ -60,6 +60,7 @@ Deploy hook chỉ nhận các đường dẫn nằm trong danh sách cho phép, 
 - `https://example.com/api/health` trả JSON có `status: ok`.
 - Kiểm tra `/favicon.svg`, `/`, `/rooms`, một URL chi tiết phòng, `/calendar`, `/bookings`, `/auth/login`.
 - Đăng nhập `/admin`, mở tab **Quản lý phòng**, thử thêm một phòng ẩn, tải ảnh, sửa tag/gói giá rồi xóa phòng thử nghiệm.
+- Nút **Xem trước** trong admin mở cả phòng đang ẩn; URL preview yêu cầu đăng nhập và không được lập chỉ mục.
 - Chạy migration `002_room_management.sql` trước khi sử dụng tab phòng; workflow sẽ tự làm bước này sau upload.
 - Webhook payOS: `https://example.com/api/payments/webhook`.
 - Giữ `BOOKINGS_ENABLED=false` đến khi payOS, giờ qua đêm và điều khoản được cấu hình xong.

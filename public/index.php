@@ -30,6 +30,7 @@ require APP_ROOT . '/src/views.php';
 
 if ($path === '/') render_page('Trang chủ', fn() => render_home());
 elseif ($path === '/rooms') render_page('Phòng & bảng giá', fn() => render_rooms());
+elseif (preg_match('#^/admin/rooms/([a-zA-Z0-9_-]+)/preview$#', $path, $m)) { require_admin(); $room=find_room($m[1],true); if(!$room) { http_response_code(404); render_page('Không tìm thấy phòng',fn()=>print('<div class="container section"><h1>Không tìm thấy phòng.</h1></div>'),['robots'=>false]); } render_page('Xem trước · '.$room['name'],fn()=>render_room($room),['robots'=>false]); }
 elseif (preg_match('#^/rooms/([a-z0-9-]+)$#', $path, $m) && ($room=find_room($m[1]))) render_page($room['name'], fn() => render_room($room));
 elseif ($path === '/calendar') render_page('Lịch phòng', fn() => render_calendar());
 elseif ($path === '/bookings') render_page('Đặt phòng', fn() => render_bookings());

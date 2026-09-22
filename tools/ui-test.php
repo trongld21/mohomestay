@@ -25,6 +25,7 @@ foreach(['data-public-room-grid','room-tag-chips','coming-soon','data-flex-packa
 }
 ui_check(str_contains($views,'/assets/rooms.js'),'Public pages phai tai rooms.js');
 ui_check(str_contains((string)file_get_contents($root.'/public/index.php'),'find_room'),'Route chi tiet phai tim phong dong theo slug');
+ui_check(str_contains((string)file_get_contents($root.'/public/index.php'),'/admin/rooms/([a-zA-Z0-9_-]+)/preview')&&str_contains((string)file_get_contents($root.'/public/index.php'),'require_admin()'),'Phong an phai co preview chi admin xem duoc');
 ui_check(!str_contains($app,'const roomData='),'App khong duoc hard-code ba phong');
 $adminJs=is_file($root.'/public/assets/admin.js')?(string)file_get_contents($root.'/public/assets/admin.js'):'';
 ui_check(str_contains($adminJs,'form.elements.id.value')&&str_contains($adminJs,'form.elements.name.focus'),'Room editor phai truy cap field id/name qua form.elements');
