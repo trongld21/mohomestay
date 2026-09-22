@@ -43,7 +43,8 @@ jobs:
         run: |
           test -n "$DEPLOY_HOOK_URL"
           test -n "$DEPLOY_HOOK_KEY"
-          find .deploy -type f -print0 | while IFS= read -r -d '' file; do
+          upload_file() {
+            file="$1"
             path="${file#.deploy/}"
             digest="$(sha256sum "$file" | cut -d ' ' -f 1)"
             signature="$(printf '%s\n%s' "$path" "$digest" | openssl dgst -sha256 -hmac "$DEPLOY_HOOK_KEY" -hex | sed 's/^.* //')"
@@ -52,6 +53,21 @@ jobs:
               -H "X-Deploy-Signature: $signature" \
               -F "path=$path" -F "file=@$file" "$DEPLOY_HOOK_URL"
             echo
+          }
+          # The previous hook knows how to replace itself, but not necessarily new assets.
+          upload_file .deploy/public_html/deploy-hook.php
+          ready=false
+          for attempt in $(seq 1 10); do
+            if curl --fail --silent --show-error --get --data-urlencode 'check=1' "$DEPLOY_HOOK_URL" \
+              | jq -e '.hook == "https-v3" and .assetSvgAllowed == true' >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" = true
+          find .deploy -type f ! -path '.deploy/public_html/deploy-hook.php' -print0 | while IFS= read -r -d '' file; do
+            upload_file "$file"
           done
       - name: Run database migrations
         env:

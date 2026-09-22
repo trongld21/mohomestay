@@ -26,7 +26,7 @@ if ($envFile !== '') {
 
 $deployKey = (string)(getenv('DEPLOY_HOOK_KEY') ?: '');
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['check'] ?? '') === '1') {
-    respond(['hook'=>'https-v2', 'envLoaded'=>$envFile !== '', 'keyConfigured'=>strlen($deployKey) >= 32]);
+    respond(['hook'=>'https-v3', 'envLoaded'=>$envFile !== '', 'keyConfigured'=>strlen($deployKey) >= 32, 'assetSvgAllowed'=>true]);
 }
 if (strlen($deployKey) < 32) not_found();
 

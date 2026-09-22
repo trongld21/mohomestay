@@ -27,7 +27,7 @@ domains/ten-mien-cua-ban/
 5. Tạo `public_html/uploads/`, upload `public/uploads/.htaccess` vào đó và tạo thư mục `public_html/uploads/rooms/`. Đặt quyền thư mục `755`; nếu PHP không ghi được ảnh thì dùng `775` theo cấu hình user Apache/PHP của hosting. Không dùng `777` nếu không thật sự bắt buộc.
 6. Nếu DirectAdmin hỏi ghi đè file, chọn xác nhận.
 7. Đảm bảo website đã có HTTPS hợp lệ.
-8. Mở `https://<domain>/deploy-hook.php?check=1`; phải thấy `hook: https-v2`, `envLoaded: true`, `keyConfigured: true`.
+8. Mở `https://<domain>/deploy-hook.php?check=1`; sau lần deploy mới phải thấy `hook: https-v3`, `envLoaded: true`, `keyConfigured: true`, `assetSvgAllowed: true`.
 
 Deploy hook là file độc lập, nên lần đầu chưa cần upload `src` hoặc các file khác. PHP cần cho phép upload ít nhất 10 MB; gói hiện tại nhỏ hơn giới hạn này.
 
@@ -48,7 +48,7 @@ Push nhánh `main`, hoặc chọn **Actions → Deploy PHP to DirectAdmin → Ru
 
 1. Kiểm tra PHP và chạy unit test.
 2. Đóng gói đúng cấu trúc DirectAdmin.
-3. Upload từng file qua HTTPS với chữ ký HMAC SHA-256.
+3. Upload `deploy-hook.php` trước, xác nhận hook mới hỗ trợ asset SVG, sau đó upload các file còn lại qua HTTPS với chữ ký HMAC SHA-256.
 4. Gọi deploy hook để tự chạy migration MySQL.
 
 Workflow cố ý loại toàn bộ `public/uploads/` khỏi gói deploy. Ảnh phòng do admin tải lên sẽ được giữ nguyên qua mọi lần push.
@@ -70,6 +70,7 @@ Deploy hook chỉ nhận các đường dẫn nằm trong danh sách cho phép, 
 - Không commit hoặc đặt `.env` trong `public_html`.
 - Nếu upload báo HTTP 413, tăng `upload_max_filesize` và `post_max_size` trong PHP Settings của DirectAdmin.
 - Nếu báo 404 ở bước upload, kiểm tra `DEPLOY_HOOK_KEY` trên server/GitHub và chắc chắn file hook mới đã được upload thủ công.
+- Nếu báo 422 `Unsupported deploy path` tại `apple-touch-icon.svg` hoặc `favicon.svg`, server vẫn đang chạy allowlist của hook cũ. Workflow mới upload hook trước và chờ `assetSvgAllowed: true`; nếu chính bước upload hook thất bại, thay `public_html/deploy-hook.php` thủ công bằng file mới rồi chạy lại workflow.
 - Nếu migration lỗi, kiểm tra các biến `DB_*` và extension `pdo_mysql`.
 - Workflow không tự xóa file cũ; cần backup database định kỳ.
 - Sao lưu cả database và `public_html/uploads/rooms/`; ảnh upload không nằm trong Git.

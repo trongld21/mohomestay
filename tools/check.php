@@ -13,6 +13,7 @@ $productionJs='';foreach(glob($root.'/public/assets/*.js')?:[] as $path)$product
 if(str_contains($productionJs,'alert(')||preg_match('/(?<!function )\bconfirm\(/',$productionJs))$errors[]='JavaScript production con native alert/confirm';
 $workflow=(string)file_get_contents($root.'/.github/workflows/deploy-directadmin.yml');
 if(!str_contains($workflow,"--exclude 'uploads/'")||!str_contains($workflow,'test ! -e .deploy/public_html/uploads'))$errors[]='Workflow phai bao toan uploads runtime';
+if(!str_contains($workflow,'upload_file .deploy/public_html/deploy-hook.php')||!str_contains($workflow,".hook == \"https-v3\""))$errors[]='Workflow phai cap nhat deploy hook truoc khi upload asset moi';
 $hook=(string)file_get_contents($root.'/public/deploy-hook.php');if(!str_contains($hook,'apple-touch-icon'))$errors[]='Deploy hook chua cho phep favicon moi';
 if ($errors) { fwrite(STDERR, implode(PHP_EOL, $errors).PHP_EOL); exit(1); }
 echo "PHP syntax va extension: OK\n";
