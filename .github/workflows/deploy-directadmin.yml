@@ -18,14 +18,24 @@ jobs:
       - name: Check PHP syntax
         run: find src public tools -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Run unit tests
-        run: php tools/test.php
+        run: |
+          php tools/test.php
+          php tools/room-test.php
+          php tools/upload-test.php
+          php tools/ui-test.php
+          php tools/check.php
+          node --check public/assets/app.js
+          node --check public/assets/ui.js
+          node --check public/assets/admin.js
+          node --check public/assets/rooms.js
       - name: Build DirectAdmin upload package
         run: |
           mkdir -p .deploy/public_html
-          cp -R public/. .deploy/public_html/
+          rsync -a --exclude 'uploads/' public/ .deploy/public_html/
           cp -R src database .deploy/
           # DirectAdmin/ModSecurity commonly blocks .htaccess in HTTP multipart uploads.
           rm -f .deploy/public_html/.htaccess
+          test ! -e .deploy/public_html/uploads
       - name: Upload through signed HTTPS hook
         env:
           DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}

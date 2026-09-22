@@ -50,7 +50,7 @@ try {
 function receive_file(string $root, string $deployKey): never
 {
     $path = str_replace('\\', '/', (string)($_POST['path'] ?? ''));
-    $allowed = '#^(?:\.env\.example|src/[A-Za-z0-9_.-]+\.php|database/migrations/[A-Za-z0-9_.-]+\.sql|public_html/(?:index\.php|\.htaccess|deploy-hook\.php|assets/[A-Za-z0-9_./-]+\.(?:css|js)|images/[A-Za-z0-9_./-]+\.(?:jpg|jpeg|png|webp|svg)))$#i';
+    $allowed = '#^(?:\.env\.example|src/[A-Za-z0-9_.-]+\.php|database/migrations/[A-Za-z0-9_.-]+\.sql|public_html/(?:index\.php|\.htaccess|deploy-hook\.php|(?:favicon|apple-touch-icon)\.svg|assets/[A-Za-z0-9_./-]+\.(?:css|js)|images/[A-Za-z0-9_./-]+\.(?:jpg|jpeg|png|webp|svg)))$#i';
     if (!preg_match($allowed, $path) || str_contains($path, '..')) respond(['error'=>'Unsupported deploy path'], 422);
 
     $upload = $_FILES['file'];
