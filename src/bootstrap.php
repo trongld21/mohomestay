@@ -101,7 +101,7 @@ function json_response(array $data, int $status = 200): never
 }
 function json_body(): array
 {
-    if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 8192) json_response(['error'=>'Dữ liệu quá lớn.'], 413);
+    if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 262144) json_response(['error'=>'Dữ liệu quá lớn.'], 413);
     $body = json_decode((string)file_get_contents('php://input'), true);
     if (!is_array($body)) json_response(['error'=>'Dữ liệu không hợp lệ.'], 400);
     return $body;

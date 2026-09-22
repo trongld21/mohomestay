@@ -16,4 +16,8 @@ ui_check(str_contains($ui,'toast(')&&str_contains($ui,'confirm('),'LangUI phai c
 ui_check(str_contains($css,'prefers-reduced-motion'),'CSS phai ton trong reduced motion');
 ui_check(!str_contains($app,'alert(')&&!str_contains($app,'confirm('),'App khong duoc dung alert/confirm native');
 ui_check(is_file($root.'/public/favicon.svg')&&is_file($root.'/public/apple-touch-icon.svg'),'Phai co favicon assets');
+foreach(['data-admin-tab="bookings"','data-admin-tab="rooms"','data-add-room','data-room-editor','data-room-form','data-image-input','data-tag-input','data-package-template','data-dirty-indicator'] as $contract){
+    ui_check(str_contains($views,$contract),'Admin UI thieu contract '.$contract);
+}
+ui_check(str_contains($views,'/assets/admin.js'),'Admin dashboard phai tai admin.js');
 if($failures){fwrite(STDERR,implode(PHP_EOL,$failures).PHP_EOL);exit(1);}echo "Shared UI contract tests: OK\n";
