@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS room_packages (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS package_id VARCHAR(64) NULL AFTER stay_package;
+ALTER TABLE bookings MODIFY COLUMN stay_package VARCHAR(64) NOT NULL;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS package_name_snapshot VARCHAR(80) NOT NULL DEFAULT '' AFTER package_id;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS package_mode_snapshot ENUM('DURATION','FIXED_TIME') NULL AFTER package_name_snapshot;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS package_duration_snapshot INT UNSIGNED NULL AFTER package_mode_snapshot;

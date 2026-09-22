@@ -55,7 +55,8 @@ function create_booking_api(): never
     if (!payment_enabled()) throw new BookingException('Đặt phòng trực tuyến chưa mở. Vui lòng gọi 0357 907 153 hoặc nhắn Zalo để đặt phòng.', 503);
     $q = quote_booking(json_body()); $pdo = db(); $pdo->beginTransaction();
     try {
-        $lock = $pdo->prepare("SELECT id,status,(status='ACTIVE') is_active FROM rooms WHERE id=? FOR UPDATE"); $lock->execute([$q['room']['id']]); $room = $lock->fetch();
+        $lock = $pdo->prepare("SELECT id,status,max_guests,(status='ACTIVE') is_active FROM rooms WHERE id=? FOR UPDATE"); $lock->execute([$q['room']['id']]); $room = $lock->fetch();
+        if ($q['guests'] > (int)($room['max_guests'] ?? 0)) throw new BookingException('Sức chứa phòng vừa được cập nhật. Vui lòng chọn lại số khách.', 409);
         $packageLock = $pdo->prepare('SELECT id,name,timing_mode,duration_minutes,check_in_time,check_out_time,price,is_enabled FROM room_packages WHERE id=? AND room_id=? FOR UPDATE');
         $packageLock->execute([$q['packageId'],$q['room']['id']]); $freshPackage = $packageLock->fetch();
         if (!$freshPackage || !(bool)$freshPackage['is_enabled']) throw new BookingException('Gói giá vừa được thay đổi. Vui lòng chọn lại.', 409);

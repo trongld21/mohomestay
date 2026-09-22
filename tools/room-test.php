@@ -53,6 +53,7 @@ foreach (['room_images','room_tags','room_packages','COMING_SOON','package_id','
 foreach (['pink-3h','pink-6h','pink-overnight','white-3h','white-6h','white-overnight','black-3h','black-6h','black-overnight'] as $seedId) {
     room_check(str_contains($migration, $seedId), 'Migration phai seed goi '.$seedId);
 }
+room_check((bool)preg_match('/MODIFY COLUMN stay_package VARCHAR\(64\)/i',$migration), 'Migration phai mo rong stay_package cho package UUID');
 
 room_check(room_deletion_allowed(0) === true, 'Phong chua co don phai xoa duoc');
 room_check(room_deletion_allowed(1) === false, 'Phong co don khong duoc xoa vat ly');
@@ -82,6 +83,8 @@ room_throws(fn()=>assert_room_bookable($comingSoonRoom), 'ra', 'Phong coming soo
 $snapshot = booking_package_snapshot($selectedPackage);
 $selectedPackage['price'] = 999;
 room_check($snapshot['packagePrice'] === 200000 && $snapshot['packageId'] === 'p1', 'Snapshot goi phai bat bien sau khi dat');
+$apiSource=(string)file_get_contents(APP_ROOT.'/src/api.php');
+room_check(str_contains($apiSource,'status,max_guests')&&str_contains($apiSource,'$q[\'guests\'] > (int)($room[\'max_guests\'] ?? 0)'),'Booking phai revalidate suc chua trong room lock');
 
 if ($failures) { fwrite(STDERR, implode(PHP_EOL, $failures).PHP_EOL); exit(1); }
 echo "Room domain tests: OK\n";
