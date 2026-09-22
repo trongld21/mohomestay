@@ -30,12 +30,12 @@ require APP_ROOT . '/src/views.php';
 
 if ($path === '/') render_page('Trang chủ', fn() => render_home());
 elseif ($path === '/rooms') render_page('Phòng & bảng giá', fn() => render_rooms());
-elseif (preg_match('#^/rooms/(pink|white|black)$#', $path, $m)) render_page(rooms()[$m[1]]['name'].' Room', fn() => render_room($m[1]));
+elseif (preg_match('#^/rooms/([a-z0-9-]+)$#', $path, $m) && ($room=find_room($m[1]))) render_page($room['name'], fn() => render_room($room));
 elseif ($path === '/calendar') render_page('Lịch phòng', fn() => render_calendar());
 elseif ($path === '/bookings') render_page('Đặt phòng', fn() => render_bookings());
 elseif ($path === '/payment') render_page('Thanh toán', fn() => render_payment());
 elseif ($path === '/auth/login') render_page('Đăng nhập quản lý', fn() => render_login($loginError ?? ''), ['robots'=>false]);
 elseif ($path === '/admin') { if (!is_admin()) redirect('/auth/login'); render_page('Quản lý', fn() => render_admin(), ['robots'=>false]); }
 elseif ($path === '/robots.txt') { header('Content-Type: text/plain'); echo "User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /auth\nSitemap: ".rtrim((string)config('app_url'),'/')."/sitemap.xml\n"; }
-elseif ($path === '/sitemap.xml') { header('Content-Type: application/xml'); echo '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'; foreach (['/','/rooms','/rooms/pink','/rooms/white','/rooms/black','/calendar','/bookings'] as $url) echo '<url><loc>'.e(rtrim((string)config('app_url'),'/').$url).'</loc></url>'; echo '</urlset>'; }
+elseif ($path === '/sitemap.xml') { header('Content-Type: application/xml'); echo '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'; $urls=['/','/rooms','/calendar','/bookings'];foreach(rooms() as $room)$urls[]='/rooms/'.$room['slug'];foreach ($urls as $url) echo '<url><loc>'.e(rtrim((string)config('app_url'),'/').$url).'</loc></url>'; echo '</urlset>'; }
 else { http_response_code(404); render_page('Không tìm thấy', fn() => print('<div class="container section text-center"><h1>Không tìm thấy trang.</h1><p class="muted"><a class="text-link" href="/">Về trang chủ</a></p></div>')); }

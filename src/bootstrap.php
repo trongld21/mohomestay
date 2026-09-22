@@ -68,10 +68,19 @@ function db(): PDO
 function fallback_rooms(): array
 {
     return [
-        'pink' => ['id'=>'pink','name'=>'Pink','subtitle'=>'Một chút ngọt ngào, một chút mơ mộng.','description'=>'Dành một khoảng thời gian thật riêng cho nhau, trong không gian dịu dàng và ấm áp.','tag'=>'Dịu dàng & lãng mạn','image'=>'/images/pink-illustration.jpg','prices'=>['3h'=>200000,'6h'=>380000,'overnight'=>330000]],
-        'white' => ['id'=>'white','name'=>'White','subtitle'=>'Nhẹ nhàng như một ngày không vội.','description'=>'Một căn phòng sáng, tinh giản và dễ chịu. Tạm gác những bộn bề để tận hưởng khoảng thời gian của riêng bạn.','tag'=>'Tinh giản & thư thái','image'=>'/images/white-illustration.jpg','prices'=>['3h'=>150000,'6h'=>350000,'overnight'=>250000]],
-        'black' => ['id'=>'black','name'=>'Black','subtitle'=>'Một không gian, một sắc thái riêng.','description'=>'Không gian trầm ấm dành cho những ai yêu sự riêng tư. Thả mình nghỉ ngơi và để nhịp sống chậm lại.','tag'=>'Cá tính & riêng tư','image'=>'/images/black-illustration.jpg','prices'=>['3h'=>180000,'6h'=>300000,'overnight'=>320000]],
+        'pink' => fallback_room('pink','Pink','Một chút ngọt ngào, một chút mơ mộng.','Dành một khoảng thời gian thật riêng cho nhau, trong không gian dịu dàng và ấm áp.','/images/pink-illustration.jpg',[200000,380000,330000]),
+        'white' => fallback_room('white','White','Nhẹ nhàng như một ngày không vội.','Một căn phòng sáng, tinh giản và dễ chịu. Tạm gác những bộn bề để tận hưởng khoảng thời gian của riêng bạn.','/images/white-illustration.jpg',[150000,350000,250000]),
+        'black' => fallback_room('black','Black','Một không gian, một sắc thái riêng.','Không gian trầm ấm dành cho những ai yêu sự riêng tư. Thả mình nghỉ ngơi và để nhịp sống chậm lại.','/images/black-illustration.jpg',[180000,300000,320000]),
     ];
+}
+
+function fallback_room(string $id,string $name,string $subtitle,string $description,string $image,array $prices):array
+{
+    return ['id'=>$id,'name'=>$name,'slug'=>$id,'subtitle'=>$subtitle,'description'=>$description,'tag'=>'Không gian riêng tư','status'=>'ACTIVE','maxGuests'=>2,'bedrooms'=>1,'bathrooms'=>1,'sortOrder'=>0,'isActive'=>true,'image'=>$image,'images'=>[['id'=>$id.'-cover','path'=>$image,'caption'=>'','isCover'=>true,'sortOrder'=>10]],'tags'=>['Máy nước nóng','Máy chiếu','Netflix'],'packages'=>[
+        ['id'=>$id.'-3h','name'=>'Gói 3 giờ','mode'=>'DURATION','durationMinutes'=>180,'checkInTime'=>null,'checkOutTime'=>null,'price'=>$prices[0],'enabled'=>true,'sortOrder'=>10],
+        ['id'=>$id.'-6h','name'=>'Gói 6 giờ','mode'=>'DURATION','durationMinutes'=>360,'checkInTime'=>null,'checkOutTime'=>null,'price'=>$prices[1],'enabled'=>true,'sortOrder'=>20],
+        ['id'=>$id.'-overnight','name'=>'Qua đêm','mode'=>'FIXED_TIME','durationMinutes'=>null,'checkInTime'=>(string)config('overnight_check_in','22:00'),'checkOutTime'=>(string)config('overnight_check_out','10:00'),'price'=>$prices[2],'enabled'=>true,'sortOrder'=>30],
+    ]];
 }
 
 function rooms(bool $includeHidden = false): array
@@ -84,7 +93,7 @@ function find_room(string $idOrSlug, bool $includeHidden = false): ?array
 {
     try {
         if ($includeHidden) return room_repository()->findById($idOrSlug) ?? current(array_filter(room_repository()->allRooms(),fn($room)=>$room['slug']===$idOrSlug)) ?: null;
-        return room_repository()->findPublicBySlug($idOrSlug) ?? room_repository()->findById($idOrSlug);
+        return room_repository()->findPublicBySlug($idOrSlug) ?? current(array_filter(room_repository()->publicRooms(),fn($room)=>$room['id']===$idOrSlug)) ?: null;
     } catch (Throwable) { foreach(fallback_rooms() as $room)if($room['id']===$idOrSlug)return $room;return null; }
 }
 

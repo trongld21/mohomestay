@@ -20,4 +20,10 @@ foreach(['data-admin-tab="bookings"','data-admin-tab="rooms"','data-add-room','d
     ui_check(str_contains($views,$contract),'Admin UI thieu contract '.$contract);
 }
 ui_check(str_contains($views,'/assets/admin.js'),'Admin dashboard phai tai admin.js');
+foreach(['data-public-room-grid','room-tag-chips','coming-soon','data-flex-package','data-room-gallery'] as $contract){
+    ui_check(str_contains($views,$contract),'Public UI thieu contract '.$contract);
+}
+ui_check(str_contains($views,'/assets/rooms.js'),'Public pages phai tai rooms.js');
+ui_check(str_contains((string)file_get_contents($root.'/public/index.php'),'find_room'),'Route chi tiet phai tim phong dong theo slug');
+ui_check(!str_contains($app,'const roomData='),'App khong duoc hard-code ba phong');
 if($failures){fwrite(STDERR,implode(PHP_EOL,$failures).PHP_EOL);exit(1);}echo "Shared UI contract tests: OK\n";
