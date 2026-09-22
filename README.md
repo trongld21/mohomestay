@@ -1,4 +1,4 @@
-# Lặng Home — PHP cho DirectAdmin
+# Mơ Home — PHP cho DirectAdmin
 
 Website đặt phòng chạy bằng PHP 8.1+ và MySQL/MariaDB, không cần Node.js hoặc Composer trên server.
 

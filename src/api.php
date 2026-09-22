@@ -3,7 +3,7 @@
 function handle_api(string $path, string $method): never
 {
     try {
-        if ($path === '/api/health' && $method === 'GET') json_response(['status'=>'ok','service'=>'lang-home-php']);
+        if ($path === '/api/health' && $method === 'GET') json_response(['status'=>'ok','service'=>'mo-home-php']);
         if ($path === '/api/rooms' && $method === 'GET') json_response(['rooms'=>array_values(room_repository()->publicRooms())]);
         if ($method === 'GET' && preg_match('#^/api/rooms/([a-z0-9-]+)$#', $path, $matches)) {
             $room = room_repository()->findPublicBySlug($matches[1]);
@@ -25,7 +25,7 @@ function handle_api(string $path, string $method): never
         if ($path === '/api/admin/bookings' && $method === 'PATCH') update_booking_api();
         json_response(['error'=>'Không tìm thấy API.'], 404);
     } catch (BookingException $e) { json_response(['error'=>$e->getMessage()], $e->httpStatus); }
-    catch (Throwable $e) { error_log($e->__toString()); json_response(['error'=>'Hệ thống đang bận. Vui lòng thử lại hoặc liên hệ Lặng.'], 503); }
+    catch (Throwable $e) { error_log($e->__toString()); json_response(['error'=>'Hệ thống đang bận. Vui lòng thử lại hoặc liên hệ Mơ.'], 503); }
 }
 
 function availability_api(): never
@@ -73,7 +73,7 @@ function create_booking_api(): never
         if ($blocked->fetch()) throw new BookingException('Phòng tạm khóa trong khoảng thời gian này.', 409);
         $holds=$pdo->prepare("SELECT COUNT(*) FROM bookings WHERE guest_phone=? AND status='PENDING' AND hold_expires_at>UTC_TIMESTAMP()");$holds->execute([$q['phone']]);
         if ((int)$holds->fetchColumn()>=2) throw new BookingException('Bạn đang có đơn chờ thanh toán. Vui lòng hoàn tất hoặc đợi hết thời gian giữ phòng.',429);
-        $booking=['id'=>uuid(),'bookingCode'=>'LANG-'.strtoupper(bin2hex(random_bytes(5))),'accessToken'=>bin2hex(random_bytes(32)),'orderCode'=>(int)(floor(microtime(true)*1000)*1000+random_int(0,999)),'holdExpiresAt'=>gmdate('Y-m-d H:i:s',time()+900),'totalPrice'=>$q['total']];
+        $booking=['id'=>uuid(),'bookingCode'=>'MO-'.strtoupper(bin2hex(random_bytes(5))),'accessToken'=>bin2hex(random_bytes(32)),'orderCode'=>(int)(floor(microtime(true)*1000)*1000+random_int(0,999)),'holdExpiresAt'=>gmdate('Y-m-d H:i:s',time()+900),'totalPrice'=>$q['total']];
         $sql='INSERT INTO bookings(id,booking_code,room_id,check_in,check_out,stay_package,package_id,package_name_snapshot,package_mode_snapshot,package_duration_snapshot,package_check_in_snapshot,package_check_out_snapshot,package_price_snapshot,hold_expires_at,access_token,order_code,total_price,number_of_guests,guest_name,guest_email,guest_phone,guest_note,payment_method) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,\'payos\')';
         $pdo->prepare($sql)->execute([$booking['id'],$booking['bookingCode'],$q['room']['id'],mysql_datetime($q['start']),mysql_datetime($q['end']),$q['packageId'],$q['packageId'],$q['packageName'],$q['packageMode'],$q['packageDuration'],$q['packageCheckIn'],$q['packageCheckOut'],$q['packagePrice'],$booking['holdExpiresAt'],$booking['accessToken'],$booking['orderCode'],$q['total'],$q['guests'],$q['name'],$q['email'],$q['phone'],$q['note']]);
         $pdo->commit();
@@ -82,14 +82,14 @@ function create_booking_api(): never
         $payment=create_payment($booking);
         // Webhook co the den truoc lenh nay; chi bo sung QR/link, khong ha trang thai PAID.
         $pdo->prepare("INSERT INTO payments(id,booking_id,amount,payment_method,status,qr_code,checkout_url) VALUES(?,?,?,'payos','PENDING',?,?) ON DUPLICATE KEY UPDATE qr_code=VALUES(qr_code),checkout_url=VALUES(checkout_url)")->execute([uuid(),$booking['id'],$q['total'],$payment['qrCode'],$payment['checkoutUrl']]);
-    } catch (Throwable $e) { json_response(['error'=>'Chưa lấy được mã QR. Phòng được giữ tối đa 15 phút để đối soát; vui lòng liên hệ Lặng trước khi đặt lại.','bookingCode'=>$booking['bookingCode']],502); }
+    } catch (Throwable $e) { json_response(['error'=>'Chưa lấy được mã QR. Phòng được giữ tối đa 15 phút để đối soát; vui lòng liên hệ Mơ trước khi đặt lại.','bookingCode'=>$booking['bookingCode']],502); }
     json_response(['bookingCode'=>$booking['bookingCode'],'token'=>$booking['accessToken']],201);
 }
 
 function lookup_booking_api(): never
 {
     $body=json_body();$code=strtoupper(trim((string)($body['code']??'')));$token=(string)($body['token']??'');$phone=preg_replace('/[\s.\-]/','',(string)($body['phone']??''));
-    if(!preg_match('/^LANG-[A-F0-9]{10}$/',$code)||(!$token&&!$phone))json_response(['error'=>'Vui lòng nhập mã đặt phòng và số điện thoại hợp lệ.'],400);
+    if(!preg_match('/^(?:MO|LANG)-[A-F0-9]{10}$/',$code)||(!$token&&!$phone))json_response(['error'=>'Vui lòng nhập mã đặt phòng và số điện thoại hợp lệ.'],400);
     $sql='SELECT b.*,r.name room_name,p.qr_code,p.checkout_url FROM bookings b JOIN rooms r ON r.id=b.room_id LEFT JOIN payments p ON p.booking_id=b.id WHERE b.booking_code=? AND '.($token?'b.access_token=?':'b.guest_phone=?').' LIMIT 1';
     $stmt=db()->prepare($sql);$stmt->execute([$code,$token?:$phone]);$b=$stmt->fetch();if(!$b)json_response(['error'=>'Không tìm thấy đơn khớp với thông tin đã nhập.'],404);
     $expired=$b['status']==='PENDING'&&strtotime($b['hold_expires_at'].' UTC')<=time();

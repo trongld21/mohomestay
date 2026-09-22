@@ -1,4 +1,4 @@
-# Deploy Lặng Home lên DirectAdmin
+# Deploy Mơ Home lên DirectAdmin
 
 Ứng dụng dùng PHP 8.1+ và MySQL/MariaDB. Workflow deploy qua HTTPS vì hosting không mở FTP/SFTP ra Internet.
 

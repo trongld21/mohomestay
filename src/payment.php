@@ -16,7 +16,7 @@ function payos_verify(array $data, string $signature): bool { return (bool)preg_
 function create_payment(array $booking): array
 {
     $url = rtrim((string)config('app_url'), '/') . '/payment?code=' . rawurlencode($booking['bookingCode']) . '#' . $booking['accessToken'];
-    $fields = ['amount'=>(int)$booking['totalPrice'],'cancelUrl'=>$url,'description'=>'LANG'.substr($booking['bookingCode'], -5),'orderCode'=>(int)$booking['orderCode'],'returnUrl'=>$url];
+    $fields = ['amount'=>(int)$booking['totalPrice'],'cancelUrl'=>$url,'description'=>'MO'.substr($booking['bookingCode'], -5),'orderCode'=>(int)$booking['orderCode'],'returnUrl'=>$url];
     $payload = $fields + ['expiredAt'=>strtotime($booking['holdExpiresAt'] . ' UTC'),'signature'=>payos_signature($fields)];
     $ch = curl_init('https://api-merchant.payos.vn/v2/payment-requests');
     curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER=>true,CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>json_encode($payload),CURLOPT_TIMEOUT=>15,CURLOPT_HTTPHEADER=>['Content-Type: application/json','x-client-id: '.config('payos.client_id'),'x-api-key: '.config('payos.api_key')]]);
