@@ -22,6 +22,15 @@ function resolve_bookable_package(array $room, string $packageId): array
     throw new BookingException('Gói giá không hợp lệ hoặc đã tạm tắt.', 409);
 }
 
+function resolve_bookable_slot(array $room, string $packageId): array
+{
+    $package = resolve_bookable_package($room, $packageId);
+    if (($package['mode'] ?? '') !== 'FIXED_TIME') {
+        throw new BookingException('Chỉ nhận đặt các khung giờ cố định đã được cấu hình.', 409);
+    }
+    return $package;
+}
+
 function booking_package_snapshot(array $package): array
 {
     return [
@@ -52,7 +61,7 @@ function quote_booking(array $input): array
     if (!$room) throw new BookingException('Phòng không hợp lệ.');
     $packageId = (string)($input['packageId'] ?? '');
     if ($packageId === '' && isset($input['stayPackage'])) $packageId = $roomId.'-'.(string)$input['stayPackage'];
-    $package = resolve_bookable_package($room, $packageId);
+    $package = resolve_bookable_slot($room, $packageId);
     [$start,$end] = package_window($package, (string)($input['date'] ?? ''), (string)($input['time'] ?? ''));
     $now = new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
     if ($start <= $now) throw new BookingException('Vui lòng chọn giờ nhận phòng trong tương lai.');

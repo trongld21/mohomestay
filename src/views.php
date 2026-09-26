@@ -1,35 +1,350 @@
 <?php
 
-function render_page(string $title, callable $content, array $options=[]): never
+function render_page(string $title, callable $content, array $options = []): never
 {
-    $fullTitle=e($title).' | Mơ Home';$robots=($options['robots']??true)?'index,follow':'noindex,nofollow';
-    ?><!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=$fullTitle?></title><meta name="description" content="Mơ Home — homestay riêng tư tại Ninh Kiều, Cần Thơ."><meta name="robots" content="<?=$robots?>"><link rel="icon" href="/images/mo-home-illustration.png?v=2" type="image/png"><link rel="apple-touch-icon" href="/images/mo-home-illustration.png?v=2"><link rel="stylesheet" href="/assets/app.css?v=3"></head><body>
-    <a class="skip-link" href="#main">Đi đến nội dung</a><?php render_header(); ?><main id="main"><?php $content(); ?></main><?php render_footer(); ?><div class="ui-toast-region" data-toast-region aria-live="polite" aria-atomic="false"></div><div class="ui-dialog-root" data-dialog-root></div><script>window.LANG_HOME={csrf:<?=json_encode(csrf_token())?>,today:<?=json_encode(date('Y-m-d'))?>,rooms:<?=json_encode(array_values(rooms()),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT)?>};</script><script defer src="/assets/ui.js?v=2"></script><script defer src="/assets/app.js?v=2"></script><script defer src="/assets/rooms.js?v=1"></script><script defer src="/assets/admin.js?v=1"></script></body></html><?php exit;
-}
-function logo(): void { ?><span class="brand"><span class="brand-art" role="img" aria-label="Mơ Home"></span></span><?php }
-function render_header(): void { ?><header class="site-header"><div class="container nav-inner"><a href="/" aria-label="Mơ Home — Trang chủ"><?php logo();?></a><nav class="nav-links" id="nav"><a href="/">Trang chủ</a><a href="/#ve-mo">Về Mơ</a><a href="/rooms">Phòng & giá</a><a href="/calendar">Lịch phòng</a><a href="/#lien-he">Liên hệ</a></nav><div class="nav-actions"><a class="nav-phone" href="tel:0357907153">☎ 0357 907 153</a><a class="button small" href="/bookings">Đặt phòng ↗</a><button class="menu-toggle" data-menu aria-label="Mở menu">☰</button></div></div></header><?php }
-function render_footer(): void { ?><footer id="lien-he" class="site-footer"><div class="container footer-top"><div><?php logo();?><p>Một chốn riêng. Một nhịp chậm.<br>Một chút bình yên dành cho bạn.</p></div><div><span class="eyebrow">KHÁM PHÁ MƠ</span><a href="/rooms">Phòng & bảng giá</a><a href="/calendar">Xem lịch phòng</a><a href="/bookings#tra-cuu">Tra cứu đặt phòng</a></div><div><span class="eyebrow">MÌNH KẾT NỐI NHÉ</span><a class="footer-phone" href="tel:0357907153">☎ 0357 907 153</a><p>82 đường B18, KDC 91B<br>Ninh Kiều, Cần Thơ</p><a href="https://zalo.me/0357907153" target="_blank" rel="noreferrer">Trò chuyện qua Zalo ↗</a></div></div><div class="container footer-bottom"><span>© <?=date('Y')?> Mơ Home.</span><span>Được chăm chút, từ những điều nhỏ nhất.</span></div></footer><?php }
+    $fullTitle = e($title) . ' | Mơ Home';
+    $robots = ($options['robots'] ?? true) ? 'index,follow' : 'noindex,nofollow';
+?>
+    <!doctype html>
+    <html lang="vi">
 
-function package_timing_label(array $package):string { return $package['mode']==='FIXED_TIME' ? substr((string)$package['checkInTime'],0,5).' – '.substr((string)$package['checkOutTime'],0,5) : ((int)$package['durationMinutes']>=60&&((int)$package['durationMinutes']%60===0)?((int)$package['durationMinutes']/60).' giờ':(int)$package['durationMinutes'].' phút'); }
-function render_room_cards(): void { $catalog=array_values(rooms());?><div class="room-toolbar"><div><span class="eyebrow">DANH SÁCH KHÔNG GIAN</span><p class="muted"><?=count($catalog)?> phòng · mỗi phòng một cá tính riêng</p></div></div><div class="room-grid" data-public-room-grid><?php foreach($catalog as $index=>$room):$packages=array_values(array_filter($room['packages']??[],fn($package)=>$package['enabled']));$minimum=$packages?min(array_column($packages,'price')):null;$coming=$room['status']==='COMING_SOON';?><article class="room-card <?=$coming?'coming-soon':''?>"><div class="room-image"><a href="/rooms/<?=e($room['slug'])?>"><img src="<?=e($room['image'])?>" alt="Phòng <?=e($room['name'])?>" loading="lazy"></a><?php if($coming):?><span class="room-status-badge">Sắp ra mắt</span><?php elseif($room['tag']):?><span class="room-tag"><?=e($room['tag'])?></span><?php endif?></div><div class="room-body"><div class="room-title"><h3><a href="/rooms/<?=e($room['slug'])?>"><?=e($room['name'])?></a></h3><span><?=str_pad((string)($index+1),2,'0',STR_PAD_LEFT)?></span></div><p><?=e($room['subtitle'])?></p><div class="room-tag-chips"><?php foreach($room['tags'] as $tag):?><span><?=e($tag)?></span><?php endforeach?></div><div class="room-amenities"><span>♙ <?=e($room['maxGuests'])?> khách</span><span>▱ <?=e($room['bedrooms'])?> phòng ngủ</span><span>◫ <?=e($room['bathrooms'])?> phòng tắm</span></div><div class="room-price"><div><?php if($minimum!==null):?><small>Từ</small><strong><?=money($minimum)?></strong><?php else:?><span>Liên hệ để biết giá</span><?php endif?></div><?php if($coming):?><span class="disabled-action" aria-disabled="true">Sắp mở</span><?php else:?><a href="/bookings?room=<?=e($room['id'])?>" aria-label="Đặt <?=e($room['name'])?>">↗</a><?php endif?></div></div></article><?php endforeach?><?php if(!$catalog):?><div class="empty-state"><h3>Không gian đang được chuẩn bị</h3><p>Hẹn bạn quay lại thật sớm nhé.</p></div><?php endif?></div><?php }
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title><?= $fullTitle ?></title>
+        <meta name="description" content="Mơ Home — homestay riêng tư tại Ninh Kiều, Cần Thơ.">
+        <meta name="robots" content="<?= $robots ?>">
+        <link rel="icon" href="/images/mo-home-illustration.png?v=2" type="image/png">
+        <link rel="apple-touch-icon" href="/images/mo-home-illustration.png?v=2">
+        <link rel="stylesheet" href="/assets/app.css?v=3">
+    </head>
 
-function render_home(): void { ?><script type="application/ld+json"><?=json_encode(['@context'=>'https://schema.org','@type'=>'LodgingBusiness','name'=>'Mơ Home','telephone'=>'+84357907153','address'=>['@type'=>'PostalAddress','streetAddress'=>'82 đường B18, KDC 91B','addressLocality'=>'Ninh Kiều','addressRegion'=>'Cần Thơ','addressCountry'=>'VN']],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?></script>
-<section class="hero"><img class="hero-photo" src="/images/pink-illustration.jpg" alt="Không gian phòng ấm áp"><div class="hero-shade"></div><div class="container hero-content"><span class="eyebrow"><span class="tiny-line"></span> CHÀO BẠN, MƠ ĐÂY</span><h1>Chạm vào<br>một chốn <em>mơ.</em></h1><p>Một căn phòng ấm. Một khoảng trời riêng.<br>Để bạn nghỉ ngơi, kết nối và tận hưởng những điều nhỏ bé.</p><a href="/rooms" class="button cream">Khám phá không gian ↗</a></div><div class="hero-bottom container"><span>STAY SLOW. FEEL AT HOME.</span><a href="#khong-gian">Kéo xuống để khám phá ↓</a></div></section>
-<div class="container search-wrap"><form class="search-bar" action="/calendar"><label><span>NGÀY GHÉ MƠ</span><input type="date" name="date" min="<?=date('Y-m-d')?>" value="<?=date('Y-m-d')?>"></label><label><span>KHÔNG GIAN</span><select name="room"><option value="all">Tất cả phòng</option><?php foreach(rooms() as $r):?><option value="<?=e($r['id'])?>"><?=e($r['name'])?></option><?php endforeach?></select></label><label><span>GÓI LƯU TRÚ</span><select name="package"><?php foreach(packages() as $id=>$label):?><option value="<?=e($id)?>"><?=e($label)?></option><?php endforeach?></select></label><button class="button">Kiểm tra phòng →</button></form></div>
-<section class="container intro-strip"><p>♡ Một nơi để đến. Một cảm giác để nhớ.</p><div><span>✓ Riêng tư & an tâm</span><span>⌁ Self check-in</span><span>◷ Linh hoạt theo giờ</span></div></section>
-<section id="khong-gian" class="container section"><div class="section-heading"><div><span class="eyebrow">KHÔNG GIAN CỦA BẠN</span><h2>Mỗi căn phòng, một cảm xúc.</h2><p>Chọn một góc nhỏ phù hợp với tâm trạng hôm nay.</p></div><a class="text-link" href="/rooms">Xem tất cả phòng ↗</a></div><?php render_room_cards();?></section>
-<section id="ve-mo" class="story-section"><div class="container story-grid"><div class="story-main story-brand"><img src="/images/mo-home-illustration.png" alt="Logo minh họa Mơ Home"></div><div class="story-copy"><span class="eyebrow">CÂU CHUYỆN CỦA MƠ</span><h2>Không cần đi xa,<br>chỉ cần <em>thấy bình yên.</em></h2><p>Có những ngày, điều mình cần chỉ là một nơi đủ yên để tạm gác lại mọi bộn bề. Một chiếc giường êm, ánh đèn ấm, và thời gian dành trọn cho bản thân hay người thương.</p><p>Mơ muốn là nơi nhỏ bé ấy. Không cầu kỳ, không vội vã — chỉ có sự riêng tư và cảm giác thoải mái như ở nhà.</p><a href="https://zalo.me/0357907153" class="text-link">Chuyện trò với Mơ ↗</a></div></div></section>
-<section class="container section"><div class="center-heading"><span class="eyebrow">NHỮNG ĐIỀU NHỎ, ĐƯỢC CHĂM CHÚT</span><h2>Đến Mơ, cứ thoải mái là mình.</h2></div><div class="perks-grid"><div><span class="perk-icon">⌁</span><h3>Nhận phòng riêng tư</h3><p>Chủ động vào phòng với khóa thông minh. Mã cửa được gửi riêng khi đơn được xác nhận.</p></div><div><span class="perk-icon">☕</span><h3>Không gian thảnh thơi</h3><p>Nghỉ ngơi, chuyện trò hay đơn giản là dành cho bản thân một khoảng riêng.</p></div><div><span class="perk-icon">◷</span><h3>Ở lại theo cách bạn muốn</h3><p>Một cuộc hẹn 3 giờ, một chiều 6 giờ hay một đêm thật chậm.</p></div><div><span class="perk-icon">♡</span><h3>Có Mơ ở đây</h3><p>Cần tư vấn hay hỗ trợ nhận phòng? Chỉ một cuộc gọi hoặc tin nhắn đến Mơ.</p></div></div></section>
-<section class="container final-cta"><span class="eyebrow">MỘT CUỘC HẸN VỚI BÌNH YÊN</span><h2>Chừa một khoảng nhỏ cho mình nhé?</h2><p>Căn phòng ấm áp đang chờ. Còn lại, để Mơ lo.</p><a href="/calendar" class="button">Tìm ngày ghé Mơ →</a></section><a class="floating-contact" href="https://zalo.me/0357907153">Nhắn Mơ</a><?php }
+    <body>
+        <a class="skip-link" href="#main">Đi đến nội dung</a><?php render_header(); ?><main id="main"><?php $content(); ?></main><?php render_footer(); ?><div class="ui-toast-region" data-toast-region aria-live="polite" aria-atomic="false"></div>
+        <div class="ui-dialog-root" data-dialog-root></div>
+        <script>
+            window.LANG_HOME = {
+                csrf: <?= json_encode(csrf_token()) ?>,
+                today: <?= json_encode(date('Y-m-d')) ?>,
+                rooms: <?= json_encode(array_values(rooms()), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
+            };
+        </script>
+        <script defer src="/assets/ui.js?v=2"></script>
+        <script defer src="/assets/app.js?v=2"></script>
+        <script defer src="/assets/booking-slots.js?v=1"></script>
+        <script defer src="/assets/rooms.js?v=1"></script>
+        <script defer src="/assets/admin.js?v=1"></script>
+    </body>
 
-function render_rooms(): void { ?><div class="container section"><div class="center-heading"><span class="eyebrow">CHỌN MỘT GÓC NHỎ CHO RIÊNG MÌNH</span><h1>Phòng & bảng giá</h1><p>Giá và khung giờ được cập nhật trực tiếp bởi Mơ.</p></div><?php render_room_cards();?></div><?php }
-function render_room(array $r): void { $coming=$r['status']==='COMING_SOON';?><div class="container section"><a class="text-link" href="/rooms">← Tất cả phòng</a><div class="room-detail-layout"><div class="room-gallery" data-room-gallery><div class="gallery-main"><img data-gallery-main src="<?=e($r['image'])?>" alt="Phòng <?=e($r['name'])?>"><?php if($coming):?><span class="room-status-badge">Sắp ra mắt</span><?php endif?></div><div class="gallery-thumbs"><?php foreach($r['images'] as $image):?><button type="button" data-gallery-image="<?=e($image['path'])?>" aria-label="Xem ảnh <?=e($image['caption']?:$r['name'])?>"><img src="<?=e($image['path'])?>" alt="" loading="lazy"></button><?php endforeach?></div></div><div class="room-detail-copy"><span class="eyebrow"><?=e($r['tag']?:'KHÔNG GIAN CỦA MƠ')?></span><h1><?=e($r['name'])?></h1><p><?=nl2br(e($r['description']))?></p><div class="room-tag-chips"><?php foreach($r['tags'] as $tag):?><span><?=e($tag)?></span><?php endforeach?></div><p class="muted"><?=e($r['maxGuests'])?> khách · <?=e($r['bedrooms'])?> phòng ngủ · <?=e($r['bathrooms'])?> phòng tắm</p><div class="detail-prices"><?php foreach($r['packages'] as $package):if(!$package['enabled'])continue;?><a <?=$coming?'aria-disabled="true" class="disabled"':'href="/bookings?room='.e($r['id']).'&package='.e($package['id']).'"'?> data-flex-package><span><strong><?=e($package['name'])?></strong><small><?=e(package_timing_label($package))?></small></span><strong><?=money($package['price'])?> <?=$coming?'':'↗'?></strong></a><?php endforeach?></div><?php if($coming):?><div class="notice">Không gian này đang được hoàn thiện. Bạn có thể theo dõi hoặc nhắn Mơ để nhận thông báo khi mở cửa.</div><a class="button" href="https://zalo.me/0357907153">Nhắn Mơ để theo dõi</a><?php else:?><a class="button" href="/calendar?room=<?=e($r['id'])?>">Xem lịch phòng trống</a><?php endif?></div></div></div><?php }
+    </html><?php exit;
+        }
+        function logo(): void
+        { ?><span class="brand"><span class="brand-art" role="img" aria-label="Mơ Home"></span></span><?php }
+                                                                                                                function render_header(): void
+                                                                                                                { ?><header class="site-header">
+        <div class="container nav-inner"><a href="/" aria-label="Mơ Home — Trang chủ"><?php logo(); ?></a>
+            <nav class="nav-links" id="nav"><a href="/">Trang chủ</a><a href="/#ve-mo">Về Mơ</a><a href="/rooms">Phòng & giá</a><a href="/calendar">Lịch phòng</a><a href="/#lien-he">Liên hệ</a></nav>
+            <div class="nav-actions"><a class="nav-phone" href="tel:0357907153">☎ 0357 907 153</a><a class="button small" href="/bookings">Đặt phòng ↗</a><button class="menu-toggle" data-menu aria-label="Mở menu">☰</button></div>
+        </div>
+    </header><?php }
+                                                                                                                function render_footer(): void
+                                                                                                                { ?><footer id="lien-he" class="site-footer">
+        <div class="container footer-top">
+            <div><?php logo(); ?><p>Một chốn riêng. Một nhịp chậm.<br>Một chút bình yên dành cho bạn.</p>
+            </div>
+            <div><span class="eyebrow">KHÁM PHÁ MƠ</span><a href="/rooms">Phòng & bảng giá</a><a href="/calendar">Xem lịch phòng</a><a href="/bookings#tra-cuu">Tra cứu đặt phòng</a></div>
+            <div><span class="eyebrow">MÌNH KẾT NỐI NHÉ</span><a class="footer-phone" href="tel:0357907153">☎ 0357 907 153</a>
+                <p>82 đường B18, KDC 91B<br>Ninh Kiều, Cần Thơ</p><a href="https://zalo.me/0357907153" target="_blank" rel="noreferrer">Trò chuyện qua Zalo ↗</a>
+            </div>
+        </div>
+        <div class="container footer-bottom"><span>© <?= date('Y') ?> Mơ Home.</span><span>Được chăm chút, từ những điều nhỏ nhất.</span></div>
+    </footer><?php }
 
-function render_calendar(): void { $active=array_filter(rooms(),fn($room)=>$room['status']==='ACTIVE');?><div class="container section"><div class="center-heading"><span class="eyebrow">CHỌN NGÀY GHÉ MƠ</span><h1>Lịch phòng</h1><p>Lịch công khai không hiển thị thông tin của khách.</p></div><div id="calendar-app" class="calendar-layout"><section class="panel"><div class="calendar-nav"><button class="icon-button" data-month-prev>‹</button><h2 data-month-title></h2><button class="icon-button" data-month-next>›</button></div><div class="month-grid" data-calendar-grid></div><div class="form-grid form-section"><label class="field">Không gian<select data-cal-room><?php foreach($active as $r):?><option value="<?=e($r['id'])?>"><?=e($r['name'])?></option><?php endforeach?></select></label><label class="field">Gói lưu trú<select data-cal-package data-flex-package></select></label><label class="field">Giờ nhận phòng<input type="time" value="14:00" data-cal-time></label></div></section><section class="panel"><div class="calendar-nav"><h2 data-selected-title></h2><button class="icon-button" data-refresh>↻</button></div><div data-availability><div class="skeleton" style="height:180px"></div></div></section></div></div><?php }
+                                                                                                                function package_timing_label(array $package): string
+                                                                                                                {
+                                                                                                                    return $package['mode'] === 'FIXED_TIME' ? substr((string)$package['checkInTime'], 0, 5) . ' – ' . substr((string)$package['checkOutTime'], 0, 5) : ((int)$package['durationMinutes'] >= 60 && ((int)$package['durationMinutes'] % 60 === 0) ? ((int)$package['durationMinutes'] / 60) . ' giờ' : (int)$package['durationMinutes'] . ' phút');
+                                                                                                                }
+                                                                                                                function render_room_cards(): void
+                                                                                                                {
+                                                                                                                    $catalog = array_values(rooms()); ?><div class="room-toolbar">
+        <div><span class="eyebrow">DANH SÁCH KHÔNG GIAN</span>
+            <p class="muted"><?= count($catalog) ?> phòng · mỗi phòng một cá tính riêng</p>
+        </div>
+    </div>
+    <div class="room-grid" data-public-room-grid><?php foreach ($catalog as $index => $room): $packages = array_values(array_filter($room['packages'] ?? [], fn($package) => $package['enabled']));
+                                                                                                                        $minimum = $packages ? min(array_column($packages, 'price')) : null;
+                                                                                                                        $coming = $room['status'] === 'COMING_SOON'; ?><article class="room-card <?= $coming ? 'coming-soon' : '' ?>">
+                <div class="room-image"><a href="/rooms/<?= e($room['slug']) ?>"><img src="<?= e($room['image']) ?>" alt="Phòng <?= e($room['name']) ?>" loading="lazy"></a><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php elseif ($room['tag']): ?><span class="room-tag"><?= e($room['tag']) ?></span><?php endif ?></div>
+                <div class="room-body">
+                    <div class="room-title">
+                        <h3><a href="/rooms/<?= e($room['slug']) ?>"><?= e($room['name']) ?></a></h3><span><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span>
+                    </div>
+                    <p><?= e($room['subtitle']) ?></p>
+                    <div class="room-tag-chips"><?php foreach ($room['tags'] as $tag): ?><span><?= e($tag) ?></span><?php endforeach ?></div>
+                    <div class="room-amenities"><span>♙ <?= e($room['maxGuests']) ?> khách</span><span>▱ <?= e($room['bedrooms']) ?> phòng ngủ</span><span>◫ <?= e($room['bathrooms']) ?> phòng tắm</span></div>
+                    <div class="room-price">
+                        <div><?php if ($minimum !== null): ?><small>Từ</small><strong><?= money($minimum) ?></strong><?php else: ?><span>Liên hệ để biết giá</span><?php endif ?></div><?php if ($coming): ?><span class="disabled-action" aria-disabled="true">Sắp mở</span><?php else: ?><a href="/bookings?room=<?= e($room['id']) ?>" aria-label="Đặt <?= e($room['name']) ?>">↗</a><?php endif ?>
+                    </div>
+                </div>
+            </article><?php endforeach ?><?php if (!$catalog): ?><div class="empty-state">
+                <h3>Không gian đang được chuẩn bị</h3>
+                <p>Hẹn bạn quay lại thật sớm nhé.</p>
+            </div><?php endif ?></div><?php }
 
-function render_bookings(): void { $active=array_filter(rooms(),fn($room)=>$room['status']==='ACTIVE');?><div class="container section"><div class="center-heading"><span class="eyebrow">CHỌN MỘT CUỘC HẸN</span><h1>Đặt phòng</h1><p>Thông tin giá và tình trạng phòng luôn được kiểm tra lại trên máy chủ.</p></div><div id="booking-app" class="booking-grid"><form class="panel" data-booking-form><h2>Cuộc hẹn của bạn</h2><div class="form-grid"><label class="field">Không gian<select name="roomId"><?php foreach($active as $r):?><option value="<?=e($r['id'])?>"><?=e($r['name'])?></option><?php endforeach?></select></label><label class="field">Gói lưu trú<select name="packageId" data-flex-package></select></label><label class="field">Ngày ghé Mơ<input name="date" type="date" min="<?=date('Y-m-d')?>" required></label><label class="field">Giờ nhận phòng<input name="time" type="time" value="14:00" required></label></div><div class="form-section"><h2>Mình làm quen nhé</h2><div class="form-grid"><label class="field">Họ và tên *<input name="guestName" minlength="2" maxlength="100" required></label><label class="field">Số điện thoại *<input name="guestPhone" type="tel" maxlength="20" required></label><label class="field">Email<input name="guestEmail" type="email" maxlength="254"></label><label class="field">Số khách<select name="numberOfGuests" data-guest-count></select></label><label class="field full">Một lời nhắn cho Mơ<textarea name="guestNote" rows="3" maxlength="1000"></textarea></label></div></div><div class="notice" data-terms hidden></div><label class="check"><input type="checkbox" name="acceptTerms" required> Tôi đã đọc điều kiện đặt phòng và đồng ý để Mơ sử dụng thông tin liên hệ xử lý đơn này.</label><div data-booking-message></div><button class="button wide" type="submit">Tiếp tục thanh toán →</button></form><aside class="panel" data-summary></aside></div><?php render_lookup();?></div><?php }
-function render_lookup(): void { ?><section class="panel lookup-panel" id="tra-cuu"><h2>Bạn đã có một cuộc hẹn?</h2><p class="muted">Tra cứu bằng mã đặt phòng và số điện thoại đã sử dụng.</p><form class="lookup-form" data-lookup-form><label class="field">Mã đặt phòng<input name="code" required placeholder="MO-…"></label><label class="field">Số điện thoại<input name="phone" type="tel" required></label><button class="button">Tra cứu đặt phòng</button></form><div data-lookup-result></div></section><?php }
-function render_payment(): void { ?><div class="container section"><div class="payment-container panel text-center" id="payment-app" data-code="<?=e($_GET['code']??'')?>"><span class="eyebrow">HOÀN TẤT CUỘC HẸN</span><h1>Thanh toán đặt phòng</h1><div data-payment-result><p class="notice">Đang tải thông tin thanh toán…</p></div></div></div><?php }
-function render_login(string $error): void { ?><div class="container section"><div class="panel payment-container"><span class="eyebrow">DÀNH CHO CHỦ HOME</span><h1>Đăng nhập quản lý</h1><p class="muted">Khách đặt phòng không cần tạo tài khoản.</p><form method="post" class="stack"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><label class="field">Email<input name="email" type="email" required></label><label class="field">Mật khẩu<input name="password" type="password" required></label><?php if($error):?><p class="notice error"><?=e($error)?></p><?php endif?><button class="button">Đăng nhập</button></form></div></div><?php }
-function render_admin(): void { ?><div class="container section admin-shell"><div class="section-heading"><div><span class="eyebrow">KHÔNG GIAN QUẢN LÝ</span><h1>Chào chủ nhà.</h1><p>Quản lý đơn và không gian tại một nơi.</p></div><form action="/logout" method="post"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><button class="button outline">Đăng xuất</button></form></div><div class="admin-tabs" role="tablist" aria-label="Khu vực quản lý"><button class="selected" role="tab" data-admin-tab="bookings">Đơn đặt phòng</button><button role="tab" data-admin-tab="rooms">Quản lý phòng</button></div><section data-admin-panel="bookings"><div id="admin-bookings"><p class="notice">Đang tải danh sách đơn…</p></div></section><section data-admin-panel="rooms" hidden><div class="admin-panel-heading"><div><h2>Không gian của Mơ</h2><p class="muted">Phòng, hình ảnh, tiện nghi và các gói giá.</p></div><button class="button" type="button" data-add-room>＋ Thêm phòng</button></div><div class="admin-room-grid" data-admin-rooms><div class="skeleton" style="height:260px"></div></div></section></div>
-<div class="room-editor-root" data-room-editor hidden><div class="room-editor-backdrop" data-close-editor></div><aside class="room-editor" role="dialog" aria-modal="true" aria-labelledby="room-editor-title"><header><div><span class="eyebrow">QUẢN LÝ KHÔNG GIAN</span><h2 id="room-editor-title" data-editor-title>Thêm phòng</h2></div><div class="editor-heading-actions"><span class="dirty-indicator" data-dirty-indicator hidden>Chưa lưu</span><button class="icon-button" type="button" data-close-editor aria-label="Đóng">×</button></div></header><form data-room-form><input type="hidden" name="id"><section class="editor-section"><h3>Thông tin cơ bản</h3><div class="form-grid"><label class="field">Tên phòng *<input name="name" maxlength="100" required></label><label class="field">Đường dẫn (slug)<input name="slug" maxlength="100" placeholder="Tự tạo từ tên"></label><label class="field full">Mô tả ngắn<input name="subtitle" maxlength="255"></label><label class="field full">Mô tả chi tiết<textarea name="description" rows="5" maxlength="5000"></textarea></label><label class="field">Trạng thái<select name="visibility"><option value="ACTIVE">Đang hoạt động</option><option value="HIDDEN">Ẩn khỏi website</option></select></label><label class="check editor-check"><input type="checkbox" name="comingSoon"> Hiển thị “Sắp ra mắt”</label></div></section><section class="editor-section"><h3>Sức chứa & sắp xếp</h3><div class="form-grid four"><label class="field">Số khách<input name="maxGuests" type="number" min="1" max="50" value="2"></label><label class="field">Phòng ngủ<input name="bedrooms" type="number" min="0" max="20" value="1"></label><label class="field">Phòng tắm<input name="bathrooms" type="number" min="0" max="20" value="1"></label><label class="field">Thứ tự<input name="sortOrder" type="number" value="0"></label></div></section><section class="editor-section"><div class="editor-section-title"><div><h3>Tag tiện nghi</h3><p>Nhập tag rồi nhấn Enter.</p></div></div><div class="tag-editor"><div data-tag-chips></div><input data-tag-input placeholder="Netflix, Máy chiếu, Bàn bida…"></div></section><section class="editor-section"><div class="editor-section-title"><div><h3>Gói thời gian & giá</h3><p>Tạo tùy ý theo giờ hoặc khung giờ cố định.</p></div><button class="button outline small" type="button" data-add-package>＋ Thêm gói</button></div><div class="package-editor" data-package-list></div><template data-package-template><div class="package-row"><input type="hidden" data-package-field="id"><label class="field">Tên gói<input data-package-field="name" maxlength="80" required></label><label class="field">Kiểu thời gian<select data-package-field="mode"><option value="DURATION">Theo số phút</option><option value="FIXED_TIME">Giờ cố định</option></select></label><label class="field" data-duration-field>Thời lượng (phút)<input data-package-field="durationMinutes" type="number" min="30" max="43200" value="180"></label><label class="field" data-fixed-field hidden>Nhận phòng<input data-package-field="checkInTime" type="time"></label><label class="field" data-fixed-field hidden>Trả phòng<input data-package-field="checkOutTime" type="time"></label><label class="field">Giá (đ)<input data-package-field="price" type="number" min="0" max="1000000000" step="1000" required></label><label class="check"><input data-package-field="enabled" type="checkbox" checked> Hiển thị</label><label class="field">Thứ tự<input data-package-field="sortOrder" type="number" value="10"></label><button class="icon-button package-remove" type="button" data-remove-package aria-label="Xóa gói">×</button></div></template></section><section class="editor-section"><div class="editor-section-title"><div><h3>Hình ảnh</h3><p>Tối đa 12 ảnh, JPEG/PNG/WebP, mỗi ảnh dưới 8 MiB.</p></div></div><label class="upload-zone"><input data-image-input type="file" accept="image/jpeg,image/png,image/webp" multiple hidden><strong>Thả ảnh vào đây hoặc chọn từ máy</strong><span>Ảnh đầu tiên sẽ làm ảnh bìa</span></label><div class="image-manager" data-image-list></div></section><footer class="editor-footer"><button class="button outline" type="button" data-close-editor>Hủy</button><button class="button" type="submit" data-save-room>Lưu phòng</button></footer></form></aside></div><?php }
+                                                                                                                function render_home(): void
+                                                                                                                { ?><script type="application/ld+json">
+        <?= json_encode(['@context' => 'https://schema.org', '@type' => 'LodgingBusiness', 'name' => 'Mơ Home', 'telephone' => '+84357907153', 'address' => ['@type' => 'PostalAddress', 'streetAddress' => '82 đường B18, KDC 91B', 'addressLocality' => 'Ninh Kiều', 'addressRegion' => 'Cần Thơ', 'addressCountry' => 'VN']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
+    </script>
+    <section class="hero"><img class="hero-photo" src="/images/pink-illustration.jpg" alt="Không gian phòng ấm áp">
+        <div class="hero-shade"></div>
+        <div class="container hero-content"><span class="eyebrow"><span class="tiny-line"></span> CHÀO BẠN, MƠ ĐÂY</span>
+            <h1>Chạm vào<br>một chốn <em>mơ.</em></h1>
+            <p>Một căn phòng ấm. Một khoảng trời riêng.<br>Để bạn nghỉ ngơi, kết nối và tận hưởng những điều nhỏ bé.</p><a href="/rooms" class="button cream">Khám phá không gian ↗</a>
+        </div>
+        <div class="hero-bottom container"><span>STAY SLOW. FEEL AT HOME.</span><a href="#khong-gian">Kéo xuống để khám phá ↓</a></div>
+    </section>
+    <div class="container search-wrap">
+        <form class="search-bar" action="/calendar"><label><span>NGÀY GHÉ MƠ</span><input type="date" name="date" min="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>"></label><label><span>KHÔNG GIAN</span><select name="room">
+                    <option value="all">Tất cả phòng</option><?php foreach (rooms() as $r): ?><option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option><?php endforeach ?>
+                </select></label><label><span>GÓI LƯU TRÚ</span><select name="package"><?php foreach (packages() as $id => $label): ?><option value="<?= e($id) ?>"><?= e($label) ?></option><?php endforeach ?></select></label><button class="button">Kiểm tra phòng →</button></form>
+    </div>
+    <section class="container intro-strip">
+        <p>♡ Một nơi để đến. Một cảm giác để nhớ.</p>
+        <div><span>✓ Riêng tư & an tâm</span><span>⌁ Self check-in</span><span>◷ Linh hoạt theo giờ</span></div>
+    </section>
+    <section id="khong-gian" class="container section">
+        <div class="section-heading">
+            <div><span class="eyebrow">KHÔNG GIAN CỦA BẠN</span>
+                <h2>Mỗi căn phòng, một cảm xúc.</h2>
+                <p>Chọn một góc nhỏ phù hợp với tâm trạng hôm nay.</p>
+            </div><a class="text-link" href="/rooms">Xem tất cả phòng ↗</a>
+        </div><?php render_room_cards(); ?>
+    </section>
+    <section id="ve-mo" class="story-section">
+        <div class="container story-grid">
+            <div class="story-main story-brand"><img src="/images/mo-home-illustration.png" alt="Logo minh họa Mơ Home"></div>
+            <div class="story-copy"><span class="eyebrow">CÂU CHUYỆN CỦA MƠ</span>
+                <h2>Không cần đi xa,<br>chỉ cần <em>thấy bình yên.</em></h2>
+                <p>Có những ngày, điều mình cần chỉ là một nơi đủ yên để tạm gác lại mọi bộn bề. Một chiếc giường êm, ánh đèn ấm, và thời gian dành trọn cho bản thân hay người thương.</p>
+                <p>Mơ muốn là nơi nhỏ bé ấy. Không cầu kỳ, không vội vã — chỉ có sự riêng tư và cảm giác thoải mái như ở nhà.</p><a href="https://zalo.me/0357907153" class="text-link">Chuyện trò với Mơ ↗</a>
+            </div>
+        </div>
+    </section>
+    <section class="container section">
+        <div class="center-heading"><span class="eyebrow">NHỮNG ĐIỀU NHỎ, ĐƯỢC CHĂM CHÚT</span>
+            <h2>Đến Mơ, cứ thoải mái là mình.</h2>
+        </div>
+        <div class="perks-grid">
+            <div><span class="perk-icon">⌁</span>
+                <h3>Nhận phòng riêng tư</h3>
+                <p>Chủ động vào phòng với khóa thông minh. Mã cửa được gửi riêng khi đơn được xác nhận.</p>
+            </div>
+            <div><span class="perk-icon">☕</span>
+                <h3>Không gian thảnh thơi</h3>
+                <p>Nghỉ ngơi, chuyện trò hay đơn giản là dành cho bản thân một khoảng riêng.</p>
+            </div>
+            <div><span class="perk-icon">◷</span>
+                <h3>Ở lại theo cách bạn muốn</h3>
+                <p>Một cuộc hẹn 3 giờ, một chiều 6 giờ hay một đêm thật chậm.</p>
+            </div>
+            <div><span class="perk-icon">♡</span>
+                <h3>Có Mơ ở đây</h3>
+                <p>Cần tư vấn hay hỗ trợ nhận phòng? Chỉ một cuộc gọi hoặc tin nhắn đến Mơ.</p>
+            </div>
+        </div>
+    </section>
+    <section class="container final-cta"><span class="eyebrow">MỘT CUỘC HẸN VỚI BÌNH YÊN</span>
+        <h2>Chừa một khoảng nhỏ cho mình nhé?</h2>
+        <p>Căn phòng ấm áp đang chờ. Còn lại, để Mơ lo.</p><a href="/calendar" class="button">Tìm ngày ghé Mơ →</a>
+    </section><a class="floating-contact" href="https://zalo.me/0357907153">Nhắn Mơ</a><?php }
+
+                                                                                                                function render_rooms(): void
+                                                                                                                { ?><div class="container section">
+        <div class="center-heading"><span class="eyebrow">CHỌN MỘT GÓC NHỎ CHO RIÊNG MÌNH</span>
+            <h1>Phòng & bảng giá</h1>
+            <p>Giá và khung giờ được cập nhật trực tiếp bởi Mơ.</p>
+        </div><?php render_room_cards(); ?>
+    </div><?php }
+                                                                                                                function render_room(array $r): void
+                                                                                                                {
+                                                                                                                    $coming = $r['status'] === 'COMING_SOON'; ?><div class="container section"><a class="text-link" href="/rooms">← Tất cả phòng</a>
+        <div class="room-detail-layout">
+            <div class="room-gallery" data-room-gallery>
+                <div class="gallery-main"><img data-gallery-main src="<?= e($r['image']) ?>" alt="Phòng <?= e($r['name']) ?>"><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php endif ?></div>
+                <div class="gallery-thumbs"><?php foreach ($r['images'] as $image): ?><button type="button" data-gallery-image="<?= e($image['path']) ?>" aria-label="Xem ảnh <?= e($image['caption'] ?: $r['name']) ?>"><img src="<?= e($image['path']) ?>" alt="" loading="lazy"></button><?php endforeach ?></div>
+            </div>
+            <div class="room-detail-copy"><span class="eyebrow"><?= e($r['tag'] ?: 'KHÔNG GIAN CỦA MƠ') ?></span>
+                <h1><?= e($r['name']) ?></h1>
+                <p><?= nl2br(e($r['description'])) ?></p>
+                <div class="room-tag-chips"><?php foreach ($r['tags'] as $tag): ?><span><?= e($tag) ?></span><?php endforeach ?></div>
+                <p class="muted"><?= e($r['maxGuests']) ?> khách · <?= e($r['bedrooms']) ?> phòng ngủ · <?= e($r['bathrooms']) ?> phòng tắm</p>
+                <div class="detail-prices"><?php foreach ($r['packages'] as $package): if (!$package['enabled']) continue; $bookable = $package['mode'] === 'FIXED_TIME' && !$coming; ?><a <?= $bookable ? 'href="/bookings?room=' . e($r['id']) . '&package=' . e($package['id']) . '"' : 'aria-disabled="true" class="disabled"' ?> data-flex-package><span><strong><?= e($package['name']) ?></strong><small><?= e(package_timing_label($package)) ?><?= $package['mode'] === 'DURATION' ? ' · Liên hệ để đặt' : '' ?></small></span><strong><?= money($package['price']) ?> <?= $bookable ? '↗' : '' ?></strong></a><?php endforeach ?></div><?php if ($coming): ?><div class="notice">Không gian này đang được hoàn thiện. Bạn có thể theo dõi hoặc nhắn Mơ để nhận thông báo khi mở cửa.</div><a class="button" href="https://zalo.me/0357907153">Nhắn Mơ để theo dõi</a><?php else: ?><a class="button" href="/calendar?room=<?= e($r['id']) ?>">Xem lịch phòng trống</a><?php endif ?>
+            </div>
+        </div>
+    </div><?php }
+
+                                                                                                                function render_calendar(): void
+                                                                                                                {
+                                                                                                                    $active = array_filter(rooms(), fn($room) => $room['status'] === 'ACTIVE'); ?><div class="container section">
+        <div class="center-heading"><span class="eyebrow">CHỌN NGÀY GHÉ MƠ</span>
+            <h1>Lịch phòng</h1>
+            <p>Lịch công khai không hiển thị thông tin của khách.</p>
+        </div>
+        <div id="calendar-app" class="calendar-layout">
+            <section class="panel">
+                <div class="calendar-nav"><button class="icon-button" data-month-prev>‹</button>
+                    <h2 data-month-title></h2><button class="icon-button" data-month-next>›</button>
+                </div>
+                <div class="month-grid" data-calendar-grid></div>
+                <div class="form-grid form-section"><label class="field">Không gian<select data-cal-room><?php foreach ($active as $r): ?><option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option><?php endforeach ?></select></label><label class="field">Khung giờ<select data-cal-package data-flex-package></select></label><label class="field" hidden>Giờ nhận phòng<input type="time" value="14:00" data-cal-time></label></div>
+            </section>
+            <section class="panel">
+                <div class="calendar-nav">
+                    <h2 data-selected-title></h2><button class="icon-button" data-refresh>↻</button>
+                </div>
+                <div data-availability>
+                    <div class="skeleton" style="height:180px"></div>
+                </div>
+            </section>
+        </div>
+    </div><?php }
+
+                                                                                                                function render_bookings(): void
+                                                                                                                {
+                                                                                                                    $active = array_filter(rooms(), fn($room) => $room['status'] === 'ACTIVE'); ?><div class="container section">
+        <div class="center-heading booking-heading"><span class="eyebrow">CHỌN MỘT CUỘC HẸN</span>
+            <h1>Chọn khung giờ của bạn</h1>
+            <p>Mỗi phòng có lịch riêng. Chọn ngày để xem giá và những khung giờ còn trống.</p>
+        </div>
+        <div id="booking-app" class="booking-grid">
+            <form class="panel booking-form" data-booking-form>
+                <input name="packageId" type="hidden" required>
+                <input name="time" type="hidden" required>
+                <div class="booking-step-heading"><span>01</span><div><h2>Phòng và ngày ghé</h2><p>Chọn không gian phù hợp với cuộc hẹn của bạn.</p></div></div>
+                <div class="form-grid booking-primary-fields"><label class="field">Không gian<select name="roomId"><?php foreach ($active as $r): ?><option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option><?php endforeach ?></select></label><label class="field">Ngày ghé Mơ<input name="date" type="date" min="<?= date('Y-m-d') ?>" required></label></div>
+                <fieldset class="booking-slot-section" data-slot-section tabindex="-1">
+                    <legend><span>02</span><strong>Chọn khung giờ</strong></legend>
+                    <p class="booking-slot-hint">Giá đã bao gồm toàn bộ thời gian hiển thị.</p>
+                    <div class="slot-status-legend" aria-label="Chú thích trạng thái"><span><i class="is-available"></i>Còn trống</span><span><i class="is-selected"></i>Đang chọn</span><span><i class="is-booked"></i>Đã đặt</span></div>
+                    <div class="booking-slot-grid" data-slot-grid aria-live="polite" aria-busy="true"><div class="slot-skeleton"></div><div class="slot-skeleton"></div></div>
+                </fieldset>
+                <div class="form-section booking-guest-section">
+                    <div class="booking-step-heading"><span>03</span><div><h2>Thông tin của bạn</h2><p>Để Mơ xác nhận và hỗ trợ bạn nhanh chóng.</p></div></div>
+                    <div class="form-grid"><label class="field">Họ và tên *<input name="guestName" minlength="2" maxlength="100" required></label><label class="field">Số điện thoại *<input name="guestPhone" type="tel" maxlength="20" required></label><label class="field">Email<input name="guestEmail" type="email" maxlength="254"></label><label class="field">Số khách<select name="numberOfGuests" data-guest-count></select></label><label class="field full">Một lời nhắn cho Mơ<textarea name="guestNote" rows="3" maxlength="1000"></textarea></label></div>
+                </div>
+                <div class="notice" data-terms hidden></div><label class="check"><input type="checkbox" name="acceptTerms" required> Tôi đã đọc điều kiện đặt phòng và đồng ý để Mơ sử dụng thông tin liên hệ xử lý đơn này.</label>
+                <div data-booking-message aria-live="assertive"></div><button class="button wide booking-submit" type="submit" disabled>Chọn một khung giờ để tiếp tục</button>
+            </form>
+            <aside class="panel booking-summary" data-summary aria-live="polite"></aside>
+        </div><?php render_lookup(); ?>
+    </div><?php }
+                                                                                                                function render_lookup(): void
+                                                                                                                { ?><section class="panel lookup-panel" id="tra-cuu">
+        <h2>Bạn đã có một cuộc hẹn?</h2>
+        <p class="muted">Tra cứu bằng mã đặt phòng và số điện thoại đã sử dụng.</p>
+        <form class="lookup-form" data-lookup-form><label class="field">Mã đặt phòng<input name="code" required placeholder="MO-…"></label><label class="field">Số điện thoại<input name="phone" type="tel" required></label><button class="button">Tra cứu đặt phòng</button></form>
+        <div data-lookup-result></div>
+    </section><?php }
+                                                                                                                function render_payment(): void
+                                                                                                                { ?><div class="container section">
+        <div class="payment-container panel text-center" id="payment-app" data-code="<?= e($_GET['code'] ?? '') ?>"><span class="eyebrow">HOÀN TẤT CUỘC HẸN</span>
+            <h1>Thanh toán đặt phòng</h1>
+            <div data-payment-result>
+                <p class="notice">Đang tải thông tin thanh toán…</p>
+            </div>
+        </div>
+    </div><?php }
+                                                                                                                function render_login(string $error): void
+                                                                                                                { ?><div class="container section">
+        <div class="panel payment-container"><span class="eyebrow">DÀNH CHO CHỦ HOME</span>
+            <h1>Đăng nhập quản lý</h1>
+            <p class="muted">Khách đặt phòng không cần tạo tài khoản.</p>
+            <form method="post" class="stack"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><label class="field">Email<input name="email" type="email" required></label><label class="field">Mật khẩu<input name="password" type="password" required></label><?php if ($error): ?><p class="notice error"><?= e($error) ?></p><?php endif ?><button class="button">Đăng nhập</button></form>
+        </div>
+    </div><?php }
+                                                                                                                function render_admin(): void
+                                                                                                                { ?><div class="container section admin-shell">
+        <div class="section-heading">
+            <div><span class="eyebrow">KHÔNG GIAN QUẢN LÝ</span>
+                <h1>Chào chủ nhà.</h1>
+                <p>Quản lý đơn và không gian tại một nơi.</p>
+            </div>
+            <form action="/logout" method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><button class="button outline">Đăng xuất</button></form>
+        </div>
+        <div class="admin-tabs" role="tablist" aria-label="Khu vực quản lý"><button class="selected" role="tab" data-admin-tab="bookings">Đơn đặt phòng</button><button role="tab" data-admin-tab="rooms">Quản lý phòng</button></div>
+        <section data-admin-panel="bookings">
+            <div id="admin-bookings">
+                <p class="notice">Đang tải danh sách đơn…</p>
+            </div>
+        </section>
+        <section data-admin-panel="rooms" hidden>
+            <div class="admin-panel-heading">
+                <div>
+                    <h2>Không gian của Mơ</h2>
+                    <p class="muted">Phòng, hình ảnh, tiện nghi và các gói giá.</p>
+                </div><button class="button" type="button" data-add-room>＋ Thêm phòng</button>
+            </div>
+            <div class="admin-room-grid" data-admin-rooms>
+                <div class="skeleton" style="height:260px"></div>
+            </div>
+        </section>
+    </div>
+    <div class="room-editor-root" data-room-editor hidden>
+        <div class="room-editor-backdrop" data-close-editor></div>
+        <aside class="room-editor" role="dialog" aria-modal="true" aria-labelledby="room-editor-title">
+            <header>
+                <div><span class="eyebrow">QUẢN LÝ KHÔNG GIAN</span>
+                    <h2 id="room-editor-title" data-editor-title>Thêm phòng</h2>
+                </div>
+                <div class="editor-heading-actions"><span class="dirty-indicator" data-dirty-indicator hidden>Chưa lưu</span><button class="icon-button" type="button" data-close-editor aria-label="Đóng">×</button></div>
+            </header>
+            <form data-room-form><input type="hidden" name="id">
+                <section class="editor-section">
+                    <h3>Thông tin cơ bản</h3>
+                    <div class="form-grid"><label class="field">Tên phòng *<input name="name" maxlength="100" required></label><label class="field">Đường dẫn (slug)<input name="slug" maxlength="100" placeholder="Tự tạo từ tên"></label><label class="field full">Mô tả ngắn<input name="subtitle" maxlength="255"></label><label class="field full">Mô tả chi tiết<textarea name="description" rows="5" maxlength="5000"></textarea></label><label class="field">Trạng thái<select name="visibility">
+                                <option value="ACTIVE">Đang hoạt động</option>
+                                <option value="HIDDEN">Ẩn khỏi website</option>
+                            </select></label><label class="check editor-check"><input type="checkbox" name="comingSoon"> Hiển thị “Sắp ra mắt”</label></div>
+                </section>
+                <section class="editor-section">
+                    <h3>Sức chứa & sắp xếp</h3>
+                    <div class="form-grid four"><label class="field">Số khách<input name="maxGuests" type="number" min="1" max="50" value="2"></label><label class="field">Phòng ngủ<input name="bedrooms" type="number" min="0" max="20" value="1"></label><label class="field">Phòng tắm<input name="bathrooms" type="number" min="0" max="20" value="1"></label><label class="field">Thứ tự<input name="sortOrder" type="number" value="0"></label></div>
+                </section>
+                <section class="editor-section">
+                    <div class="editor-section-title">
+                        <div>
+                            <h3>Tag tiện nghi</h3>
+                            <p>Nhập tag rồi nhấn Enter.</p>
+                        </div>
+                    </div>
+                    <div class="tag-editor">
+                        <div data-tag-chips></div><input data-tag-input placeholder="Netflix, Máy chiếu, Bàn bida…">
+                    </div>
+                </section>
+                <section class="editor-section">
+                    <div class="editor-section-title">
+                        <div>
+                            <h3>Gói thời gian & giá</h3>
+                            <p>Khung giờ cố định sẽ xuất hiện trên trang đặt phòng. Gói theo số phút chỉ dùng để lưu bảng giá cũ.</p>
+                        </div><button class="button outline small" type="button" data-add-package>＋ Thêm gói</button>
+                    </div>
+                    <div class="package-editor" data-package-list></div><template data-package-template>
+                        <div class="package-row"><input type="hidden" data-package-field="id"><label class="field">Tên gói<input data-package-field="name" maxlength="80" required></label><label class="field">Kiểu thời gian<select data-package-field="mode">
+                                    <option value="FIXED_TIME">Giờ cố định</option>
+                                <option value="DURATION">Theo số phút (không đặt online)</option>
+                                </select></label><label class="field" data-duration-field>Thời lượng (phút)<input data-package-field="durationMinutes" type="number" min="30" max="43200" value="180"></label><label class="field" data-fixed-field hidden>Nhận phòng<input data-package-field="checkInTime" type="time"></label><label class="field" data-fixed-field hidden>Trả phòng<input data-package-field="checkOutTime" type="time"></label><label class="field">Giá (đ)<input data-package-field="price" type="number" min="0" max="1000000000" step="1000" required></label><label class="check"><input data-package-field="enabled" type="checkbox" checked> Hiển thị</label><label class="field">Thứ tự<input data-package-field="sortOrder" type="number" value="10"></label><button class="icon-button package-remove" type="button" data-remove-package aria-label="Xóa gói">×</button></div>
+                    </template>
+                </section>
+                <section class="editor-section">
+                    <div class="editor-section-title">
+                        <div>
+                            <h3>Hình ảnh</h3>
+                            <p>Tối đa 12 ảnh, JPEG/PNG/WebP, mỗi ảnh dưới 8 MiB.</p>
+                        </div>
+                    </div><label class="upload-zone"><input data-image-input type="file" accept="image/jpeg,image/png,image/webp" multiple hidden><strong>Thả ảnh vào đây hoặc chọn từ máy</strong><span>Ảnh đầu tiên sẽ làm ảnh bìa</span></label>
+                    <div class="image-manager" data-image-list></div>
+                </section>
+                <footer class="editor-footer"><button class="button outline" type="button" data-close-editor>Hủy</button><button class="button" type="submit" data-save-room>Lưu phòng</button></footer>
+            </form>
+        </aside>
+    </div><?php }

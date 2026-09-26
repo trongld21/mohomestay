@@ -1,0 +1,201 @@
+*** Begin Patch
+*** Add File: deploy/directadmin/deploy-hook.php
++<?php
++
++declare(strict_types=1);
++
++const TAYDO_HOOK_VERSION = 'https-package-v1';
++const TAYDO_CHUNK_LIMIT = 6 * 1024 * 1024;
++const TAYDO_MAX_CHUNKS = 100;
++
++if (!defined('TAYDO_DEPLOY_HOOK_LIBRARY')) deploy_main();
++
++function deploy_main(): never
++{
++    @set_time_limit(300);
++    $domainRoot = dirname(__DIR__);
++    $appRoot = $domainRoot . '/app';
++    $publicRoot = __DIR__;
++    $envFile = $appRoot . '/shared/.env';
++    load_deploy_env($envFile);
++    $key = (string)(getenv('DEPLOY_HOOK_KEY') ?: '');
++
++    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && ($_GET['check'] ?? '') === '1') {
++        deploy_response([
++            'hook'=>TAYDO_HOOK_VERSION,
++            'envConfigured'=>is_file($envFile),
++            'keyConfigured'=>strlen($key) >= 32,
++            'pharAvailable'=>class_exists(PharData::class),
++            'symlinkAvailable'=>function_exists('symlink'),
++        ]);
++    }
++    if (strlen($key) < 32) deploy_not_found();
++    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') deploy_not_found();
++
++    $action = (string)($_POST['action'] ?? '');
++    if ($action === 'chunk') receive_chunk($appRoot, $key);
++    if ($action === 'activate') activate_bundle($appRoot, $publicRoot, $envFile, $key);
++    deploy_not_found();
++}
++
++function receive_chunk(string $appRoot, string $key): never
++{
++    $release = validated_release((string)($_POST['release'] ?? ''));
++    $index = filter_var($_POST['index'] ?? null, FILTER_VALIDATE_INT);
++    $total = filter_var($_POST['total'] ?? null, FILTER_VALIDATE_INT);
++    $digest = strtolower((string)($_POST['digest'] ?? ''));
++    if ($index === false || $total === false || $index < 0 || $total < 1 || $total > TAYDO_MAX_CHUNKS || $index >= $total) deploy_response(['error'=>'Invalid chunk coordinates'], 422);
++    if (!preg_match('/^[a-f0-9]{64}$/', $digest)) deploy_response(['error'=>'Invalid digest'], 422);
++    verify_deploy_signature($key, "chunk\n$release\n$index\n$total\n$digest");
++    $upload = $_FILES['file'] ?? null;
++    if (!is_array($upload) || ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string)$upload['tmp_name'])) deploy_response(['error'=>'Invalid upload'], 400);
++    $size = (int)($upload['size'] ?? 0);
++    if ($size < 1 || $size > TAYDO_CHUNK_LIMIT) deploy_response(['error'=>'Invalid chunk size'], 413);
++    if (!hash_equals($digest, hash_file('sha256', (string)$upload['tmp_name']))) deploy_response(['error'=>'Chunk digest mismatch'], 422);
++    $incoming = "$appRoot/incoming/$release";
++    ensure_directory($incoming);
++    $target = sprintf('%s/%04d.part', $incoming, $index);
++    $temporary = $target . '.uploading';
++    if (!move_uploaded_file((string)$upload['tmp_name'], $temporary)) deploy_response(['error'=>'Cannot store chunk'], 500);
++    chmod($temporary, 0600);
++    if (!rename($temporary, $target)) { @unlink($temporary); deploy_response(['error'=>'Cannot publish chunk'], 500); }
++    file_put_contents($incoming . '/total', (string)$total, LOCK_EX);
++    deploy_response(['ok'=>true,'release'=>$release,'chunk'=>$index]);
++}
++
++function activate_bundle(string $appRoot, string $publicRoot, string $envFile, string $key): never
++{
++    $release = validated_release((string)($_POST['release'] ?? ''));
++    $total = filter_var($_POST['total'] ?? null, FILTER_VALIDATE_INT);
++    $archiveDigest = strtolower((string)($_POST['archive_digest'] ?? ''));
++    if ($total === false || $total < 1 || $total > TAYDO_MAX_CHUNKS || !preg_match('/^[a-f0-9]{64}$/', $archiveDigest)) deploy_response(['error'=>'Invalid activation payload'], 422);
++    verify_deploy_signature($key, "activate\n$release\n$total\n$archiveDigest");
++    $incoming = "$appRoot/incoming/$release";
++    if (trim((string)@file_get_contents($incoming . '/total')) !== (string)$total) deploy_response(['error'=>'Chunk manifest mismatch'], 409);
++    ensure_directory($appRoot . '/releases');
++    $archive = "$incoming/release.tar.gz";
++    $output = fopen($archive . '.assembling', 'wb');
++    if (!$output) deploy_response(['error'=>'Cannot create archive'], 500);
++    for ($index=0; $index<$total; $index++) {
++        $part = sprintf('%s/%04d.part', $incoming, $index);
++        if (!is_file($part)) { fclose($output); deploy_response(['error'=>'Missing chunk','chunk'=>$index], 409); }
++        $input = fopen($part, 'rb');
++        if (!$input) { fclose($output); deploy_response(['error'=>'Cannot read chunk'], 500); }
++        stream_copy_to_stream($input, $output); fclose($input);
++    }
++    fclose($output);
++    if (!hash_equals($archiveDigest, hash_file('sha256', $archive . '.assembling'))) { @unlink($archive . '.assembling'); deploy_response(['error'=>'Archive digest mismatch'], 422); }
++    rename($archive . '.assembling', $archive);
++
++    $stage = "$appRoot/releases/$release.uploading";
++    $releasePath = "$appRoot/releases/$release";
++    if (is_dir($stage)) remove_tree($stage, $appRoot . '/releases');
++    if (is_dir($releasePath)) remove_tree($releasePath, $appRoot . '/releases');
++    ensure_directory($stage);
++    try { (new PharData($archive))->extractTo($stage, null, true); }
++    catch (Throwable $e) { error_log($e->__toString()); remove_tree($stage, $appRoot . '/releases'); deploy_response(['error'=>'Cannot extract release'], 500); }
++    $backend = $stage . '/backend';
++    $site = $stage . '/site';
++    if (!is_file($backend . '/artisan') || !is_file($backend . '/vendor/autoload.php') || !is_file($site . '/index.html')) {
++        remove_tree($stage, $appRoot . '/releases'); deploy_response(['error'=>'Invalid release structure'], 422);
++    }
++    ensure_shared_runtime($appRoot . '/shared');
++    if (!is_file($envFile)) {
++        copy($backend . '/.env.directadmin.example', $envFile); chmod($envFile, 0600);
++        deploy_response(['error'=>'Production env created; fill app/shared/.env and retry','code'=>'env_created'], 409);
++    }
++    link_or_fail($envFile, $backend . '/.env');
++    link_or_fail($appRoot . '/shared/storage', $backend . '/storage');
++    try { run_laravel_activation($backend); }
++    catch (Throwable $e) { error_log($e->__toString()); deploy_response(['error'=>'Laravel activation failed'], 500); }
++    rename($stage, $releasePath);
++    $backend = $releasePath . '/backend'; $site = $releasePath . '/site';
++    link_or_fail($backend, $appRoot . '/current');
++    link_or_fail($appRoot . '/current/public', $publicRoot . '/api');
++    link_or_fail($appRoot . '/shared/storage/app/public', $publicRoot . '/storage');
++    publish_static_site($site, $publicRoot, $appRoot . '/shared/frontend-manifest.json');
++    prune_releases($appRoot . '/releases', $release);
++    remove_tree($incoming, $appRoot . '/incoming');
++    deploy_response(['ok'=>true,'release'=>$release,'migrated'=>true]);
++}
++
++function run_laravel_activation(string $backend): void
++{
++    $previous = getcwd(); chdir($backend);
++    require $backend . '/vendor/autoload.php';
++    $app = require $backend . '/bootstrap/app.php';
++    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
++    foreach ([['config:clear',[]],['migrate',['--force'=>true]],['admin:bootstrap',[]],['config:cache',[]],['view:cache',[]]] as [$command,$arguments]) {
++        $status = $kernel->call($command, $arguments);
++        if ($status !== 0) throw new RuntimeException($command . ' failed: ' . $kernel->output());
++    }
++    if ($previous !== false) chdir($previous);
++}
++
++function publish_static_site(string $site, string $publicRoot, string $manifestFile): void
++{
++    $newFiles = [];
++    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($site, FilesystemIterator::SKIP_DOTS));
++    foreach ($iterator as $item) {
++        if (!$item->isFile()) continue;
++        $relative = str_replace('\\','/',substr($item->getPathname(),strlen($site)+1));
++        if (!safe_relative_path($relative)) throw new RuntimeException('Unsafe static path');
++        $newFiles[] = $relative;
++        $target = $publicRoot . '/' . $relative; ensure_directory(dirname($target));
++        $temporary = $target . '.deploying';
++        if (!copy($item->getPathname(), $temporary)) throw new RuntimeException('Cannot copy static asset');
++        chmod($temporary, 0644); if (!rename($temporary, $target)) throw new RuntimeException('Cannot publish static asset');
++    }
++    $oldFiles = json_decode((string)@file_get_contents($manifestFile), true);
++    if (is_array($oldFiles)) foreach (array_diff($oldFiles,$newFiles) as $relative) {
++        if (!is_string($relative) || !safe_relative_path($relative)) continue;
++        $target = $publicRoot . '/' . $relative; if (is_file($target)) @unlink($target);
++    }
++    sort($newFiles); ensure_directory(dirname($manifestFile));
++    file_put_contents($manifestFile,json_encode($newFiles,JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT),LOCK_EX);
++}
++
++function ensure_shared_runtime(string $shared): void
++{
++    foreach (['','/storage','/storage/app','/storage/app/public','/storage/app/private','/storage/framework','/storage/framework/cache','/storage/framework/cache/data','/storage/framework/sessions','/storage/framework/views','/storage/logs'] as $suffix) ensure_directory($shared.$suffix);
++}
++function link_or_fail(string $target,string $link): void
++{
++    if (is_link($link) || file_exists($link)) { if (is_link($link)) @unlink($link); else throw new RuntimeException("Refusing to overwrite $link"); }
++    ensure_directory(dirname($link)); if (!symlink($target,$link)) throw new RuntimeException("Cannot create symlink $link");
++}
++function prune_releases(string $root,string $keep): void
++{
++    foreach (glob($root.'/*')?:[] as $path) if (is_dir($path) && basename($path)!==$keep) remove_tree($path,$root);
++}
++function remove_tree(string $path,string $allowedRoot): void
++{
++    $root=realpath($allowedRoot);$resolved=realpath($path);if(!$root||!$resolved||$resolved===$root||!str_starts_with($resolved,$root.DIRECTORY_SEPARATOR))throw new RuntimeException('Unsafe cleanup path');
++    $iterator=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($resolved,FilesystemIterator::SKIP_DOTS),RecursiveIteratorIterator::CHILD_FIRST);
++    foreach($iterator as $item){$item->isDir()&&!$item->isLink()?rmdir($item->getPathname()):unlink($item->getPathname());}rmdir($resolved);
++}
++function safe_relative_path(string $path): bool { return $path!==''&&!str_contains($path,'..')&&!str_starts_with($path,'/')&&(bool)preg_match('#^[A-Za-z0-9_./@+\-=]+$#',$path); }
++function validated_release(string $release): string { if(!preg_match('/^[a-f0-9]{40}$/',$release))deploy_response(['error'=>'Invalid release'],422);return $release; }
++function ensure_directory(string $path): void { if(!is_dir($path)&&!mkdir($path,0755,true)&&!is_dir($path))throw new RuntimeException("Cannot create $path"); }
++function verify_deploy_signature(string $key,string $payload): void { $provided=strtolower((string)($_SERVER['HTTP_X_DEPLOY_SIGNATURE']??''));$expected=hash_hmac('sha256',$payload,$key);if(!preg_match('/^[a-f0-9]{64}$/',$provided)||!hash_equals($expected,$provided))deploy_response(['error'=>'Invalid signature'],401); }
++function load_deploy_env(string $file): void { if(!is_file($file))return;$values=parse_ini_file($file,false,INI_SCANNER_RAW);if(!is_array($values))return;foreach($values as $name=>$value)if(getenv((string)$name)===false)putenv((string)$name.'='.(string)$value); }
++function deploy_response(array $data,int $status=200): never { http_response_code($status);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);exit; }
++function deploy_not_found(): never { deploy_response(['error'=>'Not found'],404); }
+*** Add File: deploy/directadmin/hook-test.php
++<?php
++declare(strict_types=1);
++define('TAYDO_DEPLOY_HOOK_LIBRARY', true);
++require __DIR__.'/deploy-hook.php';
++$errors=[];
++if(!safe_relative_path('_next/static/app-1.js'))$errors[]='valid static path rejected';
++foreach(['../.env','/etc/passwd','api/../x','a b'] as $path)if(safe_relative_path($path))$errors[]='unsafe path accepted: '.$path;
++if(TAYDO_CHUNK_LIMIT>6*1024*1024||TAYDO_MAX_CHUNKS>100)$errors[]='upload limits too broad';
++$source=(string)file_get_contents(__DIR__.'/deploy-hook.php');
++foreach(['hash_hmac','hash_file','PharData','migrate','frontend-manifest.json'] as $contract)if(!str_contains($source,$contract))$errors[]='missing '.$contract;
++if($errors){fwrite(STDERR,implode(PHP_EOL,$errors).PHP_EOL);exit(1);}echo "HTTPS deploy hook tests: OK\n";
+*** Update File: backend/.env.directadmin.example
+@@
+ APP_URL=https://example.com
+ API_PREFIX=
++DEPLOY_HOOK_KEY=
+*** End Patch

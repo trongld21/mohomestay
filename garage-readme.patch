@@ -1,0 +1,7 @@
+*** Begin Patch
+*** Update File: README.md
+@@
+ # garage-cantho
++
++> DirectAdmin production không có SSH được triển khai qua signed HTTPS package hook. Xem [DEPLOY_DIRECTADMIN.md](DEPLOY_DIRECTADMIN.md). Phần hướng dẫn SSH cũ bên dưới chỉ giữ lại để tham khảo cho hosting khác có shell access.
+*** End Patch

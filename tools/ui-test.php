@@ -29,5 +29,5 @@ ui_check(str_contains((string)file_get_contents($root.'/public/index.php'),'/adm
 ui_check(!str_contains($app,'const roomData='),'App khong duoc hard-code ba phong');
 $adminJs=is_file($root.'/public/assets/admin.js')?(string)file_get_contents($root.'/public/assets/admin.js'):'';
 ui_check(str_contains($adminJs,'form.elements.id.value')&&str_contains($adminJs,'form.elements.name.focus'),'Room editor phai truy cap field id/name qua form.elements');
-ui_check(str_contains($views,'<option value="<?=e($r[\'id\'])?>"><?=e($r[\'name\'])?></option>'),'Homepage phai escape room option do admin quan ly');
+ui_check((bool)preg_match('/<option value="<\?=\s*e\(\$r\[\'id\'\]\)\s*\?>"><\?=\s*e\(\$r\[\'name\'\]\)\s*\?><\/option>/', $views),'Homepage phai escape room option do admin quan ly');
 if($failures){fwrite(STDERR,implode(PHP_EOL,$failures).PHP_EOL);exit(1);}echo "Shared UI contract tests: OK\n";

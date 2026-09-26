@@ -1,0 +1,120 @@
+*** Begin Patch
+*** Add File: .github/workflows/deploy-directadmin.yml
++name: Deploy to DirectAdmin over HTTPS
++
++on:
++  push:
++    branches: [main]
++  workflow_dispatch:
++
++concurrency:
++  group: directadmin-production
++  cancel-in-progress: false
++
++permissions:
++  contents: read
++
++jobs:
++  test-build-deploy:
++    runs-on: ubuntu-latest
++    environment: production
++    env:
++      NEXT_OUTPUT: export
++      NEXT_PUBLIC_API_URL: /api
++
++    steps:
++      - uses: actions/checkout@v4
++
++      - uses: actions/setup-node@v4
++        with:
++          node-version: 22
++          cache: npm
++          cache-dependency-path: frontend/package-lock.json
++
++      - name: Test and export frontend
++        working-directory: frontend
++        run: |
++          npm ci
++          npm test --if-present
++          npm run build
++
++      - uses: shivammathur/setup-php@v2
++        with:
++          php-version: '8.3'
++          extensions: mbstring, pdo_mysql, dom, xml, curl, phar
++          coverage: none
++
++      - name: Test backend and deploy hook
++        working-directory: backend
++        env:
++          APP_ENV: testing
++          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
++          DB_CONNECTION: sqlite
++          DB_DATABASE: ':memory:'
++        run: |
++          composer install --prefer-dist --no-interaction --no-progress
++          php artisan test
++          php ../deploy/directadmin/hook-test.php
++
++      - name: Build signed deployment bundle
++        run: |
++          composer install --working-dir=backend --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
++          mkdir -p .deploy-tmp/package/site .deploy-tmp/package/backend .deploy-tmp/chunks
++          rsync -a frontend/out/ .deploy-tmp/package/site/
++          cp deploy/directadmin/public.htaccess .deploy-tmp/package/site/.htaccess
++          rsync -a backend/ .deploy-tmp/package/backend/ \
++            --exclude='.env' --exclude='.env.backup' --exclude='.env.production' \
++            --exclude='node_modules' --exclude='storage' --exclude='tests' \
++            --exclude='.phpunit.result.cache'
++          tar -czf .deploy-tmp/release.tar.gz -C .deploy-tmp/package .
++          split -b 4M -d -a 4 .deploy-tmp/release.tar.gz .deploy-tmp/chunks/chunk-
++          echo "archive_digest=$(sha256sum .deploy-tmp/release.tar.gz | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
++          echo "chunk_total=$(find .deploy-tmp/chunks -type f | wc -l | tr -d ' ')" >> "$GITHUB_ENV"
++
++      - name: Verify HTTPS deploy hook
++        env:
++          DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
++        run: |
++          test -n "$DEPLOY_HOOK_URL"
++          response="$(curl --fail-with-body --silent --show-error --get --data-urlencode 'check=1' "$DEPLOY_HOOK_URL")"
++          echo "$response" | jq -e '.hook == "https-package-v1" and .envConfigured == true and .keyConfigured == true and .pharAvailable == true and .symlinkAvailable == true'
++
++      - name: Upload signed release chunks
++        env:
++          DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
++          DEPLOY_HOOK_KEY: ${{ secrets.DEPLOY_HOOK_KEY }}
++        run: |
++          test -n "$DEPLOY_HOOK_KEY"
++          index=0
++          for file in .deploy-tmp/chunks/chunk-*; do
++            digest="$(sha256sum "$file" | cut -d ' ' -f 1)"
++            payload="$(printf 'chunk\n%s\n%s\n%s\n%s' "$GITHUB_SHA" "$index" "$chunk_total" "$digest")"
++            signature="$(printf '%s' "$payload" | openssl dgst -sha256 -hmac "$DEPLOY_HOOK_KEY" -hex | sed 's/^.* //')"
++            echo "Uploading chunk $((index + 1))/$chunk_total"
++            curl --fail-with-body --silent --show-error --retry 3 \
++              -H "X-Deploy-Signature: $signature" \
++              -F "action=chunk" -F "release=$GITHUB_SHA" -F "index=$index" -F "total=$chunk_total" \
++              -F "digest=$digest" -F "file=@$file" "$DEPLOY_HOOK_URL"
++            echo
++            index=$((index + 1))
++          done
++
++      - name: Activate release and migrate
++        env:
++          DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
++          DEPLOY_HOOK_KEY: ${{ secrets.DEPLOY_HOOK_KEY }}
++        run: |
++          payload="$(printf 'activate\n%s\n%s\n%s' "$GITHUB_SHA" "$chunk_total" "$archive_digest")"
++          signature="$(printf '%s' "$payload" | openssl dgst -sha256 -hmac "$DEPLOY_HOOK_KEY" -hex | sed 's/^.* //')"
++          curl --fail-with-body --silent --show-error --retry 2 \
++            -H "X-Deploy-Signature: $signature" \
++            -F "action=activate" -F "release=$GITHUB_SHA" -F "total=$chunk_total" \
++            -F "archive_digest=$archive_digest" "$DEPLOY_HOOK_URL"
++
++      - name: Verify production
++        env:
++          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
++        run: |
++          test -n "$HEALTHCHECK_URL"
++          curl --fail --show-error --silent --retry 5 --retry-delay 3 "${HEALTHCHECK_URL%/}/api/up"
+*** End Patch

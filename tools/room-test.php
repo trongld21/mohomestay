@@ -74,6 +74,13 @@ $bookableRoom = $hydrated['r1'];
 $selectedPackage = resolve_bookable_package($bookableRoom, 'p1');
 room_check($selectedPackage['price'] === 200000, 'Phai tim dung goi gia cua phong');
 room_throws(fn()=>resolve_bookable_package($bookableRoom, 'missing'), 'G', 'Phai tu choi package khong thuoc phong');
+$fixedSlot = [
+    'id'=>'fixed-afternoon','name'=>'Buoi chieu','mode'=>'FIXED_TIME','durationMinutes'=>null,
+    'checkInTime'=>'13:00','checkOutTime'=>'16:00','price'=>350000,'enabled'=>true,'sortOrder'=>20,
+];
+$bookableRoom['packages'][] = $fixedSlot;
+room_check(resolve_bookable_slot($bookableRoom, 'fixed-afternoon')['price'] === 350000, 'Phai cho dat khung gio co dinh da cau hinh');
+room_throws(fn()=>resolve_bookable_slot($bookableRoom, 'p1'), 'cố định', 'Khong duoc dat goi thoi luong bang cach gui API thu cong');
 $disabledRoom = $bookableRoom;
 $disabledRoom['packages'][0]['enabled'] = false;
 room_throws(fn()=>resolve_bookable_package($disabledRoom, 'p1'), 'G', 'Phai tu choi package da tat');

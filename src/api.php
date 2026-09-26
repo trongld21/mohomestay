@@ -61,6 +61,7 @@ function create_booking_api(): never
         $packageLock->execute([$q['packageId'],$q['room']['id']]); $freshPackage = $packageLock->fetch();
         if (!$freshPackage || !(bool)$freshPackage['is_enabled']) throw new BookingException('Gói giá vừa được thay đổi. Vui lòng chọn lại.', 409);
         $freshPackageDto=['id'=>$freshPackage['id'],'name'=>$freshPackage['name'],'mode'=>$freshPackage['timing_mode'],'durationMinutes'=>$freshPackage['duration_minutes']===null?null:(int)$freshPackage['duration_minutes'],'checkInTime'=>$freshPackage['check_in_time']===null?null:substr((string)$freshPackage['check_in_time'],0,5),'checkOutTime'=>$freshPackage['check_out_time']===null?null:substr((string)$freshPackage['check_out_time'],0,5),'price'=>(int)$freshPackage['price'],'enabled'=>true];
+        $freshPackageDto=resolve_bookable_slot(['status'=>$room['status'],'packages'=>[$freshPackageDto]],$q['packageId']);
         [$freshStart,$freshEnd]=package_window($freshPackageDto,$q['start']->format('Y-m-d'),$freshPackageDto['mode']==='DURATION'?$q['start']->format('H:i'):'');
         $q['package']=$freshPackageDto;$q['start']=$freshStart;$q['end']=$freshEnd;$q['total']=(int)$freshPackageDto['price'];
         $q=array_replace($q,booking_package_snapshot($freshPackageDto));
