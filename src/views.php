@@ -16,7 +16,7 @@ function render_page(string $title, callable $content, array $options = []): nev
         <meta name="robots" content="<?= $robots ?>">
         <link rel="icon" href="/images/mo-home-illustration.png?v=2" type="image/png">
         <link rel="apple-touch-icon" href="/images/mo-home-illustration.png?v=2">
-        <link rel="stylesheet" href="/assets/app.css?v=3">
+        <link rel="stylesheet" href="/assets/app.css?v=4">
     </head>
 
     <body>
@@ -32,7 +32,7 @@ function render_page(string $title, callable $content, array $options = []): nev
         <script defer src="/assets/ui.js?v=2"></script>
         <script defer src="/assets/app.js?v=2"></script>
         <script defer src="/assets/booking-slots.js?v=1"></script>
-        <script defer src="/assets/rooms.js?v=1"></script>
+        <script defer src="/assets/rooms.js?v=2"></script>
         <script defer src="/assets/admin.js?v=1"></script>
     </body>
 
@@ -167,21 +167,29 @@ function render_page(string $title, callable $content, array $options = []): nev
     </div><?php }
                                                                                                                 function render_room(array $r): void
                                                                                                                 {
-                                                                                                                    $coming = $r['status'] === 'COMING_SOON'; ?><div class="container section"><a class="text-link" href="/rooms">← Tất cả phòng</a>
-        <div class="room-detail-layout">
+                                                                                                                    $coming = $r['status'] === 'COMING_SOON'; ?><section class="room-detail-page" aria-labelledby="room-detail-title">
+    <div class="container room-detail-shell"><a class="room-back-link" href="/rooms"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg><span>Tất cả phòng</span></a>
+        <div class="room-detail-layout room-detail-reveal">
             <div class="room-gallery" data-room-gallery>
-                <div class="gallery-main"><img data-gallery-main src="<?= e($r['image']) ?>" alt="Phòng <?= e($r['name']) ?>"><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php endif ?></div>
-                <div class="gallery-thumbs"><?php foreach ($r['images'] as $image): ?><button type="button" data-gallery-image="<?= e($image['path']) ?>" aria-label="Xem ảnh <?= e($image['caption'] ?: $r['name']) ?>"><img src="<?= e($image['path']) ?>" alt="" loading="lazy"></button><?php endforeach ?></div>
+                <figure class="gallery-main"><img data-gallery-main src="<?= e($r['image']) ?>" alt="Phòng <?= e($r['name']) ?>"><div class="gallery-shade" aria-hidden="true"></div><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php endif ?><figcaption><span data-gallery-caption><?= e($r['images'][0]['caption'] ?? $r['name']) ?></span><span class="gallery-position"><b data-gallery-current>01</b> / <?= str_pad((string)max(1, count($r['images'])), 2, '0', STR_PAD_LEFT) ?></span></figcaption></figure>
+                <?php if (count($r['images']) > 1): ?><div class="gallery-thumbs" aria-label="Ảnh phòng <?= e($r['name']) ?>"><?php foreach ($r['images'] as $index => $image): ?><button type="button" class="<?= $index === 0 ? 'selected' : '' ?>" data-gallery-image="<?= e($image['path']) ?>" data-gallery-caption="<?= e($image['caption'] ?: $r['name']) ?>" aria-label="Xem ảnh <?= $index + 1 ?>: <?= e($image['caption'] ?: $r['name']) ?>" aria-pressed="<?= $index === 0 ? 'true' : 'false' ?>"><img src="<?= e($image['path']) ?>" alt="" loading="lazy"><span><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span></button><?php endforeach ?></div><?php endif ?>
             </div>
-            <div class="room-detail-copy"><span class="eyebrow"><?= e($r['tag'] ?: 'KHÔNG GIAN CỦA MƠ') ?></span>
-                <h1><?= e($r['name']) ?></h1>
-                <p><?= nl2br(e($r['description'])) ?></p>
-                <div class="room-tag-chips"><?php foreach ($r['tags'] as $tag): ?><span><?= e($tag) ?></span><?php endforeach ?></div>
-                <p class="muted"><?= e($r['maxGuests']) ?> khách · <?= e($r['bedrooms']) ?> phòng ngủ · <?= e($r['bathrooms']) ?> phòng tắm</p>
-                <div class="detail-prices"><?php foreach ($r['packages'] as $package): if (!$package['enabled']) continue; $bookable = $package['mode'] === 'FIXED_TIME' && !$coming; ?><a <?= $bookable ? 'href="/bookings?room=' . e($r['id']) . '&package=' . e($package['id']) . '"' : 'aria-disabled="true" class="disabled"' ?> data-flex-package><span><strong><?= e($package['name']) ?></strong><small><?= e(package_timing_label($package)) ?><?= $package['mode'] === 'DURATION' ? ' · Liên hệ để đặt' : '' ?></small></span><strong><?= money($package['price']) ?> <?= $bookable ? '↗' : '' ?></strong></a><?php endforeach ?></div><?php if ($coming): ?><div class="notice">Không gian này đang được hoàn thiện. Bạn có thể theo dõi hoặc nhắn Mơ để nhận thông báo khi mở cửa.</div><a class="button" href="https://zalo.me/0357907153">Nhắn Mơ để theo dõi</a><?php else: ?><a class="button" href="/calendar?room=<?= e($r['id']) ?>">Xem lịch phòng trống</a><?php endif ?>
-            </div>
+            <article class="room-detail-copy"><header class="room-detail-heading"><span class="eyebrow"><i aria-hidden="true"></i><?= e($r['tag'] ?: 'KHÔNG GIAN CỦA MƠ') ?></span>
+                <h1 id="room-detail-title"><?= e($r['name']) ?></h1>
+                <p class="room-description"><?= nl2br(e($r['description'])) ?></p></header>
+                <div class="room-facts" aria-label="Thông tin phòng">
+                    <div><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span><b><?= e($r['maxGuests']) ?></b> khách</span></div>
+                    <div><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12V7a2 2 0 0 1 2-2h4a3 3 0 0 1 3 3v4M3 12h18v7M3 19v2M21 19v2M7 12V9h10a4 4 0 0 1 4 4"/></svg><span><b><?= e($r['bedrooms']) ?></b> phòng ngủ</span></div>
+                    <div><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12h16v3a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-3ZM7 12V5a2 2 0 0 1 4 0M7 20v2M17 20v2"/></svg><span><b><?= e($r['bathrooms']) ?></b> phòng tắm</span></div>
+                </div>
+                <?php if ($r['tags']): ?><div class="room-tag-chips detail-tag-chips" aria-label="Điểm nổi bật"><?php foreach ($r['tags'] as $tag): ?><span><?= e($tag) ?></span><?php endforeach ?></div><?php endif ?>
+                <section class="room-rates" aria-labelledby="room-rates-title"><div class="room-rates-heading"><div><span>LỰA CHỌN KỲ NGHỈ</span><h2 id="room-rates-title">Gói lưu trú</h2></div><small>Giá đã bao gồm tiện nghi</small></div>
+                    <div class="detail-prices"><?php foreach ($r['packages'] as $index => $package): if (!$package['enabled']) continue; $bookable = $package['mode'] === 'FIXED_TIME' && !$coming; ?><a <?= $bookable ? 'href="/bookings?room=' . e($r['id']) . '&package=' . e($package['id']) . '"' : 'aria-disabled="true" class="disabled"' ?> data-flex-package><span class="rate-index"><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span><span class="rate-name"><strong><?= e($package['name']) ?></strong><small><?= e(package_timing_label($package)) ?><?= $package['mode'] === 'DURATION' ? ' · Liên hệ để đặt' : '' ?></small></span><span class="rate-price"><strong><?= money($package['price']) ?></strong><?php if ($bookable): ?><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg><?php endif ?></span></a><?php endforeach ?></div>
+                </section>
+                <div class="room-booking-actions"><?php if ($coming): ?><div class="notice">Không gian này đang được hoàn thiện. Bạn có thể nhắn Mơ để nhận thông báo khi mở cửa.</div><a class="button room-primary-action" href="https://zalo.me/0357907153">Nhắn Mơ để theo dõi</a><?php else: ?><a class="button room-primary-action" href="/calendar?room=<?= e($r['id']) ?>"><span>Xem lịch phòng trống</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="room-contact-action" href="https://zalo.me/0357907153">Cần tư vấn? Nhắn Mơ</a><?php endif ?><p><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Mơ xác nhận lịch trước khi thanh toán</p></div>
+            </article>
         </div>
-    </div><?php }
+    </div></section><?php }
 
                                                                                                                 function render_calendar(): void
                                                                                                                 {
