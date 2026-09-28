@@ -74,7 +74,7 @@ function quote_booking(array $input): array
     $note = trim((string)($input['guestNote'] ?? ''));
     if (mb_strlen($name) < 2 || mb_strlen($name) > 100) throw new BookingException('Vui lòng nhập họ tên từ 2 đến 100 ký tự.');
     if (!preg_match('/^(?:0[35789]\d{8}|\+84[35789]\d{8})$/', $phone)) throw new BookingException('Số điện thoại Việt Nam chưa hợp lệ.');
-    if ($email !== '' && (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254)) throw new BookingException('Email chưa hợp lệ.');
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) throw new BookingException('Vui lòng nhập email hợp lệ để nhận xác nhận đặt phòng.');
     if (mb_strlen($note) > 1000) throw new BookingException('Lời nhắn tối đa 1.000 ký tự.');
     if (($input['acceptTerms'] ?? false) !== true) throw new BookingException('Vui lòng đồng ý điều kiện đặt phòng.');
     return compact('room','package','start','end','guests','name','phone','email','note')

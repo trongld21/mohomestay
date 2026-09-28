@@ -33,9 +33,9 @@ function render_page(string $title, callable $content, array $options = []): nev
             };
         </script>
         <script defer src="/assets/ui.js?v=2"></script>
-        <script defer src="/assets/app.js?v=2"></script>
+        <script defer src="/assets/app.js?v=3"></script>
         <script defer src="/assets/booking-slots.js?v=2"></script>
-        <script defer src="/assets/rooms.js?v=3"></script>
+        <script defer src="/assets/rooms.js?v=4"></script>
         <script defer src="/assets/admin.js?v=1"></script>
     </body>
 
@@ -241,7 +241,7 @@ function render_page(string $title, callable $content, array $options = []): nev
                 </fieldset>
                 <div class="form-section booking-guest-section">
                     <div class="booking-step-heading"><span>03</span><div><h2>Thông tin của bạn</h2><p>Để Mơ xác nhận và hỗ trợ bạn nhanh chóng.</p></div></div>
-                    <div class="form-grid"><label class="field">Họ và tên *<input name="guestName" minlength="2" maxlength="100" required></label><label class="field">Số điện thoại *<input name="guestPhone" type="tel" maxlength="20" required></label><label class="field">Email<input name="guestEmail" type="email" maxlength="254"></label><label class="field">Số khách<select name="numberOfGuests" data-guest-count></select></label><label class="field full">Một lời nhắn cho Mơ<textarea name="guestNote" rows="3" maxlength="1000"></textarea></label></div>
+                    <div class="form-grid"><label class="field">Họ và tên *<input name="guestName" minlength="2" maxlength="100" required></label><label class="field">Số điện thoại *<input name="guestPhone" type="tel" maxlength="20" required></label><label class="field">Email nhận xác nhận *<input name="guestEmail" type="email" maxlength="254" autocomplete="email" required></label><label class="field">Số khách<select name="numberOfGuests" data-guest-count></select></label><label class="field full">Một lời nhắn cho Mơ<textarea name="guestNote" rows="3" maxlength="1000"></textarea></label></div>
                 </div>
                 <div class="notice" data-terms hidden></div><label class="check"><input type="checkbox" name="acceptTerms" required> Tôi đã đọc điều kiện đặt phòng và đồng ý để Mơ sử dụng thông tin liên hệ xử lý đơn này.</label>
                 <div data-booking-message aria-live="assertive"></div><button class="button wide booking-submit" type="submit" disabled>Chọn một khung giờ để tiếp tục</button>
@@ -256,9 +256,14 @@ function render_page(string $title, callable $content, array $options = []): nev
         <form class="lookup-form" data-lookup-form><label class="field">Mã đặt phòng<input name="code" required placeholder="MO-…"></label><label class="field">Số điện thoại<input name="phone" type="tel" required></label><button class="button">Tra cứu đặt phòng</button></form>
         <div data-lookup-result></div>
     </section><?php }
-                                                                                                                function render_payment(): void
-                                                                                                                { ?><div class="container section">
-        <div class="payment-container panel text-center" id="payment-app" data-code="<?= e($_GET['code'] ?? '') ?>"><span class="eyebrow">HOÀN TẤT CUỘC HẸN</span>
+function render_payment(): void
+{
+    $queryCode = strtoupper((string)($_GET['code'] ?? ''));
+    $directCode = preg_match('/^(?:MO|LANG)-[A-F0-9]{10}$/', $queryCode) ? $queryCode : '';
+    $return = payment_return_credentials($_GET);
+    $code = $directCode ?: $return['code'];
+    ?><div class="container section">
+        <div class="payment-container panel text-center" id="payment-app" data-code="<?= e($code) ?>" data-token="<?= e($return['token']) ?>"><span class="eyebrow">HOÀN TẤT CUỘC HẸN</span>
             <h1>Thanh toán đặt phòng</h1>
             <div data-payment-result>
                 <p class="notice">Đang tải thông tin thanh toán…</p>

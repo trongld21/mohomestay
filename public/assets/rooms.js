@@ -88,7 +88,7 @@
       event.preventDefault();message.innerHTML='';
       if(!selectedSlot()){message.innerHTML='<p class="notice error">Vui lòng chọn một gói còn trống.</p>';one('[data-slot-section]',form)?.focus();return}
       const data=Object.fromEntries(new FormData(form));data.numberOfGuests=Number(data.numberOfGuests);data.acceptTerms=!!data.acceptTerms;submit.disabled=true;submit.textContent='Đang giữ khung giờ…';
-      try{const result=await request('/api/bookings',{method:'POST',body:JSON.stringify(data)});LangUI.toast({type:'success',title:'Đã giữ khung giờ',message:'Đang chuyển đến trang thanh toán.'});location.href='/payment?code='+encodeURIComponent(result.bookingCode)+'#'+result.token}
+      try{const result=await request('/api/bookings',{method:'POST',body:JSON.stringify(data)});try{sessionStorage.setItem('mo-payment-'+result.orderCode,JSON.stringify({code:result.bookingCode,token:result.token}))}catch{}LangUI.toast({type:'success',title:'Đã giữ khung giờ',message:'Đang chuyển đến trang thanh toán.'});location.href='/payment?code='+encodeURIComponent(result.bookingCode)+'#'+result.token}
       catch(error){message.innerHTML=`<p class="notice error">${esc(error.message)}</p>`;LangUI.toast({type:'error',title:'Chưa thể đặt phòng',message:error.message});await loadAvailability()}
       finally{if(selectedSlot()){submit.disabled=false;submit.textContent='Tiếp tục thanh toán →'}}
     };

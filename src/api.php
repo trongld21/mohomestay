@@ -84,17 +84,24 @@ function create_booking_api(): never
         // Webhook co the den truoc lenh nay; chi bo sung QR/link, khong ha trang thai PAID.
         $pdo->prepare("INSERT INTO payments(id,booking_id,amount,payment_method,status,qr_code,checkout_url) VALUES(?,?,?,'payos','PENDING',?,?) ON DUPLICATE KEY UPDATE qr_code=VALUES(qr_code),checkout_url=VALUES(checkout_url)")->execute([uuid(),$booking['id'],$q['total'],$payment['qrCode'],$payment['checkoutUrl']]);
     } catch (Throwable $e) { json_response(['error'=>'Chưa lấy được mã QR. Phòng được giữ tối đa 15 phút để đối soát; vui lòng liên hệ Mơ trước khi đặt lại.','bookingCode'=>$booking['bookingCode']],502); }
-    json_response(['bookingCode'=>$booking['bookingCode'],'token'=>$booking['accessToken']],201);
+    remember_payment_return($booking);
+    json_response(['bookingCode'=>$booking['bookingCode'],'token'=>$booking['accessToken'],'orderCode'=>(string)$booking['orderCode']],201);
 }
 
 function lookup_booking_api(): never
 {
-    $body=json_body();$code=strtoupper(trim((string)($body['code']??'')));$token=(string)($body['token']??'');$phone=preg_replace('/[\s.\-]/','',(string)($body['phone']??''));
-    if(!preg_match('/^(?:MO|LANG)-[A-F0-9]{10}$/',$code)||(!$token&&!$phone))json_response(['error'=>'Vui lòng nhập mã đặt phòng và số điện thoại hợp lệ.'],400);
-    $sql='SELECT b.*,r.name room_name,p.qr_code,p.checkout_url FROM bookings b JOIN rooms r ON r.id=b.room_id LEFT JOIN payments p ON p.booking_id=b.id WHERE b.booking_code=? AND '.($token?'b.access_token=?':'b.guest_phone=?').' LIMIT 1';
-    $stmt=db()->prepare($sql);$stmt->execute([$code,$token?:$phone]);$b=$stmt->fetch();if(!$b)json_response(['error'=>'Không tìm thấy đơn khớp với thông tin đã nhập.'],404);
+    $body=json_body();$code=strtoupper(trim((string)($body['code']??'')));$token=(string)($body['token']??'');$phone=preg_replace('/[\s.\-]/','',(string)($body['phone']??''));$orderCode=preg_replace('/\D/','',(string)($body['orderCode']??''));
+    $validCode=(bool)preg_match('/^(?:MO|LANG)-[A-F0-9]{10}$/',$code);$returnRecovery=!$validCode&&preg_match('/^[a-f0-9]{64}$/',$token)&&preg_match('/^\d{10,20}$/',$orderCode);
+    if(!$returnRecovery&&(!$validCode||(!$token&&!$phone)))json_response(['error'=>'Vui lòng nhập mã đặt phòng và số điện thoại hợp lệ.'],400);
+    $where=$returnRecovery?'b.access_token=? AND b.order_code=?':'b.booking_code=? AND '.($token?'b.access_token=?':'b.guest_phone=?');
+    $sql='SELECT b.*,r.name room_name,p.qr_code,p.checkout_url FROM bookings b JOIN rooms r ON r.id=b.room_id LEFT JOIN payments p ON p.booking_id=b.id WHERE '.$where.' LIMIT 1';
+    $stmt=db()->prepare($sql);$stmt->execute($returnRecovery?[$token,$orderCode]:[$code,$token?:$phone]);$b=$stmt->fetch();if(!$b)json_response(['error'=>'Không tìm thấy đơn khớp với thông tin đã nhập.'],404);
+    if($b['status']==='CONFIRMED'&&in_array($b['confirmation_email_status']??'PENDING',['PENDING','FAILED'],true)){
+        dispatch_confirmation_email((string)$b['id']);
+        $email=db()->prepare('SELECT confirmation_email_status FROM bookings WHERE id=?');$email->execute([$b['id']]);$b['confirmation_email_status']=$email->fetchColumn()?:'PENDING';
+    }
     $expired=$b['status']==='PENDING'&&strtotime($b['hold_expires_at'].' UTC')<=time();
-    json_response(['bookingCode'=>$b['booking_code'],'room'=>$b['room_name'],'checkIn'=>gmdate('c',strtotime($b['check_in'].' UTC')),'checkOut'=>gmdate('c',strtotime($b['check_out'].' UTC')),'total'=>(int)$b['total_price'],'status'=>$expired?'EXPIRED':$b['status'],'paymentStatus'=>$b['payment_status'],'expires'=>gmdate('c',strtotime($b['hold_expires_at'].' UTC')),'qrCode'=>$expired?null:$b['qr_code'],'checkoutUrl'=>$expired?null:$b['checkout_url']]);
+    json_response(['bookingCode'=>$b['booking_code'],'room'=>$b['room_name'],'checkIn'=>gmdate('c',strtotime($b['check_in'].' UTC')),'checkOut'=>gmdate('c',strtotime($b['check_out'].' UTC')),'total'=>(int)$b['total_price'],'status'=>$expired?'EXPIRED':$b['status'],'paymentStatus'=>$b['payment_status'],'emailStatus'=>$b['confirmation_email_status']??'PENDING','expires'=>gmdate('c',strtotime($b['hold_expires_at'].' UTC')),'qrCode'=>$expired?null:$b['qr_code'],'checkoutUrl'=>$expired?null:$b['checkout_url']]);
 }
 
 function payment_webhook_api(): never
@@ -106,7 +113,7 @@ function payment_webhook_api(): never
     $pdo=db();$pdo->beginTransaction();
     try{$stmt=$pdo->prepare('SELECT * FROM bookings WHERE order_code=? FOR UPDATE');$stmt->execute([(string)$data['orderCode']]);$b=$stmt->fetch();if(!$b){$pdo->commit();json_response(['ok'=>true]);}if((int)$data['amount']!==(int)$b['total_price'])throw new BookingException('Amount mismatch',400);
         if($b['payment_status']!=='PAID'){$conf=$pdo->prepare("SELECT id FROM bookings WHERE id<>? AND room_id=? AND check_in<? AND check_out>? AND (status IN ('CONFIRMED','CHECKED_IN') OR (status='PENDING' AND hold_expires_at>UTC_TIMESTAMP())) LIMIT 1");$conf->execute([$b['id'],$b['room_id'],$b['check_out'],$b['check_in']]);$valid=$b['status']==='PENDING'&&strtotime($b['hold_expires_at'].' UTC')>time()&&!$conf->fetch();$status=$valid?'CONFIRMED':'CANCELLED';$reason=$valid?null:'Đã nhận tiền sau thời hạn hoặc đơn đã hủy. Cần đối soát/hoàn tiền.';$pdo->prepare('UPDATE bookings SET payment_status=\'PAID\',status=?,transaction_id=? WHERE id=?')->execute([$status,(string)$data['reference'],$b['id']]);$pdo->prepare("INSERT INTO payments(id,booking_id,amount,payment_method,status,transaction_id,paid_at,failure_reason) VALUES(?,?,?,'payos','PAID',?,UTC_TIMESTAMP(),?) ON DUPLICATE KEY UPDATE status='PAID',transaction_id=VALUES(transaction_id),paid_at=VALUES(paid_at),failure_reason=VALUES(failure_reason)")->execute([uuid(),$b['id'],(int)$data['amount'],(string)$data['reference'],$reason]);}
-        $pdo->commit();json_response(['ok'=>true]);
+        $pdo->commit();dispatch_confirmation_email((string)$b['id']);json_response(['ok'=>true]);
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
 }
 

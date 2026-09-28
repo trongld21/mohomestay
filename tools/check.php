@@ -7,7 +7,7 @@ foreach ($files as $file) {
     if ($code !== 0) $errors[] = $file->getPathname();
 }
 foreach (['pdo_mysql','curl','mbstring','openssl'] as $ext) if (!extension_loaded($ext)) $errors[] = 'Thieu extension '.$ext;
-$required=['public/favicon.svg','public/apple-touch-icon.svg','public/assets/ui.js','public/assets/admin.js','public/assets/rooms.js','database/migrations/002_room_management.sql','public/uploads/.htaccess'];
+$required=['public/favicon.svg','public/apple-touch-icon.svg','public/assets/ui.js','public/assets/admin.js','public/assets/rooms.js','database/migrations/002_room_management.sql','database/migrations/003_confirmation_email.sql','src/mail.php','public/uploads/.htaccess'];
 foreach($required as $path)if(!is_file($root.'/'.$path))$errors[]='Thieu file '.$path;
 $productionJs='';foreach(glob($root.'/public/assets/*.js')?:[] as $path)$productionJs.=(string)file_get_contents($path);
 if(str_contains($productionJs,'alert(')||preg_match('/(?<!function )\bconfirm\(/',$productionJs))$errors[]='JavaScript production con native alert/confirm';

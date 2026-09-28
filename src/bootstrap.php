@@ -38,6 +38,7 @@ function config(string $key, mixed $default = null): mixed
         'timezone'=>'APP_TIMEZONE','overnight_check_in'=>'OVERNIGHT_CHECK_IN',
         'overnight_check_out'=>'OVERNIGHT_CHECK_OUT','booking_terms'=>'BOOKING_TERMS',
         'admin_email'=>'ADMIN_EMAIL','admin_password_hash'=>'ADMIN_PASSWORD_HASH',
+        'mail.from'=>'MAIL_FROM','mail.reply_to'=>'MAIL_REPLY_TO',
         'payos.client_id'=>'PAYOS_CLIENT_ID','payos.api_key'=>'PAYOS_API_KEY',
         'payos.checksum_key'=>'PAYOS_CHECKSUM_KEY',
     ];
@@ -139,3 +140,4 @@ require_once APP_ROOT . '/src/rooms.php';
 require_once APP_ROOT . '/src/room-repository.php';
 require_once APP_ROOT . '/src/uploads.php';
 require_once APP_ROOT . '/src/payment.php';
+require_once APP_ROOT . '/src/mail.php';

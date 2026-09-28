@@ -22,6 +22,7 @@ domains/ten-mien-cua-ban/
 
 1. Trong DirectAdmin tạo database và user MySQL.
 2. Upload `.env` vào `domains/<domain>/.env`.
+   Để gửi email xác nhận, tạo trước một hộp thư cùng tên miền trong **E-mail Manager → E-mail Accounts**, rồi thêm `MAIL_FROM=booking@<domain>` và `MAIL_REPLY_TO=<email nhận phản hồi>` vào `.env`.
 3. Upload `public/deploy-hook.php` vào `domains/<domain>/public_html/deploy-hook.php`.
 4. Upload `public/.htaccess` vào `domains/<domain>/public_html/.htaccess`. File này được cài thủ công một lần vì ModSecurity thường chặn upload `.htaccess` qua HTTP.
 5. Tạo `public_html/uploads/`, upload `public/uploads/.htaccess` vào đó và tạo thư mục `public_html/uploads/rooms/`. Đặt quyền thư mục `755`; nếu PHP không ghi được ảnh thì dùng `775` theo cấu hình user Apache/PHP của hosting. Không dùng `777` nếu không thật sự bắt buộc.
@@ -63,6 +64,7 @@ Deploy hook chỉ nhận các đường dẫn nằm trong danh sách cho phép, 
 - Nút **Xem trước** trong admin mở cả phòng đang ẩn; URL preview yêu cầu đăng nhập và không được lập chỉ mục.
 - Chạy migration `002_room_management.sql` trước khi sử dụng tab phòng; workflow sẽ tự làm bước này sau upload.
 - Webhook payOS: `https://example.com/api/payments/webhook`.
+- Thanh toán thử một đơn, kiểm tra trang `/payment` tự khôi phục đúng đơn và email xác nhận có mã đơn, phòng, gói, giờ nhận/trả cùng tổng tiền. Nếu thư vào spam, bật SPF/DKIM trong **E-mail Manager → SPF/DKIM** của DirectAdmin.
 - Giữ `BOOKINGS_ENABLED=false` đến khi payOS, giờ qua đêm và điều khoản được cấu hình xong.
 
 ## Lưu ý
