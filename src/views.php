@@ -16,7 +16,10 @@ function render_page(string $title, callable $content, array $options = []): nev
         <meta name="robots" content="<?= $robots ?>">
         <link rel="icon" href="/images/mo-home-illustration.png?v=2" type="image/png">
         <link rel="apple-touch-icon" href="/images/mo-home-illustration.png?v=2">
-        <link rel="stylesheet" href="/assets/app.css?v=4">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="/assets/app.css?v=5">
     </head>
 
     <body>
@@ -31,8 +34,8 @@ function render_page(string $title, callable $content, array $options = []): nev
         </script>
         <script defer src="/assets/ui.js?v=2"></script>
         <script defer src="/assets/app.js?v=2"></script>
-        <script defer src="/assets/booking-slots.js?v=1"></script>
-        <script defer src="/assets/rooms.js?v=2"></script>
+        <script defer src="/assets/booking-slots.js?v=2"></script>
+        <script defer src="/assets/rooms.js?v=3"></script>
         <script defer src="/assets/admin.js?v=1"></script>
     </body>
 
@@ -184,7 +187,7 @@ function render_page(string $title, callable $content, array $options = []): nev
                 </div>
                 <?php if ($r['tags']): ?><div class="room-tag-chips detail-tag-chips" aria-label="Điểm nổi bật"><?php foreach ($r['tags'] as $tag): ?><span><?= e($tag) ?></span><?php endforeach ?></div><?php endif ?>
                 <section class="room-rates" aria-labelledby="room-rates-title"><div class="room-rates-heading"><div><span>LỰA CHỌN KỲ NGHỈ</span><h2 id="room-rates-title">Gói lưu trú</h2></div><small>Giá đã bao gồm tiện nghi</small></div>
-                    <div class="detail-prices"><?php foreach ($r['packages'] as $index => $package): if (!$package['enabled']) continue; $bookable = $package['mode'] === 'FIXED_TIME' && !$coming; ?><a <?= $bookable ? 'href="/bookings?room=' . e($r['id']) . '&package=' . e($package['id']) . '"' : 'aria-disabled="true" class="disabled"' ?> data-flex-package><span class="rate-index"><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span><span class="rate-name"><strong><?= e($package['name']) ?></strong><small><?= e(package_timing_label($package)) ?><?= $package['mode'] === 'DURATION' ? ' · Liên hệ để đặt' : '' ?></small></span><span class="rate-price"><strong><?= money($package['price']) ?></strong><?php if ($bookable): ?><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg><?php endif ?></span></a><?php endforeach ?></div>
+                    <div class="detail-prices"><?php foreach ($r['packages'] as $index => $package): if (!$package['enabled']) continue; $bookable = !$coming; ?><a <?= $bookable ? 'href="/bookings?room=' . e($r['id']) . '&package=' . e($package['id']) . '"' : 'aria-disabled="true" class="disabled"' ?> data-flex-package><span class="rate-index"><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span><span class="rate-name"><strong><?= e($package['name']) ?></strong><small><?= e(package_timing_label($package)) ?></small></span><span class="rate-price"><strong><?= money($package['price']) ?></strong><?php if ($bookable): ?><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg><?php endif ?></span></a><?php endforeach ?></div>
                 </section>
                 <div class="room-booking-actions"><?php if ($coming): ?><div class="notice">Không gian này đang được hoàn thiện. Bạn có thể nhắn Mơ để nhận thông báo khi mở cửa.</div><a class="button room-primary-action" href="https://zalo.me/0357907153">Nhắn Mơ để theo dõi</a><?php else: ?><a class="button room-primary-action" href="/calendar?room=<?= e($r['id']) ?>"><span>Xem lịch phòng trống</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="room-contact-action" href="https://zalo.me/0357907153">Cần tư vấn? Nhắn Mơ</a><?php endif ?><p><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Mơ xác nhận lịch trước khi thanh toán</p></div>
             </article>
@@ -227,7 +230,6 @@ function render_page(string $title, callable $content, array $options = []): nev
         <div id="booking-app" class="booking-grid">
             <form class="panel booking-form" data-booking-form>
                 <input name="packageId" type="hidden" required>
-                <input name="time" type="hidden" required>
                 <div class="booking-step-heading"><span>01</span><div><h2>Phòng và ngày ghé</h2><p>Chọn không gian phù hợp với cuộc hẹn của bạn.</p></div></div>
                 <div class="form-grid booking-primary-fields"><label class="field">Không gian<select name="roomId"><?php foreach ($active as $r): ?><option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option><?php endforeach ?></select></label><label class="field">Ngày ghé Mơ<input name="date" type="date" min="<?= date('Y-m-d') ?>" required></label></div>
                 <fieldset class="booking-slot-section" data-slot-section tabindex="-1">
@@ -235,6 +237,7 @@ function render_page(string $title, callable $content, array $options = []): nev
                     <p class="booking-slot-hint">Giá đã bao gồm toàn bộ thời gian hiển thị.</p>
                     <div class="slot-status-legend" aria-label="Chú thích trạng thái"><span><i class="is-available"></i>Còn trống</span><span><i class="is-selected"></i>Đang chọn</span><span><i class="is-booked"></i>Đã đặt</span></div>
                     <div class="booking-slot-grid" data-slot-grid aria-live="polite" aria-busy="true"><div class="slot-skeleton"></div><div class="slot-skeleton"></div></div>
+                    <label class="field booking-duration-time" data-duration-time hidden>Giờ nhận phòng<input name="time" type="time" step="1800"></label>
                 </fieldset>
                 <div class="form-section booking-guest-section">
                     <div class="booking-step-heading"><span>03</span><div><h2>Thông tin của bạn</h2><p>Để Mơ xác nhận và hỗ trợ bạn nhanh chóng.</p></div></div>
@@ -333,13 +336,13 @@ function render_page(string $title, callable $content, array $options = []): nev
                     <div class="editor-section-title">
                         <div>
                             <h3>Gói thời gian & giá</h3>
-                            <p>Khung giờ cố định sẽ xuất hiện trên trang đặt phòng. Gói theo số phút chỉ dùng để lưu bảng giá cũ.</p>
+                            <p>Tất cả gói đang bật sẽ xuất hiện trên trang đặt phòng. Gói theo số phút cho khách tự chọn giờ nhận phòng.</p>
                         </div><button class="button outline small" type="button" data-add-package>＋ Thêm gói</button>
                     </div>
                     <div class="package-editor" data-package-list></div><template data-package-template>
                         <div class="package-row"><input type="hidden" data-package-field="id"><label class="field">Tên gói<input data-package-field="name" maxlength="80" required></label><label class="field">Kiểu thời gian<select data-package-field="mode">
                                     <option value="FIXED_TIME">Giờ cố định</option>
-                                <option value="DURATION">Theo số phút (không đặt online)</option>
+                                <option value="DURATION">Theo số phút (khách chọn giờ)</option>
                                 </select></label><label class="field" data-duration-field>Thời lượng (phút)<input data-package-field="durationMinutes" type="number" min="30" max="43200" value="180"></label><label class="field" data-fixed-field hidden>Nhận phòng<input data-package-field="checkInTime" type="time"></label><label class="field" data-fixed-field hidden>Trả phòng<input data-package-field="checkOutTime" type="time"></label><label class="field">Giá (đ)<input data-package-field="price" type="number" min="0" max="1000000000" step="1000" required></label><label class="check"><input data-package-field="enabled" type="checkbox" checked> Hiển thị</label><label class="field">Thứ tự<input data-package-field="sortOrder" type="number" value="10"></label><button class="icon-button package-remove" type="button" data-remove-package aria-label="Xóa gói">×</button></div>
                     </template>
                 </section>

@@ -29,3 +29,17 @@
 @media(max-width:620px){.room-detail-page:before{display:none}.room-detail-shell{width:calc(100% - 28px);padding-top:20px;padding-bottom:52px}.room-back-link{margin-bottom:12px}.gallery-main{height:430px;border-radius:18px}.gallery-main figcaption{left:18px;right:18px;bottom:16px}.gallery-thumbs{margin-top:10px}.gallery-thumbs button{flex-basis:82px;height:64px}.room-detail-copy{padding:26px 20px;border-radius:18px}.room-detail-copy h1{font-size:48px}.room-description{font-size:13px}.room-facts{gap:6px;margin-top:24px}.room-facts>div{min-height:82px;padding:12px 8px}.room-facts span{font-size:9px}.room-facts b{font-size:12px}.room-rates-heading>small{display:none}.room-detail-copy .detail-prices{overflow:visible}.room-detail-copy .detail-prices a{min-width:0;grid-template-columns:24px minmax(0,1fr) auto}.rate-price strong{font-size:12px}.room-booking-actions{grid-template-columns:1fr}.room-contact-action{min-height:42px}.room-booking-actions>p{grid-column:1}.room-primary-action{width:100%}}
 @media(max-width:400px){.gallery-main{height:365px}.room-detail-copy{padding-inline:16px}.room-detail-copy h1{font-size:43px}.room-facts svg{width:19px;height:19px}.room-facts span{font-size:8px}.room-detail-copy .detail-prices a{padding-inline:10px}.rate-index{display:none}.room-detail-copy .detail-prices a{grid-template-columns:minmax(0,1fr) auto}}
 @media(prefers-reduced-motion:reduce){.room-detail-reveal>.room-gallery,.room-detail-reveal>.room-detail-copy{animation:none}.room-back-link svg,.gallery-main img,.gallery-thumbs button,.room-detail-copy .detail-prices a,.room-primary-action{transition:none}.gallery-main:hover img,.gallery-thumbs button:hover,.room-detail-copy .detail-prices a:hover,.room-primary-action:hover,.room-primary-action:active{transform:none}}
+
+/* Readable Vietnamese typography */
+:root{--sans:'Noto Sans','Segoe UI',sans-serif;--serif:'Be Vietnam Pro','Segoe UI',sans-serif}
+body{font-family:var(--sans);font-size:16px;line-height:1.65}
+h1,h2,h3{font-family:var(--serif);font-weight:600;letter-spacing:-.025em}
+button,input,select,textarea{font-family:var(--sans)}
+.button,.text-link,.nav-links,.nav-phone,.field,.notice,.summary-row,.check,table{font-size:14px}
+.eyebrow,.search-bar label span,.room-tag,.image-caption,.weekday,.status-chip,.badge,.chip,.summary-kicker,.slot-state,.slot-price small,.rate-index,.room-rates-heading>div>span{font-size:12px}
+.muted,.room-body>p,.story-copy p,.perks-grid p,.footer-top p,.footer-top>div>a,.admin-room-content>div>p,.admin-booking-card p,.booking-step-heading p,.booking-slot-hint,.slot-status-legend,.summary-assurance,.summary-prompt,.room-description{font-size:14px}
+.room-amenities,.room-price small,.detail-prices a small,.room-facts span,.room-rates-heading>small,.room-contact-action,.room-booking-actions>p{font-size:12px}
+.room-facts b{font-size:14px}.rate-name>strong{font-size:17px}.footer-bottom{font-size:12px}
+.package-row .field,.editor-section-title p,.tag-editor input,.upload-zone span,.image-tile button,.admin-tabs button{font-size:13px}
+.booking-duration-time{max-width:280px;margin-top:18px}.booking-duration-time input{min-height:48px;font-size:16px}
+@media(max-width:620px){body{font-size:16px}.room-description{font-size:14px}.room-facts span{font-size:12px}.room-facts b{font-size:14px}.rate-price strong{font-size:14px}}

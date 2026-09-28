@@ -80,7 +80,7 @@ $fixedSlot = [
 ];
 $bookableRoom['packages'][] = $fixedSlot;
 room_check(resolve_bookable_slot($bookableRoom, 'fixed-afternoon')['price'] === 350000, 'Phai cho dat khung gio co dinh da cau hinh');
-room_throws(fn()=>resolve_bookable_slot($bookableRoom, 'p1'), 'cố định', 'Khong duoc dat goi thoi luong bang cach gui API thu cong');
+room_check(resolve_bookable_slot($bookableRoom, 'p1')['durationMinutes'] === 120, 'Phai cho dat goi thoi luong da cau hinh');
 $disabledRoom = $bookableRoom;
 $disabledRoom['packages'][0]['enabled'] = false;
 room_throws(fn()=>resolve_bookable_package($disabledRoom, 'p1'), 'G', 'Phai tu choi package da tat');

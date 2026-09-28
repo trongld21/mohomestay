@@ -25,8 +25,8 @@ function resolve_bookable_package(array $room, string $packageId): array
 function resolve_bookable_slot(array $room, string $packageId): array
 {
     $package = resolve_bookable_package($room, $packageId);
-    if (($package['mode'] ?? '') !== 'FIXED_TIME') {
-        throw new BookingException('Chỉ nhận đặt các khung giờ cố định đã được cấu hình.', 409);
+    if (!in_array(($package['mode'] ?? ''), ['FIXED_TIME','DURATION'], true)) {
+        throw new BookingException('Kiểu thời gian của gói không hợp lệ.', 409);
     }
     return $package;
 }

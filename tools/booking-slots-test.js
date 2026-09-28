@@ -14,7 +14,12 @@ const room = {
   ],
 };
 
-assert.deepEqual(configuredSlots(room).map(slot => slot.id), ['afternoon'], 'only enabled fixed-time packages are bookable slots');
+assert.deepEqual(configuredSlots(room).map(slot => slot.id), ['duration', 'afternoon'], 'all enabled packages are bookable slots');
+
+const duration = slotWindow(room.packages[0], '2027-01-15', '14:30');
+assert.equal(duration.start.toISOString(), '2027-01-15T07:30:00.000Z', 'duration package uses the selected Vietnam start time');
+assert.equal(duration.end.toISOString(), '2027-01-15T10:30:00.000Z', 'duration package ends after its configured minutes');
+assert.equal(slotWindow(room.packages[0], '2027-01-15', ''), null, 'duration package waits for a start time');
 
 const overnight = slotWindow({ mode: 'FIXED_TIME', checkInTime: '22:00', checkOutTime: '08:00' }, '2027-01-15');
 assert.equal(overnight.start.toISOString(), '2027-01-15T15:00:00.000Z', 'slot starts in Vietnam timezone');
