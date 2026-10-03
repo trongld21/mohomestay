@@ -1,10 +1,56 @@
 <?php
 
-function render_page(string $title, callable $content, array $options = []): never
+function render_contact_widget(): void
 {
-    $fullTitle = e($title) . ' | Mơ Home';
-    $robots = ($options['robots'] ?? true) ? 'index,follow' : 'noindex,nofollow';
-?>
+    // Only use explicitly configured Facebook destinations, never guessed accounts.
+    $socialUrl = static function (string $key): string {
+        $url = trim((string)env_value($key, ''));
+        $parts = parse_url($url);
+        $host = strtolower($parts['host'] ?? '');
+        return ($parts['scheme'] ?? '') === 'https' && in_array($host, ['facebook.com', 'www.facebook.com', 'm.facebook.com', 'm.me', 'messenger.com', 'www.messenger.com'], true) ? $url : '';
+    };
+    $contacts = [
+        ['Messenger', 'Trò chuyện cùng Mơ', $socialUrl('CONTACT_MESSENGER_URL'), 'messenger'],
+        ['Zalo', 'Nhắn Mơ qua Zalo', 'https://zalo.me/0357907153', 'zalo'],
+        ['Fanpage', 'Ghé thăm Mơ Home', $socialUrl('CONTACT_FACEBOOK_URL'), 'facebook'],
+        ['Hotline', '0357 907 153', 'tel:0357907153', 'phone'],
+    ];
+?><details class="contact-widget" data-contact-widget>
+        <summary class="contact-toggle" aria-controls="mo-contact-links">
+            <span class="contact-toggle-label"><img class="contact-chat" src="<?= e(asset_url('/images/contact-chat.png')) ?>" alt="" width="56" height="56"><span class="sr-only">Mở danh sách liên hệ Mơ</span></span>
+            <span class="contact-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                    <path d="m6 6 12 12M18 6 6 18" />
+                </svg></span>
+            <span class="contact-close-label">Đóng danh sách liên hệ</span>
+        </summary>
+        <div class="contact-backdrop" data-contact-backdrop aria-hidden="true"></div>
+        <ul id="mo-contact-links" class="contact-list" aria-label="Liên hệ Mơ Home">
+            <?php foreach ($contacts as [$label, $description, $url, $icon]): ?>
+                <li><?php if ($url): ?><a class="contact-link" href="<?= e($url) ?>" <?= str_starts_with($url, 'https://') ? ' target="_blank" rel="noopener noreferrer"' : '' ?>><?php else: ?><span class="contact-link contact-unavailable" aria-disabled="true"><?php endif ?>
+                            <span class="contact-copy"><strong><?= e($label) ?></strong><small><?= e($url ? $description : 'Sắp kết nối') ?></small></span>
+                            <span class="contact-icon contact-icon-<?= e($icon) ?>" aria-hidden="true">
+                                <?php if ($icon === 'zalo'): ?><span class="contact-zalo">Zalo</span>
+                                <?php elseif ($icon === 'facebook'): ?><svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M14 22v-9h3l.5-4H14V7c0-1.2.4-2 2-2h2V1.5A24 24 0 0 0 15 1c-3 0-5 1.8-5 5v3H7v4h3v9z" />
+                                    </svg>
+                                <?php elseif ($icon === 'messenger'): ?><svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 2C6.5 2 2 6.1 2 11.2c0 2.9 1.4 5.5 3.6 7.2V22l3.5-1.9c.9.2 1.9.3 2.9.3 5.5 0 10-4.1 10-9.2S17.5 2 12 2Zm-6 12 5-5 3 2 4-2-5 5-3-2z" />
+                                    </svg>
+                                <?php else: ?><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="m5 3 4 1 1 5-3 2a15 15 0 0 0 6 6l2-3 5 1 1 4c0 1-1 2-3 2C10 21 3 14 3 6c0-2 1-3 2-3ZM15 3a7 7 0 0 1 6 6M15 7a3 3 0 0 1 2 2" />
+                                    </svg><?php endif ?>
+                            </span>
+                            <?php if ($url): ?></a><?php else: ?></span><?php endif ?></li>
+            <?php endforeach ?>
+        </ul>
+    </details><?php
+            }
+
+            function render_page(string $title, callable $content, array $options = []): never
+            {
+                $fullTitle = e($title) . ' | Mơ Home';
+                $robots = ($options['robots'] ?? true) ? 'index,follow' : 'noindex,nofollow';
+                ?>
     <!doctype html>
     <html lang="vi">
 
@@ -14,17 +60,28 @@ function render_page(string $title, callable $content, array $options = []): nev
         <title><?= $fullTitle ?></title>
         <meta name="description" content="Mơ Home — homestay riêng tư tại Ninh Kiều, Cần Thơ.">
         <meta name="robots" content="<?= $robots ?>">
-        <link rel="icon" href="/images/mo-home-illustration.png?v=2" type="image/png">
-        <link rel="apple-touch-icon" href="/images/mo-home-illustration.png?v=2">
+        <link rel="icon" href="<?= e(asset_url('/images/mo-home-favicon.png')) ?>" type="image/png">
+        <link rel="apple-touch-icon" href="<?= e(asset_url('/images/mo-home-favicon.png')) ?>">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="/assets/app.css?v=5">
+        <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Noto+Sans:wght@400;500;600;700&amp;family=Noto+Serif:wght@400;500;600&amp;display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="<?= e(asset_url('/assets/app.css')) ?>">
+        <link rel="stylesheet" href="<?= e(asset_url('/assets/tailwind.css')) ?>">
+        <script src="<?= e(asset_url('/assets/contact.js')) ?>" defer></script>
+        <script src="<?= e(asset_url('/assets/date-picker.js')) ?>" defer></script>
+        <script src="<?= e(asset_url('/assets/select.js')) ?>" defer></script>
+        <script src="<?= e(asset_url('/assets/hero-carousel.js')) ?>" defer></script>
+        <script src="<?= e(asset_url('/assets/room-favorites.js')) ?>" defer></script>
+        <script src="<?= e(asset_url('/assets/phone-ring.js')) ?>" defer></script>
+        <script src="<?= e(asset_url('/assets/story-scene.js')) ?>" defer></script>
+        <?php if (dev_reload_enabled()): ?><script src="<?= e(asset_url('/assets/dev-reload.js')) ?>" defer></script><?php endif ?>
     </head>
 
     <body>
         <a class="skip-link" href="#main">Đi đến nội dung</a><?php render_header(); ?><main id="main"><?php $content(); ?></main><?php render_footer(); ?><div class="ui-toast-region" data-toast-region aria-live="polite" aria-atomic="false"></div>
         <div class="ui-dialog-root" data-dialog-root></div>
+        <?php $pagePath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+        if (!preg_match('#^/(admin|auth)(/|$)#', $pagePath)) render_contact_widget(); ?>
         <script>
             window.LANG_HOME = {
                 csrf: <?= json_encode(csrf_token()) ?>,
@@ -32,26 +89,31 @@ function render_page(string $title, callable $content, array $options = []): nev
                 rooms: <?= json_encode(array_values(rooms()), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
             };
         </script>
-        <script defer src="/assets/ui.js?v=2"></script>
-        <script defer src="/assets/app.js?v=3"></script>
-        <script defer src="/assets/booking-slots.js?v=2"></script>
-        <script defer src="/assets/rooms.js?v=4"></script>
-        <script defer src="/assets/admin.js?v=1"></script>
+        <script defer src="<?= e(asset_url('/assets/ui.js')) ?>"></script>
+        <script defer src="<?= e(asset_url('/assets/app.js')) ?>"></script>
+        <script defer src="<?= e(asset_url('/assets/booking-slots.js')) ?>"></script>
+        <script defer src="<?= e(asset_url('/assets/rooms.js')) ?>"></script>
+        <script defer src="<?= e(asset_url('/assets/admin.js')) ?>"></script>
     </body>
 
     </html><?php exit;
-        }
-        function logo(): void
-        { ?><span class="brand"><span class="brand-art" role="img" aria-label="Mơ Home"></span></span><?php }
-                                                                                                                function render_header(): void
-                                                                                                                { ?><header class="site-header">
+            }
+            function logo(): void
+            { ?><span class="brand"><span class="brand-art" role="img" aria-label="Mơ Home" style="background-image:url('<?= e(asset_url('/images/mo-home-wordmark.png')) ?>')"></span></span><?php }
+                                                                                                                                                                                        function render_header(): void
+                                                                                                                                                                                        { ?><header class="site-header">
         <div class="container nav-inner"><a href="/" aria-label="Mơ Home — Trang chủ"><?php logo(); ?></a>
-            <nav class="nav-links" id="nav"><a href="/">Trang chủ</a><a href="/#ve-mo">Về Mơ</a><a href="/rooms">Phòng & giá</a><a href="/calendar">Lịch phòng</a><a href="/#lien-he">Liên hệ</a></nav>
-            <div class="nav-actions"><a class="nav-phone" href="tel:0357907153">☎ 0357 907 153</a><a class="button small" href="/bookings">Đặt phòng ↗</a><button class="menu-toggle" data-menu aria-label="Mở menu">☰</button></div>
+            <nav class="nav-links" id="nav"><a class="header-link" href="/">Trang chủ</a><a class="header-link" href="/#ve-mo">Về Mơ</a><a class="header-link" href="/rooms">Phòng & giá</a><a class="header-link" href="/calendar">Lịch phòng</a><a class="header-link" href="/#lien-he">Liên hệ</a></nav>
+            <div class="nav-actions"><a class="nav-phone" href="tel:0357907153"><svg class="nav-phone-icon" aria-hidden="true" viewBox="0 0 24 24">
+                        <path class="phone-body" fill="currentColor" d="M7 10h10l3 8v3H4v-3l3-8Zm5 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" fill-rule="evenodd" />
+                        <g class="phone-handset" fill="currentColor">
+                            <path d="M2 7c0-4 4-6 10-6s10 2 10 6v2h-6V6c-2.5-1.2-5.5-1.2-8 0v3H2V7Z" />
+                        </g>
+                    </svg><span>0357 907 153</span></a><a class="button small" href="/bookings">Đặt phòng ↗</a><button class="menu-toggle" data-menu aria-label="Mở menu">☰</button></div>
         </div>
     </header><?php }
-                                                                                                                function render_footer(): void
-                                                                                                                { ?><footer id="lien-he" class="site-footer">
+                                                                                                                                                                                        function render_footer(): void
+                                                                                                                                                                                        { ?><footer id="lien-he" class="site-footer">
         <div class="container footer-top">
             <div><?php logo(); ?><p>Một chốn riêng. Một nhịp chậm.<br>Một chút bình yên dành cho bạn.</p>
             </div>
@@ -63,30 +125,46 @@ function render_page(string $title, callable $content, array $options = []): nev
         <div class="container footer-bottom"><span>© <?= date('Y') ?> Mơ Home.</span><span>Được chăm chút, từ những điều nhỏ nhất.</span></div>
     </footer><?php }
 
-                                                                                                                function package_timing_label(array $package): string
-                                                                                                                {
-                                                                                                                    return $package['mode'] === 'FIXED_TIME' ? substr((string)$package['checkInTime'], 0, 5) . ' – ' . substr((string)$package['checkOutTime'], 0, 5) : ((int)$package['durationMinutes'] >= 60 && ((int)$package['durationMinutes'] % 60 === 0) ? ((int)$package['durationMinutes'] / 60) . ' giờ' : (int)$package['durationMinutes'] . ' phút');
-                                                                                                                }
-                                                                                                                function render_room_cards(): void
-                                                                                                                {
-                                                                                                                    $catalog = array_values(rooms()); ?><div class="room-toolbar">
-        <div><span class="eyebrow">DANH SÁCH KHÔNG GIAN</span>
-            <p class="muted"><?= count($catalog) ?> phòng · mỗi phòng một cá tính riêng</p>
-        </div>
-    </div>
+                                                                                                                                                                                        function package_timing_label(array $package): string
+                                                                                                                                                                                        {
+                                                                                                                                                                                            return $package['mode'] === 'FIXED_TIME' ? substr((string)$package['checkInTime'], 0, 5) . ' – ' . substr((string)$package['checkOutTime'], 0, 5) : ((int)$package['durationMinutes'] >= 60 && ((int)$package['durationMinutes'] % 60 === 0) ? ((int)$package['durationMinutes'] / 60) . ' giờ' : (int)$package['durationMinutes'] . ' phút');
+                                                                                                                                                                                        }
+                                                                                                                                                                                        function render_room_cards(): void
+                                                                                                                                                                                        {
+                                                                                                                                                                                            $catalog = array_values(rooms()); ?>
     <div class="room-grid" data-public-room-grid><?php foreach ($catalog as $index => $room): $packages = array_values(array_filter($room['packages'] ?? [], fn($package) => $package['enabled']));
-                                                                                                                        $minimum = $packages ? min(array_column($packages, 'price')) : null;
-                                                                                                                        $coming = $room['status'] === 'COMING_SOON'; ?><article class="room-card <?= $coming ? 'coming-soon' : '' ?>">
-                <div class="room-image"><a href="/rooms/<?= e($room['slug']) ?>"><img src="<?= e($room['image']) ?>" alt="Phòng <?= e($room['name']) ?>" loading="lazy"></a><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php elseif ($room['tag']): ?><span class="room-tag"><?= e($room['tag']) ?></span><?php endif ?></div>
+                                                                                                                                                                                                $minimum = $packages ? min(array_column($packages, 'price')) : null;
+                                                                                                                                                                                                $coming = $room['status'] === 'COMING_SOON'; ?><article class="room-card room-product-card <?= $coming ? 'coming-soon' : '' ?>">
+                <div class="room-image"><a href="/rooms/<?= e($room['slug']) ?>"><img src="<?= e($room['image']) ?>" alt="Phòng <?= e($room['name']) ?>" loading="lazy"></a><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php elseif ($room['tag']): ?><span class="room-tag"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <rect x="5" y="10" width="14" height="11" rx="2" />
+                                <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+                            </svg><?= e($room['tag']) ?></span><?php endif ?><button type="button" class="room-favorite" data-room-favorite="<?= e($room['id']) ?>" aria-label="Yêu thích phòng <?= e($room['name']) ?>" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                            <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />
+                        </svg></button><span class="room-photo-count">▧ 1/<?= max(1, count($room['images'] ?? [])) ?></span></div>
                 <div class="room-body">
                     <div class="room-title">
                         <h3><a href="/rooms/<?= e($room['slug']) ?>"><?= e($room['name']) ?></a></h3><span><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span>
                     </div>
                     <p><?= e($room['subtitle']) ?></p>
-                    <div class="room-tag-chips"><?php foreach ($room['tags'] as $tag): ?><span><?= e($tag) ?></span><?php endforeach ?></div>
-                    <div class="room-amenities"><span>♙ <?= e($room['maxGuests']) ?> khách</span><span>▱ <?= e($room['bedrooms']) ?> phòng ngủ</span><span>◫ <?= e($room['bathrooms']) ?> phòng tắm</span></div>
+                    <div class="room-tag-chips"><?php foreach ($room['tags'] as $tag): ?><span><?php if ($tag === 'Máy nước nóng'): ?><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                                        <path d="M6 3c-6 5 6 8 0 13l-1 2M12 3c-6 5 6 8 0 13l-1 2M18 3c-6 5 6 8 0 13l-1 2" />
+                                    </svg><?php elseif ($tag === 'Máy chiếu'): ?><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                                        <circle cx="12" cy="12" r="5" />
+                                        <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M19 5l-1.5 1.5m-11 11L5 19" />
+                                    </svg><?php elseif ($tag === 'Netflix'): ?><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+                                        <rect x="3" y="4" width="18" height="13" rx="1" />
+                                        <path d="M12 17v4m-4 0h8" />
+                                    </svg><?php endif ?><?= e($tag) ?></span><?php endforeach ?></div>
+                    <div class="room-amenities"><span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <circle cx="12" cy="7" r="3" />
+                                <path d="M5 21v-3a7 7 0 0 1 14 0v3Z" />
+                            </svg><?= e($room['maxGuests']) ?> khách</span><span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <path d="M3 21V7h18v14M3 17h18M3 13h18M6 13V9h4v4m4 0V9h4v4" />
+                            </svg><?= e($room['bedrooms']) ?> phòng ngủ</span><span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <path d="M3 12h18v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5ZM6 12V5a2 2 0 0 1 4 0M6 20v2m12-2v2" />
+                            </svg><?= e($room['bathrooms']) ?> phòng tắm</span></div>
                     <div class="room-price">
-                        <div><?php if ($minimum !== null): ?><small>Từ</small><strong><?= money($minimum) ?></strong><?php else: ?><span>Liên hệ để biết giá</span><?php endif ?></div><?php if ($coming): ?><span class="disabled-action" aria-disabled="true">Sắp mở</span><?php else: ?><a href="/bookings?room=<?= e($room['id']) ?>" aria-label="Đặt <?= e($room['name']) ?>">↗</a><?php endif ?>
+                        <div><?php if ($minimum !== null): ?><small>Từ</small><strong><?= money($minimum) ?></strong><?php else: ?><span>Liên hệ để biết giá</span><?php endif ?></div><?php if ($coming): ?><span class="disabled-action" aria-disabled="true">Sắp mở</span><?php else: ?><a href="/bookings?room=<?= e($room['id']) ?>" aria-label="Đặt <?= e($room['name']) ?>">→</a><?php endif ?>
                     </div>
                 </div>
             </article><?php endforeach ?><?php if (!$catalog): ?><div class="empty-state">
@@ -94,15 +172,23 @@ function render_page(string $title, callable $content, array $options = []): nev
                 <p>Hẹn bạn quay lại thật sớm nhé.</p>
             </div><?php endif ?></div><?php }
 
-                                                                                                                function render_home(): void
-                                                                                                                { ?><script type="application/ld+json">
+                                                                                                                                                                                        function render_home(): void
+                                                                                                                                                                                        { ?><script type="application/ld+json">
         <?= json_encode(['@context' => 'https://schema.org', '@type' => 'LodgingBusiness', 'name' => 'Mơ Home', 'telephone' => '+84357907153', 'address' => ['@type' => 'PostalAddress', 'streetAddress' => '82 đường B18, KDC 91B', 'addressLocality' => 'Ninh Kiều', 'addressRegion' => 'Cần Thơ', 'addressCountry' => 'VN']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
     </script>
-    <section class="hero"><img class="hero-photo" src="/images/pink-illustration.jpg" alt="Không gian phòng ấm áp">
+    <section class="hero" data-hero-carousel aria-label="Không gian Mơ Home" aria-roledescription="carousel">
+        <?php foreach (['pink', 'white', 'black'] as $index => $image): ?><img class="hero-photo hero-slide <?= $index === 0 ? 'is-active' : '' ?>" src="<?= e(asset_url('/images/' . $image . '-illustration.jpg')) ?>" alt="Không gian phòng <?= e(ucfirst($image)) ?>" data-hero-slide aria-hidden="<?= $index === 0 ? 'false' : 'true' ?>" <?= $index === 0 ? ' fetchpriority="high"' : ' loading="lazy"' ?>><?php endforeach ?>
         <div class="hero-shade"></div>
         <div class="container hero-content"><span class="eyebrow"><span class="tiny-line"></span> CHÀO BẠN, MƠ ĐÂY</span>
             <h1>Chạm vào<br>một chốn <em>mơ.</em></h1>
             <p>Một căn phòng ấm. Một khoảng trời riêng.<br>Để bạn nghỉ ngơi, kết nối và tận hưởng những điều nhỏ bé.</p><a href="/rooms" class="button cream">Khám phá không gian ↗</a>
+        </div>
+        <div class="hero-carousel-controls" data-hero-controls hidden>
+            <button type="button" data-hero-prev aria-label="Ảnh trước">‹</button>
+            <div class="hero-carousel-dots"><?php for ($i = 0; $i < 3; $i++): ?><button type="button" data-hero-dot="<?= $i ?>" aria-label="Xem ảnh <?= $i + 1 ?>" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>"></button><?php endfor ?></div>
+            <button type="button" data-hero-next aria-label="Ảnh tiếp theo">›</button>
+            <button type="button" data-hero-pause aria-label="Tạm dừng chuyển ảnh">Ⅱ</button>
+            <span class="sr-only" data-hero-status aria-live="polite"></span>
         </div>
         <div class="hero-bottom container"><span>STAY SLOW. FEEL AT HOME.</span><a href="#khong-gian">Kéo xuống để khám phá ↓</a></div>
     </section>
@@ -125,104 +211,167 @@ function render_page(string $title, callable $content, array $options = []): nev
     </section>
     <section id="ve-mo" class="story-section">
         <div class="container story-grid">
-            <div class="story-main story-brand"><img src="/images/mo-home-illustration.png" alt="Logo minh họa Mơ Home"></div>
+            <div class="story-main story-brand" data-story-scene><img src="<?= e(asset_url('/images/mo-home-illustration.png')) ?>" alt="Mơ Home — Homestay for a slower life, EST 2026"><canvas class="story-scene-canvas" aria-hidden="true"></canvas></div>
             <div class="story-copy"><span class="eyebrow">CÂU CHUYỆN CỦA MƠ</span>
                 <h2>Không cần đi xa,<br>chỉ cần <em>thấy bình yên.</em></h2>
                 <p>Có những ngày, điều mình cần chỉ là một nơi đủ yên để tạm gác lại mọi bộn bề. Một chiếc giường êm, ánh đèn ấm, và thời gian dành trọn cho bản thân hay người thương.</p>
-                <p>Mơ muốn là nơi nhỏ bé ấy. Không cầu kỳ, không vội vã — chỉ có sự riêng tư và cảm giác thoải mái như ở nhà.</p><a href="https://zalo.me/0357907153" class="text-link">Chuyện trò với Mơ ↗</a>
+                <p>Mơ muốn là nơi nhỏ bé ấy. Không cầu kỳ, không vội vã — chỉ có sự riêng tư và cảm giác thoải mái như ở nhà.</p><a href="https://zalo.me/0357907153" class="text-link story-contact-link" target="_blank" rel="noopener noreferrer">Chuyện trò với Mơ <span class="story-contact-arrow" aria-hidden="true">↗</span></a>
             </div>
         </div>
     </section>
-    <section class="container section">
-        <div class="center-heading"><span class="eyebrow">NHỮNG ĐIỀU NHỎ, ĐƯỢC CHĂM CHÚT</span>
-            <h2>Đến Mơ, cứ thoải mái là mình.</h2>
-        </div>
-        <div class="perks-grid">
-            <div><span class="perk-icon">⌁</span>
-                <h3>Nhận phòng riêng tư</h3>
-                <p>Chủ động vào phòng với khóa thông minh. Mã cửa được gửi riêng khi đơn được xác nhận.</p>
+    <div class="perks-background" style="--perks-background:url('<?= e(asset_url('/images/perks-botanical.png')) ?>')">
+        <section class="section perks-section">
+            <div class="container">
+                <div class="center-heading"><span class="eyebrow">NHỮNG ĐIỀU NHỎ, ĐƯỢC CHĂM CHÚT</span>
+                    <h2>Đến Mơ, cứ thoải mái là mình.</h2>
+                </div>
+                <div class="perks-grid">
+                    <div><span class="perk-icon"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="15" y="4" width="15" height="40" rx="4" />
+                                <path d="M24 29h15a2 2 0 0 0 0-4H24a3 3 0 1 0 0 4Z" />
+                                <path d="M20 10h1m4 0h1m-6 5h1m4 0h1m-6 5h1m4 0h1M22 36v3" />
+                            </svg></span>
+                        <h3>Nhận phòng riêng tư</h3>
+                        <p>Chủ động vào phòng với khóa thông minh. Mã cửa được gửi riêng khi đơn được xác nhận.</p>
+                    </div>
+                    <div><span class="perk-icon"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 24v-4a8 8 0 0 1 16 0v4M7 37h22M9 37v4m18-4v4M34 41h10M39 41V5H29l-3 7h7l-3-7" />
+                                <rect x="4" y="23" width="7" height="14" rx="3" />
+                                <rect x="25" y="23" width="7" height="14" rx="3" />
+                                <path d="M11 31h14" />
+                            </svg></span>
+                        <h3>Không gian thảnh thơi</h3>
+                        <p>Nghỉ ngơi, chuyện trò hay đơn giản là dành cho bản thân một khoảng riêng.</p>
+                    </div>
+                    <div><span class="perk-icon"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                <circle cx="24" cy="24" r="18" />
+                                <path d="M24 13v12l9 7" />
+                            </svg></span>
+                        <h3>Ở lại theo cách bạn muốn</h3>
+                        <p>Một cuộc hẹn 3 giờ, một chiều 6 giờ hay một đêm thật chậm.</p>
+                    </div>
+                    <div><span class="perk-icon"><svg aria-hidden="true" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M24 40 7 24C-5 12 12 0 24 14 36 0 53 12 41 24Z" />
+                            </svg></span>
+                        <h3>Có Mơ ở đây</h3>
+                        <p>Cần tư vấn hay hỗ trợ nhận phòng? Chỉ một cuộc gọi hoặc tin nhắn đến Mơ.</p>
+                    </div>
+                </div>
             </div>
-            <div><span class="perk-icon">☕</span>
-                <h3>Không gian thảnh thơi</h3>
-                <p>Nghỉ ngơi, chuyện trò hay đơn giản là dành cho bản thân một khoảng riêng.</p>
-            </div>
-            <div><span class="perk-icon">◷</span>
-                <h3>Ở lại theo cách bạn muốn</h3>
-                <p>Một cuộc hẹn 3 giờ, một chiều 6 giờ hay một đêm thật chậm.</p>
-            </div>
-            <div><span class="perk-icon">♡</span>
-                <h3>Có Mơ ở đây</h3>
-                <p>Cần tư vấn hay hỗ trợ nhận phòng? Chỉ một cuộc gọi hoặc tin nhắn đến Mơ.</p>
-            </div>
-        </div>
-    </section>
-    <section class="container final-cta"><span class="eyebrow">MỘT CUỘC HẸN VỚI BÌNH YÊN</span>
-        <h2>Chừa một khoảng nhỏ cho mình nhé?</h2>
-        <p>Căn phòng ấm áp đang chờ. Còn lại, để Mơ lo.</p><a href="/calendar" class="button">Tìm ngày ghé Mơ →</a>
-    </section><a class="floating-contact" href="https://zalo.me/0357907153">Nhắn Mơ</a><?php }
+        </section>
+        <section class="container final-cta"><span class="eyebrow">MỘT CUỘC HẸN VỚI BÌNH YÊN</span>
+            <h2>Chừa một khoảng nhỏ cho mình nhé?</h2>
+            <p>Căn phòng ấm áp đang chờ. Còn lại, để Mơ lo.</p><a href="/calendar" class="button">Tìm ngày ghé Mơ →</a>
+        </section>
+    </div><?php }
 
-                                                                                                                function render_rooms(): void
-                                                                                                                { ?><div class="container section">
+                                                                                                                                                                                        function render_rooms(): void
+                                                                                                                                                                                        { ?><div class="container section">
         <div class="center-heading"><span class="eyebrow">CHỌN MỘT GÓC NHỎ CHO RIÊNG MÌNH</span>
             <h1>Phòng & bảng giá</h1>
             <p>Giá và khung giờ được cập nhật trực tiếp bởi Mơ.</p>
         </div><?php render_room_cards(); ?>
     </div><?php }
-                                                                                                                function render_room(array $r): void
-                                                                                                                {
-                                                                                                                    $coming = $r['status'] === 'COMING_SOON'; ?><section class="room-detail-page" aria-labelledby="room-detail-title">
-    <div class="container room-detail-shell"><a class="room-back-link" href="/rooms"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg><span>Tất cả phòng</span></a>
-        <div class="room-detail-layout room-detail-reveal">
-            <div class="room-gallery" data-room-gallery>
-                <figure class="gallery-main"><img data-gallery-main src="<?= e($r['image']) ?>" alt="Phòng <?= e($r['name']) ?>"><div class="gallery-shade" aria-hidden="true"></div><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php endif ?><figcaption><span data-gallery-caption><?= e($r['images'][0]['caption'] ?? $r['name']) ?></span><span class="gallery-position"><b data-gallery-current>01</b> / <?= str_pad((string)max(1, count($r['images'])), 2, '0', STR_PAD_LEFT) ?></span></figcaption></figure>
-                <?php if (count($r['images']) > 1): ?><div class="gallery-thumbs" aria-label="Ảnh phòng <?= e($r['name']) ?>"><?php foreach ($r['images'] as $index => $image): ?><button type="button" class="<?= $index === 0 ? 'selected' : '' ?>" data-gallery-image="<?= e($image['path']) ?>" data-gallery-caption="<?= e($image['caption'] ?: $r['name']) ?>" aria-label="Xem ảnh <?= $index + 1 ?>: <?= e($image['caption'] ?: $r['name']) ?>" aria-pressed="<?= $index === 0 ? 'true' : 'false' ?>"><img src="<?= e($image['path']) ?>" alt="" loading="lazy"><span><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span></button><?php endforeach ?></div><?php endif ?>
+                                                                                                                                                                                        function render_room(array $r): void
+                                                                                                                                                                                        {
+                                                                                                                                                                                            $coming = $r['status'] === 'COMING_SOON'; ?><section class="room-detail-page" aria-labelledby="room-detail-title" style="--room-background:url('<?= e(asset_url('/images/perks-botanical.png')) ?>')">
+        <div class="container room-detail-shell"><a class="room-back-link" href="/rooms"><svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="m15 18-6-6 6-6" />
+                </svg><span>Tất cả phòng</span></a>
+            <div class="room-detail-layout room-detail-reveal">
+                <div class="room-gallery" data-room-gallery>
+                    <figure class="gallery-main"><img data-gallery-main src="<?= e($r['image']) ?>" alt="Phòng <?= e($r['name']) ?>">
+                        <?php if (count($r['images']) > 1): ?><button type="button" class="gallery-step gallery-step-prev" data-gallery-prev aria-label="Ảnh trước">‹</button><button type="button" class="gallery-step gallery-step-next" data-gallery-next aria-label="Ảnh tiếp theo">›</button><?php endif ?>
+                        <div class="gallery-shade" aria-hidden="true"></div><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php endif ?><figcaption><span data-gallery-caption><?= e($r['images'][0]['caption'] ?? $r['name']) ?></span><span class="gallery-position"><b data-gallery-current>01</b> / <?= str_pad((string)max(1, count($r['images'])), 2, '0', STR_PAD_LEFT) ?></span></figcaption>
+                    </figure>
+                    <?php if (count($r['images']) > 1): ?><div class="gallery-thumbs" aria-label="Ảnh phòng <?= e($r['name']) ?>"><?php foreach ($r['images'] as $index => $image): ?><button type="button" class="<?= $index === 0 ? 'selected' : '' ?>" data-gallery-image="<?= e($image['path']) ?>" data-gallery-caption="<?= e($image['caption'] ?: $r['name']) ?>" aria-label="Xem ảnh <?= $index + 1 ?>: <?= e($image['caption'] ?: $r['name']) ?>" aria-pressed="<?= $index === 0 ? 'true' : 'false' ?>"><img src="<?= e($image['path']) ?>" alt="" loading="lazy"><span><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span></button><?php endforeach ?></div><?php endif ?>
+                </div>
+                <article class="room-detail-copy">
+                    <header class="room-detail-heading"><span class="eyebrow"><i aria-hidden="true"></i><?= e($r['tag'] ?: 'KHÔNG GIAN CỦA MƠ') ?></span>
+                        <h1 id="room-detail-title"><?= e($r['name']) ?></h1>
+                        <p class="room-description"><?= nl2br(e($r['description'])) ?></p>
+                    </header>
+                    <div class="room-facts" aria-label="Thông tin phòng">
+                        <div><svg aria-hidden="true" viewBox="0 0 24 24">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg><span><b><?= e($r['maxGuests']) ?></b> khách</span></div>
+                        <div><svg aria-hidden="true" viewBox="0 0 24 24">
+                                <path d="M3 12V7a2 2 0 0 1 2-2h4a3 3 0 0 1 3 3v4M3 12h18v7M3 19v2M21 19v2M7 12V9h10a4 4 0 0 1 4 4" />
+                            </svg><span><b><?= e($r['bedrooms']) ?></b> phòng ngủ</span></div>
+                        <div><svg aria-hidden="true" viewBox="0 0 24 24">
+                                <path d="M4 12h16v3a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-3ZM7 12V5a2 2 0 0 1 4 0M7 20v2M17 20v2" />
+                            </svg><span><b><?= e($r['bathrooms']) ?></b> phòng tắm</span></div>
+                    </div>
+                    <?php if ($r['tags']): ?><div class="room-tag-chips detail-tag-chips" aria-label="Điểm nổi bật"><?php foreach ($r['tags'] as $tag): ?><span><?= e($tag) ?></span><?php endforeach ?></div><?php endif ?>
+                    <section class="room-rates" aria-labelledby="room-rates-title">
+                        <div class="room-rates-heading">
+                            <div><span>LỰA CHỌN KỲ NGHỈ</span>
+                                <h2 id="room-rates-title">Gói lưu trú</h2>
+                            </div><small>Giá đã bao gồm tiện nghi</small>
+                        </div>
+                        <div class="detail-prices"><?php foreach ($r['packages'] as $index => $package): if (!$package['enabled']) continue;
+                                                                                                                                                                                                $bookable = !$coming; ?><a <?= $bookable ? 'href="/bookings?room=' . e($r['id']) . '&package=' . e($package['id']) . '"' : 'aria-disabled="true" class="disabled"' ?> data-flex-package><span class="rate-index"><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span><span class="rate-name"><strong><?= e($package['name']) ?></strong><small><?= e(package_timing_label($package)) ?></small></span><span class="rate-price"><strong><?= money($package['price']) ?></strong><?php if ($bookable): ?><svg aria-hidden="true" viewBox="0 0 24 24">
+                                                <path d="M5 12h14M13 6l6 6-6 6" />
+                                            </svg><?php endif ?></span></a><?php endforeach ?></div>
+                    </section>
+                    <div class="room-booking-actions"><?php if ($coming): ?><div class="notice">Không gian này đang được hoàn thiện. Bạn có thể nhắn Mơ để nhận thông báo khi mở cửa.</div><a class="button room-primary-action" href="https://zalo.me/0357907153">Nhắn Mơ để theo dõi</a><?php else: ?><a class="button room-primary-action" href="/calendar?room=<?= e($r['id']) ?>"><span>Xem lịch phòng trống</span><svg aria-hidden="true" viewBox="0 0 24 24">
+                                    <path d="M5 12h14M13 6l6 6-6 6" />
+                                </svg></a><a class="room-contact-action" href="https://zalo.me/0357907153">Cần tư vấn? Nhắn Mơ</a><?php endif ?><p><svg aria-hidden="true" viewBox="0 0 24 24">
+                                <path d="M20 6 9 17l-5-5" />
+                            </svg>Mơ xác nhận lịch trước khi thanh toán</p>
+                    </div>
+                </article>
             </div>
-            <article class="room-detail-copy"><header class="room-detail-heading"><span class="eyebrow"><i aria-hidden="true"></i><?= e($r['tag'] ?: 'KHÔNG GIAN CỦA MƠ') ?></span>
-                <h1 id="room-detail-title"><?= e($r['name']) ?></h1>
-                <p class="room-description"><?= nl2br(e($r['description'])) ?></p></header>
-                <div class="room-facts" aria-label="Thông tin phòng">
-                    <div><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span><b><?= e($r['maxGuests']) ?></b> khách</span></div>
-                    <div><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12V7a2 2 0 0 1 2-2h4a3 3 0 0 1 3 3v4M3 12h18v7M3 19v2M21 19v2M7 12V9h10a4 4 0 0 1 4 4"/></svg><span><b><?= e($r['bedrooms']) ?></b> phòng ngủ</span></div>
-                    <div><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12h16v3a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-3ZM7 12V5a2 2 0 0 1 4 0M7 20v2M17 20v2"/></svg><span><b><?= e($r['bathrooms']) ?></b> phòng tắm</span></div>
-                </div>
-                <?php if ($r['tags']): ?><div class="room-tag-chips detail-tag-chips" aria-label="Điểm nổi bật"><?php foreach ($r['tags'] as $tag): ?><span><?= e($tag) ?></span><?php endforeach ?></div><?php endif ?>
-                <section class="room-rates" aria-labelledby="room-rates-title"><div class="room-rates-heading"><div><span>LỰA CHỌN KỲ NGHỈ</span><h2 id="room-rates-title">Gói lưu trú</h2></div><small>Giá đã bao gồm tiện nghi</small></div>
-                    <div class="detail-prices"><?php foreach ($r['packages'] as $index => $package): if (!$package['enabled']) continue; $bookable = !$coming; ?><a <?= $bookable ? 'href="/bookings?room=' . e($r['id']) . '&package=' . e($package['id']) . '"' : 'aria-disabled="true" class="disabled"' ?> data-flex-package><span class="rate-index"><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span><span class="rate-name"><strong><?= e($package['name']) ?></strong><small><?= e(package_timing_label($package)) ?></small></span><span class="rate-price"><strong><?= money($package['price']) ?></strong><?php if ($bookable): ?><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg><?php endif ?></span></a><?php endforeach ?></div>
-                </section>
-                <div class="room-booking-actions"><?php if ($coming): ?><div class="notice">Không gian này đang được hoàn thiện. Bạn có thể nhắn Mơ để nhận thông báo khi mở cửa.</div><a class="button room-primary-action" href="https://zalo.me/0357907153">Nhắn Mơ để theo dõi</a><?php else: ?><a class="button room-primary-action" href="/calendar?room=<?= e($r['id']) ?>"><span>Xem lịch phòng trống</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="room-contact-action" href="https://zalo.me/0357907153">Cần tư vấn? Nhắn Mơ</a><?php endif ?><p><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Mơ xác nhận lịch trước khi thanh toán</p></div>
-            </article>
         </div>
-    </div></section><?php }
+    </section><?php }
 
-                                                                                                                function render_calendar(): void
-                                                                                                                {
-                                                                                                                    $active = array_filter(rooms(), fn($room) => $room['status'] === 'ACTIVE'); ?><div class="container section">
-        <div class="center-heading"><span class="eyebrow">CHỌN NGÀY GHÉ MƠ</span>
-            <h1>Lịch phòng</h1>
-            <p>Lịch công khai không hiển thị thông tin của khách.</p>
-        </div>
-        <div id="calendar-app" class="calendar-layout">
-            <section class="panel">
-                <div class="calendar-nav"><button class="icon-button" data-month-prev>‹</button>
-                    <h2 data-month-title></h2><button class="icon-button" data-month-next>›</button>
-                </div>
-                <div class="month-grid" data-calendar-grid></div>
-                <div class="form-grid form-section"><label class="field">Không gian<select data-cal-room><?php foreach ($active as $r): ?><option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option><?php endforeach ?></select></label><label class="field">Khung giờ<select data-cal-package data-flex-package></select></label><label class="field" hidden>Giờ nhận phòng<input type="time" value="14:00" data-cal-time></label></div>
-            </section>
-            <section class="panel">
-                <div class="calendar-nav">
-                    <h2 data-selected-title></h2><button class="icon-button" data-refresh>↻</button>
-                </div>
-                <div data-availability>
-                    <div class="skeleton" style="height:180px"></div>
-                </div>
-            </section>
+                                                                                                                                                                                        function render_calendar(): void
+                                                                                                                                                                                        {
+                                                                                                                                                                                            $active = array_filter(rooms(), fn($room) => $room['status'] === 'ACTIVE'); ?><div class="calendar-page" style="--calendar-background:url('<?= e(asset_url('/images/perks-botanical.png')) ?>')">
+        <div class="container section">
+            <div class="center-heading calendar-heading"><span class="eyebrow">CHỌN NGÀY GHÉ MƠ</span>
+                <svg class="calendar-sprig" aria-hidden="true" viewBox="0 0 64 64">
+                    <path d="M9 56C20 40 31 27 48 15" />
+                    <path d="M23 38C13 30 15 19 21 12c6 10 8 18 2 26ZM31 30C32 17 43 9 57 7c-4 14-12 22-26 23ZM25 39c11-8 22-5 29 1-11 8-20 8-29-1Z" />
+                </svg>
+                <h1>Lịch phòng</h1>
+                <p>Lịch trống được cập nhật theo thời gian thực. Chọn ngày, không gian và khung giờ phù hợp<br class="hidden sm:block"> để bắt đầu một trải nghiệm thật thư giãn tại Mơ.</p>
+            </div>
+            <div id="calendar-app" class="calendar-layout">
+                <section class="panel">
+                    <div class="calendar-nav"><button class="icon-button" aria-label="Tháng trước" data-month-prev>‹</button>
+                        <h2 data-month-title></h2><button class="icon-button" aria-label="Tháng sau" data-month-next>›</button>
+                    </div>
+                    <div class="month-grid" data-calendar-grid></div>
+                    <div class="calendar-legend"><span><i class="calendar-dot"></i>Ngày có thể chọn</span><span><i class="calendar-dot unavailable"></i>Ngày không khả dụng</span></div>
+                    <div class="form-grid form-section"><label class="field">Không gian<select data-cal-room><?php foreach ($active as $r): ?><option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option><?php endforeach ?></select></label><label class="field">Khung giờ<select data-cal-package data-flex-package></select></label><label class="field" hidden>Giờ nhận phòng<input type="time" value="14:00" data-cal-time></label></div>
+                </section>
+                <section class="panel calendar-details">
+                    <div class="calendar-nav">
+                        <div>
+                            <h2 data-selected-title></h2>
+                            <p class="calendar-detail-label">Thông tin đặt phòng</p>
+                        </div><button class="icon-button" aria-label="Tải lại lịch phòng" data-refresh>↻</button>
+                    </div>
+                    <div data-availability aria-live="polite" aria-busy="true">
+                        <div class="skeleton" style="height:180px"></div>
+                    </div>
+                    <aside class="calendar-notes"><strong>Một vài lưu ý nhỏ</strong>
+                        <ul>
+                            <li>Chọn ngày để kiểm tra lịch của từng phòng.</li>
+                            <li>Vui lòng kiểm tra kỹ thời gian trước khi đặt.</li>
+                            <li>Cần hỗ trợ? <a href="https://zalo.me/0357907153" target="_blank" rel="noopener noreferrer">Nhắn Mơ qua Zalo ↗</a></li>
+                        </ul>
+                        <p>Lịch công khai không hiển thị thông tin của khách.</p>
+                    </aside>
+                </section>
+            </div>
         </div>
     </div><?php }
 
-                                                                                                                function render_bookings(): void
-                                                                                                                {
-                                                                                                                    $active = array_filter(rooms(), fn($room) => $room['status'] === 'ACTIVE'); ?><div class="container section">
+                                                                                                                                                                                        function render_bookings(): void
+                                                                                                                                                                                        {
+                                                                                                                                                                                            $active = array_filter(rooms(), fn($room) => $room['status'] === 'ACTIVE'); ?><div class="container section">
         <div class="center-heading booking-heading"><span class="eyebrow">CHỌN MỘT CUỘC HẸN</span>
             <h1>Chọn khung giờ của bạn</h1>
             <p>Mỗi phòng có lịch riêng. Chọn ngày để xem giá và những khung giờ còn trống.</p>
@@ -230,17 +379,30 @@ function render_page(string $title, callable $content, array $options = []): nev
         <div id="booking-app" class="booking-grid">
             <form class="panel booking-form" data-booking-form>
                 <input name="packageId" type="hidden" required>
-                <div class="booking-step-heading"><span>01</span><div><h2>Phòng và ngày ghé</h2><p>Chọn không gian phù hợp với cuộc hẹn của bạn.</p></div></div>
+                <div class="booking-step-heading"><span>01</span>
+                    <div>
+                        <h2>Phòng và ngày ghé</h2>
+                        <p>Chọn không gian phù hợp với cuộc hẹn của bạn.</p>
+                    </div>
+                </div>
                 <div class="form-grid booking-primary-fields"><label class="field">Không gian<select name="roomId"><?php foreach ($active as $r): ?><option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option><?php endforeach ?></select></label><label class="field">Ngày ghé Mơ<input name="date" type="date" min="<?= date('Y-m-d') ?>" required></label></div>
                 <fieldset class="booking-slot-section" data-slot-section tabindex="-1">
                     <legend><span>02</span><strong>Chọn khung giờ</strong></legend>
                     <p class="booking-slot-hint">Giá đã bao gồm toàn bộ thời gian hiển thị.</p>
                     <div class="slot-status-legend" aria-label="Chú thích trạng thái"><span><i class="is-available"></i>Còn trống</span><span><i class="is-selected"></i>Đang chọn</span><span><i class="is-booked"></i>Đã đặt</span></div>
-                    <div class="booking-slot-grid" data-slot-grid aria-live="polite" aria-busy="true"><div class="slot-skeleton"></div><div class="slot-skeleton"></div></div>
+                    <div class="booking-slot-grid" data-slot-grid aria-live="polite" aria-busy="true">
+                        <div class="slot-skeleton"></div>
+                        <div class="slot-skeleton"></div>
+                    </div>
                     <label class="field booking-duration-time" data-duration-time hidden>Giờ nhận phòng<input name="time" type="time" step="1800"></label>
                 </fieldset>
                 <div class="form-section booking-guest-section">
-                    <div class="booking-step-heading"><span>03</span><div><h2>Thông tin của bạn</h2><p>Để Mơ xác nhận và hỗ trợ bạn nhanh chóng.</p></div></div>
+                    <div class="booking-step-heading"><span>03</span>
+                        <div>
+                            <h2>Thông tin của bạn</h2>
+                            <p>Để Mơ xác nhận và hỗ trợ bạn nhanh chóng.</p>
+                        </div>
+                    </div>
                     <div class="form-grid"><label class="field">Họ và tên *<input name="guestName" minlength="2" maxlength="100" required></label><label class="field">Số điện thoại *<input name="guestPhone" type="tel" maxlength="20" required></label><label class="field">Email nhận xác nhận *<input name="guestEmail" type="email" maxlength="254" autocomplete="email" required></label><label class="field">Số khách<select name="numberOfGuests" data-guest-count></select></label><label class="field full">Một lời nhắn cho Mơ<textarea name="guestNote" rows="3" maxlength="1000"></textarea></label></div>
                 </div>
                 <div class="notice" data-terms hidden></div><label class="check"><input type="checkbox" name="acceptTerms" required> Tôi đã đọc điều kiện đặt phòng và đồng ý để Mơ sử dụng thông tin liên hệ xử lý đơn này.</label>
@@ -249,20 +411,20 @@ function render_page(string $title, callable $content, array $options = []): nev
             <aside class="panel booking-summary" data-summary aria-live="polite"></aside>
         </div><?php render_lookup(); ?>
     </div><?php }
-                                                                                                                function render_lookup(): void
-                                                                                                                { ?><section class="panel lookup-panel" id="tra-cuu">
+                                                                                                                                                                                        function render_lookup(): void
+                                                                                                                                                                                        { ?><section class="panel lookup-panel" id="tra-cuu">
         <h2>Bạn đã có một cuộc hẹn?</h2>
         <p class="muted">Tra cứu bằng mã đặt phòng và số điện thoại đã sử dụng.</p>
         <form class="lookup-form" data-lookup-form><label class="field">Mã đặt phòng<input name="code" required placeholder="MO-…"></label><label class="field">Số điện thoại<input name="phone" type="tel" required></label><button class="button">Tra cứu đặt phòng</button></form>
         <div data-lookup-result></div>
     </section><?php }
-function render_payment(): void
-{
-    $queryCode = strtoupper((string)($_GET['code'] ?? ''));
-    $directCode = preg_match('/^(?:MO|LANG)-[A-F0-9]{10}$/', $queryCode) ? $queryCode : '';
-    $return = payment_return_credentials($_GET);
-    $code = $directCode ?: $return['code'];
-    ?><div class="container section">
+                                                                                                                                                                                        function render_payment(): void
+                                                                                                                                                                                        {
+                                                                                                                                                                                            $queryCode = strtoupper((string)($_GET['code'] ?? ''));
+                                                                                                                                                                                            $directCode = preg_match('/^(?:MO|LANG)-[A-F0-9]{10}$/', $queryCode) ? $queryCode : '';
+                                                                                                                                                                                            $return = payment_return_credentials($_GET);
+                                                                                                                                                                                            $code = $directCode ?: $return['code'];
+                ?><div class="container section">
         <div class="payment-container panel text-center" id="payment-app" data-code="<?= e($code) ?>" data-token="<?= e($return['token']) ?>"><span class="eyebrow">HOÀN TẤT CUỘC HẸN</span>
             <h1>Thanh toán đặt phòng</h1>
             <div data-payment-result>
@@ -270,16 +432,16 @@ function render_payment(): void
             </div>
         </div>
     </div><?php }
-                                                                                                                function render_login(string $error): void
-                                                                                                                { ?><div class="container section">
+                                                                                                                                                                                        function render_login(string $error): void
+                                                                                                                                                                                        { ?><div class="container section">
         <div class="panel payment-container"><span class="eyebrow">DÀNH CHO CHỦ HOME</span>
             <h1>Đăng nhập quản lý</h1>
             <p class="muted">Khách đặt phòng không cần tạo tài khoản.</p>
             <form method="post" class="stack"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><label class="field">Email<input name="email" type="email" required></label><label class="field">Mật khẩu<input name="password" type="password" required></label><?php if ($error): ?><p class="notice error"><?= e($error) ?></p><?php endif ?><button class="button">Đăng nhập</button></form>
         </div>
     </div><?php }
-                                                                                                                function render_admin(): void
-                                                                                                                { ?><div class="container section admin-shell">
+                                                                                                                                                                                        function render_admin(): void
+                                                                                                                                                                                        { ?><div class="container section admin-shell">
         <div class="section-heading">
             <div><span class="eyebrow">KHÔNG GIAN QUẢN LÝ</span>
                 <h1>Chào chủ nhà.</h1>
@@ -347,7 +509,7 @@ function render_payment(): void
                     <div class="package-editor" data-package-list></div><template data-package-template>
                         <div class="package-row"><input type="hidden" data-package-field="id"><label class="field">Tên gói<input data-package-field="name" maxlength="80" required></label><label class="field">Kiểu thời gian<select data-package-field="mode">
                                     <option value="FIXED_TIME">Giờ cố định</option>
-                                <option value="DURATION">Theo số phút (khách chọn giờ)</option>
+                                    <option value="DURATION">Theo số phút (khách chọn giờ)</option>
                                 </select></label><label class="field" data-duration-field>Thời lượng (phút)<input data-package-field="durationMinutes" type="number" min="30" max="43200" value="180"></label><label class="field" data-fixed-field hidden>Nhận phòng<input data-package-field="checkInTime" type="time"></label><label class="field" data-fixed-field hidden>Trả phòng<input data-package-field="checkOutTime" type="time"></label><label class="field">Giá (đ)<input data-package-field="price" type="number" min="0" max="1000000000" step="1000" required></label><label class="check"><input data-package-field="enabled" type="checkbox" checked> Hiển thị</label><label class="field">Thứ tự<input data-package-field="sortOrder" type="number" value="10"></label><button class="icon-button package-remove" type="button" data-remove-package aria-label="Xóa gói">×</button></div>
                     </template>
                 </section>

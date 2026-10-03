@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200" preserveAspectRatio="none" fill="none">
+  <defs>
+    <filter id="blur" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="4"/></filter>
+    <g id="branch" fill="#9b8d75"><path d="M0 0Q55 140 160 340" fill="none" stroke="#9b8d75" stroke-width="3"/><ellipse cx="-9" cy="30" rx="25" ry="19" transform="rotate(-30 -9 30)"/><ellipse cx="40" cy="42" rx="27" ry="20" transform="rotate(30 40 42)"/><ellipse cx="10" cy="73" rx="25" ry="19" transform="rotate(-30 10 73)"/><ellipse cx="59" cy="85" rx="27" ry="20" transform="rotate(30 59 85)"/><ellipse cx="29" cy="116" rx="25" ry="19" transform="rotate(-30 29 116)"/><ellipse cx="78" cy="128" rx="27" ry="20" transform="rotate(30 78 128)"/><ellipse cx="48" cy="159" rx="25" ry="19" transform="rotate(-30 48 159)"/><ellipse cx="97" cy="171" rx="27" ry="20" transform="rotate(30 97 171)"/><ellipse cx="67" cy="202" rx="25" ry="19" transform="rotate(-30 67 202)"/><ellipse cx="116" cy="214" rx="27" ry="20" transform="rotate(30 116 214)"/><ellipse cx="86" cy="245" rx="25" ry="19" transform="rotate(-30 86 245)"/><ellipse cx="135" cy="257" rx="27" ry="20" transform="rotate(30 135 257)"/><ellipse cx="105" cy="288" rx="25" ry="19" transform="rotate(-30 105 288)"/><ellipse cx="154" cy="300" rx="27" ry="20" transform="rotate(30 154 300)"/></g>
+  </defs>
+  <g stroke="#cfb79f" stroke-width="1.5" opacity=".65">
+    <path d="M280-30C255 120 110 105 40 220L-30 300"/>
+    <path d="M1630 290C1490 350 1575 460 1450 530"/>
+    <path d="M-30 650C100 700 10 825 155 865"/>
+    <path d="M1650 1020C1520 1080 1430 1080 1360 1230"/>
+  </g>
+  <g filter="url(#blur)" opacity=".24">
+    <use href="#branch" transform="translate(1510 35) rotate(60) scale(.85)"/>
+    <use href="#branch" transform="translate(1570 100) rotate(70) scale(.65)"/>
+    <use href="#branch" transform="translate(30 690) rotate(-65) scale(.8)"/>
+    <use href="#branch" transform="translate(10 1130) rotate(-55) scale(.7)"/>
+    <use href="#branch" transform="translate(1550 1020) rotate(65) scale(.5)"/>
+    <use href="#branch" transform="translate(680 230) rotate(-20) scale(.48)" opacity=".35"/>
+  </g>
+</svg>

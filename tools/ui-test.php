@@ -7,7 +7,7 @@ function ui_check(bool $condition,string $message):void{global $failures;if(!$co
 $views=(string)file_get_contents($root.'/src/views.php');$app=(string)file_get_contents($root.'/public/assets/app.js');
 $ui=is_file($root.'/public/assets/ui.js')?(string)file_get_contents($root.'/public/assets/ui.js'):'';
 $css=(string)file_get_contents($root.'/public/assets/app.css');
-ui_check(str_contains($views,'rel="icon" href="/images/mo-home-illustration.png'),'Moi trang phai link favicon Mơ Home');
+ui_check(str_contains($views, 'rel="icon"') && str_contains($views, "asset_url('/images/mo-home-favicon.png')"),'Moi trang phai link favicon Mơ Home co version tu dong');
 ui_check(str_contains($views,'apple-touch-icon'),'Moi trang phai link apple touch icon');
 ui_check(substr_count($views,'data-toast-region')===1,'Layout phai co dung mot toast region');
 ui_check(substr_count($views,'data-dialog-root')===1,'Layout phai co dung mot dialog root');

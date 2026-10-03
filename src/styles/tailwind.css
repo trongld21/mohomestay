@@ -1,0 +1,507 @@
+/* Keep legacy layout stable: import utilities without Tailwind Preflight. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@source "../views.php";
+@source "../../public/assets/*.js";
+
+.room-detail-page { @apply bg-[#f8f3ed]; background-image:linear-gradient(#f8f3ed55,#f8f3ed55),var(--room-background);background-size:100% 100%; }
+.room-detail-page::before { @apply hidden; }
+.room-detail-page .room-detail-shell { @apply pt-8 pb-16 md:pt-12 md:pb-20; }
+.room-detail-page .room-back-link { @apply mb-4; }
+.room-detail-page .room-detail-layout { @apply grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-6 items-start; }
+.room-detail-page .room-gallery { @apply static min-w-0; }
+.room-detail-page .gallery-main { @apply h-auto aspect-[1.35] rounded-3xl shadow-none; }
+.room-detail-page .gallery-main img { @apply w-full h-full object-cover; }
+.gallery-step { @apply absolute top-1/2 -translate-y-1/2 z-10 size-11 rounded-full bg-[#fff7e9]/95 text-[#825536] text-3xl transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#835536]; }
+.gallery-step-prev { @apply left-5; }.gallery-step-next { @apply right-5; }
+.room-detail-page .gallery-thumbs { @apply gap-3 mt-4; }
+.room-detail-page .gallery-thumbs button { @apply basis-[30%] h-auto aspect-[1.4] shrink-0 rounded-2xl opacity-100; }
+.room-detail-page .gallery-thumbs button span { @apply hidden; }
+.room-detail-page .room-detail-copy { @apply mt-0 rounded-2xl bg-[#fffdf9]/90 p-6 xl:p-8 shadow-none min-w-0; }
+.room-detail-page .room-detail-copy h1 { @apply text-6xl xl:text-7xl mt-2 mb-5 font-semibold; font-family:'Noto Serif',Georgia,serif; }
+.room-detail-page .room-description { @apply text-sm leading-7 text-[#86786d]; }
+.room-detail-page .room-facts { @apply grid grid-cols-3 gap-3 mt-6 mb-5; }
+.room-detail-page .room-facts > div { @apply flex flex-col items-start gap-3 p-4 rounded-xl min-h-28 bg-[#faf5ee]/60 border-[#eee3d7]; }
+.room-detail-page .room-facts svg { @apply size-7 text-[#926144]; }
+.room-detail-page .room-facts span { @apply text-xs text-[#8b7b6d]; }
+.room-detail-page .room-facts b { @apply block mb-1 text-base text-[#63432e]; }
+.room-detail-page .detail-tag-chips { @apply flex-wrap mb-5; }
+.room-detail-page .room-rates { @apply border-t border-[#ecdfd2] pt-5; }
+.room-detail-page .room-rates-heading { @apply items-end gap-3; }
+.room-detail-page .room-rates-heading h2 { @apply text-3xl mb-0 mt-2; font-family:'Noto Serif',Georgia,serif; }
+.room-detail-page .room-rates-heading > small { @apply text-[10px]; }
+.room-detail-page .detail-prices { @apply my-4 overflow-visible; }
+.room-detail-page .detail-prices a { @apply grid grid-cols-[2.5rem_minmax(0,1fr)_auto] gap-3 min-w-0 rounded-xl border border-[#ecdfd2] bg-white/70 py-3 px-3 mb-2 transition-colors hover:bg-[#f3e8d9]; }
+.room-detail-page .rate-index { @apply flex size-10 items-center justify-center rounded-full bg-[#f5ece1] text-xs text-[#8b5939]; }
+.room-detail-page .rate-name > strong { @apply text-base; font-family:'Noto Serif',Georgia,serif; }
+.room-detail-page .rate-name > small { @apply text-xs; }
+.room-detail-page .detail-prices a > .rate-price { @apply flex items-center gap-3; }
+.room-detail-page .rate-price strong { @apply text-sm; }
+.room-detail-page .rate-price svg { @apply rounded-full bg-[#f8f0e5] size-8 p-2; }
+.room-detail-page .room-booking-actions { @apply grid-cols-1 xl:grid-cols-[1fr_auto] gap-3 mt-5; }
+.room-detail-page .room-primary-action { @apply shadow-none rounded-xl text-sm; }
+.room-detail-page .room-contact-action { @apply text-xs; }
+@media(max-width:540px) { .room-detail-page .room-detail-copy { @apply p-5; } .room-detail-page .room-facts > div { @apply px-2 py-3; } .room-detail-page .rate-price svg { @apply hidden; } .room-detail-page .detail-prices a { @apply gap-2 grid-cols-[2rem_minmax(0,1fr)_auto]; } .room-detail-page .rate-index { @apply size-8; } }
+
+.calendar-page { @apply bg-[#f8f4ee]; background-image:linear-gradient(#f8f4ee66,#f8f4ee66),var(--calendar-background); background-size:100% 100%; background-repeat:no-repeat; }
+.calendar-page > .section { @apply pt-12 pb-16 md:pt-14 md:pb-20; }
+.calendar-page .calendar-heading { @apply mb-8 text-center; }
+.calendar-heading .eyebrow { @apply tracking-[.3em] text-xs; }
+.calendar-sprig { @apply block mx-auto mt-4 mb-3 h-10 w-10 fill-none stroke-[#93623f]; stroke-width:4;stroke-linecap:round;stroke-linejoin:round; }
+.calendar-page h1,.calendar-page h2,.calendar-page h3 { font-family:'Noto Serif',Georgia,serif; }
+.calendar-page h1 { @apply mt-0 mb-4 text-4xl md:text-6xl font-semibold; }
+.calendar-heading p { @apply mx-auto max-w-2xl text-sm leading-7 text-[#827a70]; }
+.calendar-page .calendar-layout { @apply grid grid-cols-1 gap-6 lg:grid-cols-[1.38fr_1fr] items-stretch; }
+.calendar-page .panel { @apply min-w-0 rounded-xl border border-[#e8dfd5] bg-[#fffdf9]/80 p-5 md:p-7; box-shadow:0 16px 40px #65452b0b; }
+.calendar-page .calendar-nav { @apply flex items-center justify-between gap-3 mb-6; }
+.calendar-page .calendar-nav h2 { @apply m-0 text-xl md:text-2xl font-semibold; }
+.calendar-page .icon-button { @apply shrink-0 w-10 h-10 text-2xl border-[#e4d2bd] text-[#835536] bg-[#faf5ed] transition-colors hover:bg-[#ecdfd0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#835536]; }
+.calendar-page .month-grid { @apply gap-2; }
+.calendar-page .weekday { @apply text-[10px] sm:text-xs uppercase py-2 mb-1; }
+.calendar-page .day { @apply flex flex-col justify-center items-center gap-1.5 min-h-12 sm:min-h-14 rounded-lg border-[#e8dfd5] bg-transparent text-sm transition-colors; }
+.calendar-page .day:not(:disabled):hover { @apply bg-[#eee1d2] border-[#c8a887]; }
+.calendar-page .day:focus-visible { @apply outline-2 outline-offset-2 outline-[#835536]; }
+.calendar-page .day.selected,.calendar-page .day.selected:hover { @apply bg-[#754b31] border-[#754b31] text-white; }
+.calendar-page .day:disabled { @apply opacity-35 bg-[#eee9e1]/40 border-transparent; }
+.calendar-page .day i { @apply h-1 w-1 rounded-full bg-[#b89b7e]; }
+.calendar-page .day.selected i { @apply bg-white; }
+.calendar-legend { @apply flex flex-wrap gap-5 mt-4 text-[11px] text-[#898179]; }
+.calendar-legend span { @apply flex items-center gap-2; }
+.calendar-dot { @apply block h-2.5 w-2.5 rounded-full bg-[#987151]; }
+.calendar-dot.unavailable { @apply bg-[#ded8d0]; }
+.calendar-page .form-section { @apply border-t border-[#e8dfd5] pt-5 mb-0 mt-6 gap-4; }
+.calendar-page .field { @apply text-sm gap-2 min-w-0; }
+.calendar-page .field input { @apply rounded-lg min-h-12 bg-white/70 border-[#e4d9cb]; }
+.calendar-page .mo-select { @apply min-w-0 w-full; }
+.calendar-page .mo-select-trigger { @apply min-h-12 rounded-lg min-w-0; }
+.calendar-page .mo-select-trigger > span { @apply truncate; }
+@media(max-width:540px) { .calendar-page .form-grid { @apply grid-cols-1; } .calendar-page { background-size:auto 100%;background-position:center; } }
+.calendar-detail-label { @apply mt-2 mb-0 text-sm text-[#a38265]; }
+.calendar-room-preview { @apply grid grid-cols-[.9fr_1fr] gap-5 items-start; }
+.calendar-room-preview > img { @apply w-full h-56 lg:h-60 object-cover rounded-lg; }
+.calendar-page .status-chip { @apply inline-flex items-center gap-2 text-xs px-3 py-2 rounded-md; }
+.calendar-page .status-chip.free::before { content:''; @apply h-2 w-2 rounded-full bg-[#79a35c]; }
+.calendar-room-preview h3 { @apply text-2xl mt-4 mb-3 font-semibold; }
+.calendar-room-subtitle { @apply text-sm leading-6 text-[#827a70]; }
+.calendar-package { @apply flex items-start gap-2 text-sm mt-5 leading-6; }
+.calendar-page svg:not(.calendar-sprig) { @apply w-5 h-5 shrink-0 fill-none stroke-[#9b6842]; stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round; }
+.calendar-time-summary { @apply flex gap-3 border-t border-[#e8dfd5] mt-5 pt-4 mb-5 text-sm; }
+.calendar-time-summary p { @apply mt-1 mb-0 leading-6 text-[#68472f]; }
+.calendar-book-button { @apply flex w-full justify-center gap-5 rounded-lg min-h-14 text-sm; }
+.calendar-notes { @apply mt-4 rounded-lg bg-[#eee4d6]/65 px-5 py-4 text-xs text-[#74675b] leading-6; }
+.calendar-notes strong { @apply text-[#62472f] font-semibold text-sm; }
+.calendar-notes ul { @apply list-disc pl-4 mt-2 mb-0; }
+.calendar-notes p { @apply text-[10px] mb-0 mt-2; }
+.calendar-notes a { @apply underline underline-offset-2 hover:text-[#9b6842] focus-visible:outline-2; }
+@media(max-width:400px) { .calendar-room-preview { @apply grid-cols-1; } .calendar-room-preview > img { @apply h-44; } }
+
+.perks-background {
+  @apply bg-[#f8f3ed] pb-16 md:pb-20;
+  background-image: linear-gradient(rgba(248,243,237,.55), rgba(248,243,237,.55)), var(--perks-background);
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.perks-section { @apply relative py-16 md:py-24; }
+.perks-background .final-cta {
+  @apply mb-0 bg-transparent;
+}
+.perks-section .center-heading { @apply mb-10 md:mb-12; }
+.perks-section .eyebrow { @apply inline-flex items-center gap-3 text-center text-xs tracking-[0.15em] text-[#60402d]; }
+.perks-section .eyebrow::before, .perks-section .eyebrow::after {
+  content: "";
+  @apply hidden h-px w-12 bg-[#bca28c] sm:block;
+}
+.perks-section .center-heading h2 {
+  @apply font-serif text-4xl font-normal leading-tight text-[#3e322b] md:text-5xl xl:text-6xl;
+}
+.perks-section .perks-grid { @apply grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4; }
+.perks-section .perks-grid > div {
+  @apply relative flex flex-col items-center rounded-3xl bg-[#fffaf3]/80 px-6 py-9 text-center shadow-[0_10px_30px_rgba(112,67,44,0.09)];
+}
+.perks-section .perk-icon {
+  @apply mb-6 flex size-24 items-center justify-center rounded-full bg-[#f2e8dc] text-[#704b2c];
+}
+.perks-section .perk-icon svg { @apply size-12; }
+.perks-section .perks-grid h3 { @apply mb-4 font-serif text-2xl font-normal leading-tight text-[#3e322b]; }
+.perks-section .center-heading h2, .perks-section .perks-grid h3 {
+  font-family: 'Noto Serif', Georgia, serif;
+}
+.perks-section .perks-grid p { @apply text-base leading-7 text-[#7c7166]; }
+.perks-section .perks-grid > div::after {
+  content: "";
+  @apply mt-7 block h-[3px] w-8 rounded-full bg-[#cab49e];
+}
+
+.nav-actions .button.small, .search-bar .button {
+  @apply bg-[#596747] border-[#596747] text-white;
+}
+@media (hover: hover) {
+  .nav-actions .button.small:not(:disabled):not([aria-disabled="true"]):hover,
+  .search-bar .button:not(:disabled):not([aria-disabled="true"]):hover {
+    @apply bg-[#465238] border-[#465238];
+  }
+}
+
+.site-footer .eyebrow {
+  @apply text-[#f2dec8];
+}
+
+.story-contact-link {
+  @apply relative gap-1 transition-[color,border-color] duration-200 ease-out;
+}
+.story-contact-link::after {
+  content: "";
+  @apply absolute inset-x-0 -bottom-px h-px origin-left scale-x-0 bg-[#70432c] transition-transform duration-300 ease-out;
+}
+.story-contact-arrow { @apply inline-block transition-transform duration-200 ease-out; }
+.story-contact-link:hover {
+  @apply text-[#70432c] border-[#70432c];
+}
+.story-contact-link:hover::after, .story-contact-link:focus-visible::after { @apply scale-x-100; }
+@media (prefers-reduced-motion: no-preference) {
+  .story-contact-link:hover .story-contact-arrow { @apply translate-x-0.5 -translate-y-0.5; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-contact-link, .story-contact-link::after, .story-contact-arrow { @apply transition-none!; }
+}
+.story-contact-link:focus-visible {
+  @apply outline-2 outline-offset-4 outline-[#ab8b74];
+}
+
+.room-product-card { @apply flex flex-col overflow-hidden rounded-3xl border-0 bg-white shadow-[0_8px_24px_rgba(62,50,43,0.12)]; }
+.room-product-card .room-image img { @apply transition-transform duration-500 ease-out; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .room-product-card .room-image:hover img { @apply scale-105; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .room-product-card .room-image img { @apply transition-none!; }
+}
+.room-product-card .room-image { @apply h-auto aspect-[1.55] shrink-0 overflow-hidden rounded-t-3xl rounded-b-none border-0; }
+.room-product-card .room-image > a { @apply block size-full; }
+.room-product-card .room-tag { @apply left-4 top-4 flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-medium text-[#3e322b]; }
+.room-product-card .room-tag svg { @apply size-4 shrink-0; }
+.room-favorite { @apply absolute right-4 top-4 flex size-11 items-center justify-center rounded-full border-0 bg-[#53483e]/70 text-white; }
+.room-favorite svg { @apply size-6; }
+.room-favorite[aria-pressed="true"] svg { @apply fill-white; }
+.room-photo-count { @apply absolute right-4 bottom-4 rounded-full bg-[#53483e]/80 px-3 py-1.5 text-sm font-medium text-white; }
+.room-product-card .room-body { @apply flex flex-1 flex-col px-5 py-6; }
+.room-product-card .room-title h3 { @apply font-sans text-2xl font-bold text-[#171412]; }
+.room-product-card .room-title > span { @apply rounded-full bg-[#f7f4f0] px-3 py-1 text-xs font-semibold text-[#9b8b7d]; }
+.room-product-card .room-body > p { @apply mt-3 text-sm leading-6 text-[#82786f]; }
+.room-product-card .room-tag-chips { @apply my-5 flex flex-wrap gap-2; }
+.room-product-card .room-tag-chips > span { @apply inline-flex items-center gap-2 rounded-lg border-0 bg-[#f0edff] px-3 py-2 text-xs font-medium text-[#5141b2]; }
+.room-product-card .room-tag-chips svg { @apply size-4 shrink-0; }
+.room-product-card .room-amenities { @apply mb-6 mt-0 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#625b55]; }
+.room-product-card .room-amenities > span { @apply inline-flex items-center gap-1.5; }
+.room-product-card .room-amenities svg { @apply size-4 shrink-0; }
+.room-product-card .room-price { @apply mt-auto border-t border-[#eee9e3] pt-5; }
+.room-product-card .room-price small { @apply mb-1 block text-xs text-[#82786f]; }
+.room-product-card .room-price strong { @apply text-2xl font-bold text-[#70432c]; }
+.room-product-card .room-price > a { @apply flex size-11 shrink-0 items-center justify-center rounded-full border-0 bg-[#596747] p-0 text-2xl text-white; }
+@media (hover: hover) { .room-product-card .room-price > a:hover { @apply bg-[#465238]; } }
+
+.nav-actions .button.small, .final-cta .button {
+  @apply min-h-11 py-2.5;
+}
+
+.story-main.story-brand {
+  @apply block h-auto aspect-square overflow-hidden rounded-tl-[80px];
+}
+.story-main.story-brand img {
+  @apply block size-full min-h-0 object-contain;
+}
+.story-scene-canvas { @apply absolute inset-0 size-full pointer-events-none; }
+
+.hero-slide { @apply opacity-0 transition-opacity duration-700 ease-out; }
+.hero-slide.is-active { @apply opacity-100; }
+.hero-carousel-controls {
+  @apply sr-only;
+}
+.hero-carousel-controls:focus-within {
+  @apply not-sr-only absolute right-5 bottom-24 z-10 flex items-center gap-2 rounded-full bg-[#30251e]/70 px-3 py-2 text-[#fff8ed] md:right-10;
+}
+.hero-carousel-controls[hidden] { @apply hidden; }
+.hero-carousel-controls > button { @apply flex size-11 items-center justify-center rounded-full border-0 bg-transparent text-2xl text-inherit; }
+.hero-carousel-dots { @apply flex items-center gap-1; }
+.hero-carousel-dots button { @apply relative size-8 rounded-full border-0 bg-transparent p-0; }
+.hero-carousel-dots button::after { content:""; @apply absolute left-3 top-3 size-2 rounded-full bg-white/50; }
+.hero-carousel-dots button[aria-pressed="true"]::after { @apply bg-white; }
+@media (prefers-reduced-motion: reduce) { .hero-slide { @apply transition-none!; } }
+
+.mo-select { @apply relative min-w-0 w-full; }
+.mo-select-native { @apply absolute size-px! overflow-hidden opacity-0 pointer-events-none; }
+.mo-select-trigger {
+  @apply flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-[#e7e0d7] bg-[#fffdfa] px-3 py-2 text-left text-inherit;
+}
+.mo-select-trigger > span { @apply min-w-0 truncate; }
+.mo-select-trigger svg { @apply size-4 shrink-0; }
+.mo-select-trigger:focus-visible { @apply outline-2 outline-offset-2 outline-[#ab8b74]; }
+.mo-select-trigger:disabled { @apply cursor-not-allowed opacity-50; }
+.mo-select-list {
+  @apply absolute left-0 right-0 top-full z-[55] mt-2 max-h-64 overflow-y-auto rounded-xl border border-[#e7e0d7] bg-[#fffdfa] p-1.5 text-[#3e322b] shadow-lg;
+}
+.mo-select-list[hidden], .mo-select-option[hidden] { @apply hidden; }
+.mo-select-option { @apply cursor-pointer rounded-lg px-3 py-2.5 text-sm leading-5; }
+.mo-select-option[aria-selected="true"] { @apply bg-[#70432c] text-white; }
+.mo-select-option[aria-disabled="true"] { @apply cursor-not-allowed opacity-40; }
+.mo-select-option[data-active="true"]:not([aria-selected="true"]) { @apply bg-[#eee5d9]; }
+.search-bar .mo-select-trigger { @apply min-h-0 rounded-none border-0 bg-transparent p-0; }
+.search-bar .mo-select-trigger > span { @apply m-0 text-[length:inherit] font-normal tracking-normal text-inherit; }
+@media (hover: hover) {
+  .mo-select-option:not([aria-disabled="true"]):not([aria-selected="true"]):hover { @apply bg-[#eee5d9]; }
+}
+
+.date-picker { @apply relative min-w-0; }
+.date-picker > label { @apply block min-w-0 pr-4 md:pr-6; }
+.date-picker-trigger {
+  @apply flex w-full items-center justify-between gap-3 border-0 bg-transparent p-0 text-left text-inherit;
+}
+.date-picker-trigger svg { @apply size-5 shrink-0; }
+.date-picker-panel {
+  @apply absolute left-0 top-full z-[55] mt-4 w-80 max-w-[calc(100vw-3rem)] rounded-xl border border-[#e7e0d7] bg-[#fffdfa] p-4 text-[#3e322b] shadow-lg;
+}
+.date-picker-panel[hidden] { @apply hidden; }
+.date-picker-heading { @apply mb-3 flex items-center justify-between gap-2; }
+.date-picker-heading strong { @apply text-sm font-semibold capitalize; }
+.date-picker-heading button { @apply size-9 rounded-lg border-0 bg-[#efebe4] text-xl; }
+.date-picker-grid { @apply grid grid-cols-7 gap-1; }
+.date-picker-grid > span { @apply py-2 text-center text-xs text-[#82786f]; }
+.date-picker-grid button { @apply aspect-square rounded-lg border-0 bg-transparent p-0 text-sm; }
+.date-picker-grid button[data-other-month="true"] { @apply text-[#82786f]; }
+.date-picker-grid button[aria-pressed="true"] { @apply bg-[#70432c] text-white; }
+.date-picker-panel button:disabled { @apply cursor-not-allowed opacity-40; }
+.date-picker-today { @apply mt-3 w-full rounded-lg border-0 bg-[#efebe4] py-2 text-sm text-[#70432c]; }
+.date-picker-trigger:focus-visible { @apply outline-2 outline-offset-4 outline-[#ab8b74]; }
+@media (hover: hover) {
+  .date-picker-grid button:not(:disabled):not([aria-pressed="true"]):hover { @apply bg-[#eee5d9]; }
+}
+
+/* Keep native calendar/select icons inset from the field divider. */
+.search-bar > label {
+  @apply min-w-0 pr-4 md:pr-6;
+}
+.search-bar input, .search-bar select {
+  @apply min-w-0;
+}
+
+/* Contact disclosure floats above a full-screen dimmed backdrop. */
+.contact-widget {
+  @apply fixed right-4 bottom-5 z-[60] sm:right-6 sm:bottom-6;
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+.contact-toggle {
+  @apply relative z-10 flex size-14 cursor-pointer list-none items-center justify-center rounded-full border-0 bg-[#9C0000] p-0 text-base text-white shadow-lg transition-colors duration-200;
+}
+.contact-backdrop {
+  @apply fixed inset-0 bg-black/60;
+}
+.contact-toggle-label {
+  @apply flex items-center justify-center;
+}
+.contact-chat {
+  @apply block size-14;
+  filter: brightness(0) invert(1);
+}
+.contact-toggle::-webkit-details-marker {
+  @apply hidden;
+}
+.contact-toggle::marker {
+  content: "";
+}
+.contact-close, .contact-close-label {
+  @apply hidden;
+}
+.contact-widget[open] .contact-toggle {
+  @apply ml-auto size-14 p-0;
+}
+.contact-widget[open] .contact-toggle-label {
+  @apply hidden;
+}
+.contact-widget[open] .contact-close {
+  @apply block size-7;
+}
+.contact-widget[open] .contact-close-label {
+  @apply sr-only;
+}
+.contact-list {
+  @apply absolute right-0 bottom-full z-10 m-0 mb-4 flex w-64 max-w-[calc(100vw-2rem)] list-none flex-col gap-3 p-0;
+  max-height: calc(100dvh - 7rem);
+  @apply overflow-y-auto;
+}
+.contact-link {
+  @apply flex items-center justify-end gap-3 rounded-xl text-white no-underline;
+}
+.contact-copy {
+  @apply min-w-0 py-2 text-right;
+}
+.contact-copy strong {
+  @apply block text-sm font-semibold;
+}
+.contact-copy small {
+  @apply block text-xs leading-5 text-white;
+}
+.contact-icon {
+  @apply flex size-14 shrink-0 items-center justify-center rounded-full bg-[#70432c] text-[#fff8ed] shadow-md transition-colors duration-200;
+}
+.contact-icon svg {
+  @apply size-7;
+}
+.contact-zalo {
+  @apply text-base font-semibold;
+}
+.contact-unavailable {
+  @apply cursor-default;
+}
+.contact-icon.contact-icon-messenger {
+  @apply bg-white text-[#0866ff] shadow-none;
+}
+.contact-icon.contact-icon-zalo {
+  @apply bg-white text-[#0068ff];
+}
+.contact-icon.contact-icon-facebook {
+  @apply bg-[#0866ff] text-white shadow-none;
+}
+.contact-icon.contact-icon-phone {
+  @apply bg-[#9C0000] text-white;
+}
+.contact-toggle:focus-visible, a.contact-link:focus-visible {
+  @apply outline-2 outline-offset-4 outline-[#ab8b74];
+}
+@media (hover: hover) {
+  .contact-toggle:hover {
+    @apply bg-[#9C0000];
+  }
+  a.contact-link:hover .contact-icon-phone {
+    @apply bg-[#9C0000];
+  }
+  a.contact-link:hover .contact-copy strong {
+    @apply underline underline-offset-4;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .contact-widget[open] .contact-list {
+    animation: contact-reveal 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes contact-reveal {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+@media print {
+  .contact-widget { @apply hidden; }
+}
+
+/* White background pixels blend away; retain the supplied handwritten logo. */
+.site-header .brand .brand-art {
+  @apply bg-transparent rounded-none mix-blend-multiply brightness-[1.18];
+}
+.site-footer .brand .brand-art {
+  @apply bg-transparent rounded-none mix-blend-screen;
+  filter: grayscale(1) contrast(4) invert(1);
+}
+.header-link {
+  @apply relative py-2 transition-colors duration-200 ease-out;
+}
+.header-link::after {
+  content: "";
+  @apply absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-[#70432c] transition-transform duration-200 ease-out;
+}
+.header-link:focus-visible, .nav-phone:focus-visible {
+  @apply text-[#53301f] outline-2 outline-offset-4 outline-[#ab8b74];
+}
+.header-link:focus-visible::after {
+  @apply scale-x-100;
+}
+.nav-phone {
+  @apply border-0 bg-transparent px-2 py-2 transition-colors duration-200;
+}
+.nav-phone-icon {
+  @apply inline-block mr-1 size-4 align-[-2px] overflow-visible;
+}
+.phone-handset {
+  transform-box: fill-box;
+  transform-origin: 50% 70%;
+  transform: rotate(0deg);
+  transition: transform 150ms ease-out;
+}
+@media (hover: hover) {
+  .nav-phone:hover { @apply bg-transparent text-[#70432c]; }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .nav-phone:hover .phone-handset {
+    animation: phone-ring 300ms ease-in-out infinite;
+  }
+}
+@keyframes phone-ring {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-12deg); }
+  75% { transform: rotate(12deg); }
+}
+@media (max-width: 400px) {
+  .site-header .nav-inner {
+    @apply gap-3;
+  }
+  .site-header .nav-actions {
+    @apply gap-2;
+  }
+  .site-header .brand .brand-art {
+    @apply w-[120px] bg-[length:150px_150px];
+  }
+  .site-header .button.small {
+    @apply px-3;
+  }
+}
+@media (hover: hover) {
+  .header-link:hover, .nav-phone:hover {
+    @apply text-[#53301f];
+  }
+  .header-link:hover::after {
+    @apply scale-x-100;
+  }
+}
+
+/* Unlayered shared states override legacy CSS and cover dynamically created buttons. */
+:is(button, .button, [role="button"], .floating-contact, .room-price > a) {
+  @apply transition-[background-color,color,border-color,box-shadow,transform,filter] duration-200 ease-out;
+}
+:is(button, .button, [role="button"], .floating-contact, .room-price > a):focus-visible {
+  @apply outline-2 outline-offset-4 outline-[#ab8b74];
+}
+@media (hover: hover) {
+  :is(button, .button, [role="button"], .floating-contact, .room-price > a):not(:disabled):not([aria-disabled="true"]):hover {
+    @apply brightness-95;
+  }
+  .button:not(:disabled):not([aria-disabled="true"]):hover,
+  .floating-contact:hover {
+    @apply -translate-y-0.5 shadow-md;
+  }
+  .button:not(:disabled):not([aria-disabled="true"]):where(:not(.cream):not(.outline)):hover {
+    @apply bg-[#53301f];
+  }
+  .button.cream:not(:disabled):not([aria-disabled="true"]):hover {
+    @apply bg-[#eee2cd] text-[#53301f];
+  }
+  .button.outline:not(:disabled):not([aria-disabled="true"]):hover {
+    @apply bg-[#70432c] text-white;
+  }
+  :is(.icon-button, .menu-toggle):not(:disabled):hover,
+  :is(.segmented, .admin-tabs) button:not(.selected):not(:disabled):hover {
+    @apply bg-[#eee5d9] text-[#53301f];
+  }
+}
+:is(button, .button, [role="button"]):is(:disabled, [aria-disabled="true"]) {
+  @apply cursor-not-allowed;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(button, .button, [role="button"], .floating-contact, .room-price > a, .nav-links a, .nav-phone) {
+    @apply transition-none! transform-none;
+  }
+  .nav-links a::after {
+    @apply transition-none!;
+  }
+  .button:hover, .floating-contact:hover {
+    @apply transform-none;
+  }
+}

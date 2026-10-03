@@ -19,3 +19,5 @@ coverage/
 *.tmp
 
 .agents/
+node_modules/
+.npm-cache/

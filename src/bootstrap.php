@@ -100,6 +100,25 @@ function find_room(string $idOrSlug, bool $includeHidden = false): ?array
 
 function packages(): array { return ['3h'=>'Gói 3 giờ','6h'=>'Gói 6 giờ','overnight'=>'Qua đêm']; }
 function money(float|int $amount): string { return number_format((float)$amount, 0, ',', '.') . 'đ'; }
+function dev_reload_enabled(): bool
+{
+    return (PHP_SAPI === 'cli-server' || env_value('APP_ENV') === 'development')
+        && in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
+}
+
+function asset_url(string $path): string
+{
+    static $versions = [];
+    if (!preg_match('~^/(?:assets|images)/[a-zA-Z0-9_./-]+$~', $path) || str_contains($path, '..')) {
+        throw new InvalidArgumentException('Invalid asset path');
+    }
+    if (!array_key_exists($path, $versions)) {
+        $file = APP_ROOT . '/public' . $path;
+        $versions[$path] = is_file($file) ? substr(hash_file('sha256', $file), 0, 16) : null;
+    }
+    return $versions[$path] === null ? $path : $path . '?v=' . $versions[$path];
+}
+
 function e(mixed $value): string { return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 function json_response(array $data, int $status = 200): never
 {

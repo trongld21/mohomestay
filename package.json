@@ -1,0 +1,12 @@
+{
+  "name": "mo-home-ui",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/styles/tailwind.css -o ./public/assets/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./src/styles/tailwind.css -o ./public/assets/tailwind.css --watch=always"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.2.0",
+    "tailwindcss": "4.2.0"
+  }
+}
