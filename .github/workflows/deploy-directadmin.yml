@@ -60,17 +60,26 @@ jobs:
             digest="$(sha256sum "$file" | cut -d ' ' -f 1)"
             signature="$(printf '%s\n%s' "$path" "$digest" | openssl dgst -sha256 -hmac "$DEPLOY_HOOK_KEY" -hex | sed 's/^.* //')"
             echo "Uploading $path"
+            echo "File size: $(wc -c < "$file") bytes"
             if ! curl --fail-with-body --silent --show-error \
               --connect-timeout 15 --max-time 120 \
               --retry 3 --retry-connrefused --retry-max-time 300 \
               -H "X-Deploy-Signature: $signature" \
+              -H 'Expect:' \
+              --write-out '\nHTTP %{http_code}; remote=%{remote_ip}; connect=%{time_connect}s; TLS=%{time_appconnect}s; first-byte=%{time_starttransfer}s; total=%{time_total}s\n' \
               --form-string "path=$path" -F "file=@$file" "$DEPLOY_HOOK_URL"; then
               echo "::error::Upload failed for $path. See the HTTP status and hook response above: network errors require a retry; rejected paths require a package/hook fix."
+              # A read-only probe distinguishes upload rejection from a blocked runner.
+              echo "Checking endpoint reachability after upload failure"
+              curl --silent --show-error --connect-timeout 10 --max-time 20 \
+                --get --data-urlencode 'check=1' \
+                --write-out '\nProbe HTTP %{http_code}; connect=%{time_connect}s; total=%{time_total}s\n' \
+                "$DEPLOY_HOOK_URL" || true
               return 1
             fi
             echo
             # Avoid a burst of new TLS connections to shared hosting.
-            sleep 1
+            sleep 3
           }
           # The previous hook knows how to replace itself, but not necessarily new assets.
           upload_file .deploy/public_html/deploy-hook.php
