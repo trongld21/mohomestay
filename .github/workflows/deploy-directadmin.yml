@@ -43,22 +43,36 @@ jobs:
         run: |
           test -n "$DEPLOY_HOOK_URL"
           test -n "$DEPLOY_HOOK_KEY"
+          # Check the hook itself; HEAD on a signed endpoint is not a health check.
+          echo "Checking deployment endpoint"
+          curl --fail-with-body --silent --show-error \
+            --connect-timeout 15 --max-time 30 \
+            --retry 3 --retry-connrefused --retry-max-time 120 \
+            --get --data-urlencode 'check=1' "$DEPLOY_HOOK_URL" \
+            | jq -e '.keyConfigured == true' >/dev/null
           upload_file() {
             file="$1"
             path="${file#.deploy/}"
             digest="$(sha256sum "$file" | cut -d ' ' -f 1)"
             signature="$(printf '%s\n%s' "$path" "$digest" | openssl dgst -sha256 -hmac "$DEPLOY_HOOK_KEY" -hex | sed 's/^.* //')"
             echo "Uploading $path"
-            curl --fail-with-body --silent --show-error --retry 2 \
+            if ! curl --fail-with-body --silent --show-error \
+              --connect-timeout 15 --max-time 120 \
+              --retry 3 --retry-connrefused --retry-max-time 300 \
               -H "X-Deploy-Signature: $signature" \
-              -F "path=$path" -F "file=@$file" "$DEPLOY_HOOK_URL"
+              --form-string "path=$path" -F "file=@$file" "$DEPLOY_HOOK_URL"; then
+              echo "::error::Upload failed for $path after retries. Check hosting connectivity/firewall and rerun the job."
+              return 1
+            fi
             echo
+            # Avoid a burst of new TLS connections to shared hosting.
+            sleep 1
           }
           # The previous hook knows how to replace itself, but not necessarily new assets.
           upload_file .deploy/public_html/deploy-hook.php
           ready=false
           for attempt in $(seq 1 10); do
-            if curl --fail --silent --show-error --get --data-urlencode 'check=1' "$DEPLOY_HOOK_URL" \
+            if curl --fail --silent --show-error --connect-timeout 15 --max-time 30 --get --data-urlencode 'check=1' "$DEPLOY_HOOK_URL" \
               | jq -e '.hook == "https-v3" and .assetSvgAllowed == true' >/dev/null; then
               ready=true
               break
@@ -79,4 +93,5 @@ jobs:
             exit 0
           fi
           curl --fail-with-body --silent --show-error --retry 2 \
+            --connect-timeout 15 --max-time 120 --retry-connrefused --retry-max-time 300 \
             -H "X-Deploy-Key: $DEPLOY_HOOK_KEY" "$DEPLOY_HOOK_URL"
