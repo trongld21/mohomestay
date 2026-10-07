@@ -32,10 +32,14 @@ jobs:
         run: |
           mkdir -p .deploy/public_html
           rsync -a --exclude 'uploads/' public/ .deploy/public_html/
-          cp -R src database .deploy/
+          # Deploy PHP runtime files only; Tailwind source is a local build input.
+          rsync -a --exclude 'styles/' src/ .deploy/src/
+          cp -R database .deploy/
           # DirectAdmin/ModSecurity commonly blocks .htaccess in HTTP multipart uploads.
           rm -f .deploy/public_html/.htaccess
           test ! -e .deploy/public_html/uploads
+          test ! -e .deploy/src/styles
+          test -s .deploy/public_html/assets/tailwind.css
       - name: Upload through signed HTTPS hook
         env:
           DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
@@ -61,7 +65,7 @@ jobs:
               --retry 3 --retry-connrefused --retry-max-time 300 \
               -H "X-Deploy-Signature: $signature" \
               --form-string "path=$path" -F "file=@$file" "$DEPLOY_HOOK_URL"; then
-              echo "::error::Upload failed for $path after retries. Check hosting connectivity/firewall and rerun the job."
+              echo "::error::Upload failed for $path. See the HTTP status and hook response above: network errors require a retry; rejected paths require a package/hook fix."
               return 1
             fi
             echo
