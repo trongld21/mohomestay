@@ -64,6 +64,12 @@ elseif ($path === '/calendar') render_page('Lịch phòng', fn() => render_calen
 elseif ($path === '/bookings') render_page('Đặt phòng', fn() => render_bookings());
 elseif ($path === '/payment') render_page('Thanh toán', fn() => render_payment());
 elseif ($path === '/auth/login') render_page('Đăng nhập quản lý', fn() => render_login($loginError ?? ''), ['robots' => false]);
+elseif ($path === '/admin/door-codes') {
+    if (!is_admin()) redirect('/auth/login');
+    header('Cache-Control: no-store');
+    require APP_ROOT . '/src/door-code-view.php';
+    render_page('Mã mở cửa', fn() => render_door_codes(), ['robots' => false]);
+}
 elseif ($path === '/admin') {
     if (!is_admin()) redirect('/auth/login');
     render_page('Quản lý', fn() => render_admin(), ['robots' => false]);

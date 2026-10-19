@@ -449,6 +449,7 @@ function render_contact_widget(): void
             </div>
             <form action="/logout" method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><button class="button outline">Đăng xuất</button></form>
         </div>
+        <a href="/admin/door-codes" class="mb-5 inline-flex min-h-11 items-center rounded-xl border border-stone-300 bg-white px-4 py-2 font-medium text-amber-950 hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Quản lý mã mở cửa →</a>
         <div class="admin-tabs" role="tablist" aria-label="Khu vực quản lý"><button class="selected" role="tab" data-admin-tab="bookings">Đơn đặt phòng</button><button role="tab" data-admin-tab="rooms">Quản lý phòng</button></div>
         <section data-admin-panel="bookings">
             <div id="admin-bookings">

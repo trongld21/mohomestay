@@ -14,6 +14,8 @@ function handle_api(string $path, string $method): never
         if ($path === '/api/bookings' && $method === 'POST') create_booking_api();
         if ($path === '/api/bookings/lookup' && $method === 'POST') lookup_booking_api();
         if ($path === '/api/payments/webhook' && $method === 'POST') payment_webhook_api();
+        if ($path === '/api/admin/door-codes' && in_array($method, ['GET', 'POST'], true)) admin_door_codes_api($method);
+        if (preg_match('#^/api/admin/door-codes/([a-f0-9]{32})$#', $path, $matches) && $method === 'PATCH') admin_door_codes_api($method, $matches[1]);
         if ($path === '/api/admin/rooms' && $method === 'GET') admin_rooms_api();
         if ($path === '/api/admin/rooms' && $method === 'POST') create_room_api();
         if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)/images$#',$path,$matches) && $method === 'POST') upload_room_image_api($matches[1]);

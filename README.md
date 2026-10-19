@@ -64,3 +64,20 @@ Mã chính:
 - `src/payment.php`: chữ ký HMAC và kết nối payOS.
 - `database/migrations`: schema MySQL/MariaDB.
 - `public/assets/app.js`: giao diện JavaScript thuần, không cần build.
+
+## Mã mở cửa
+
+Admin vào **Quản lý mã mở cửa** (`/admin/door-codes`) để tạo nhiều mã dùng chung,
+chọn loại ngày/tuần/tháng, đặt giờ bắt đầu/kết thúc và bật/tắt thủ công. Thời gian nhập
+và hiển thị dùng giờ Việt Nam; database lưu UTC. Trạng thái hiệu lực được tính tự động
+mỗi lần đọc: chưa đến hạn, đang dùng, đã tắt hoặc hết hạn. Không cần cron để loại mã hết hạn.
+Muốn dùng lại mã hết hạn, sửa thời gian và bật sử dụng.
+
+Email xác nhận sau khi thanh toán thành công chọn mã đang bật có thời gian bao gồm
+thời điểm nhận phòng, ưu tiên ngày → tuần → tháng. Nếu cùng mức ưu tiên có nhiều mã,
+email chứa tất cả mã đó kèm thời hạn. Nếu chưa có mã phù hợp, email hướng dẫn liên hệ Mơ.
+Mã chỉ được nhập và quản lý trong website; việc đặt thời hạn này không tự cấu hình khóa cửa vật lý.
+
+Chạy `php tools/migrate.php` để tạo bảng `door_codes`, rồi `php tools/door-code-test.php`
+để kiểm tra ưu tiên, bật/tắt, hết hạn, múi giờ và nội dung email. Cần cấu hình `MAIL_FROM`
+hợp lệ và mail server để gửi thư thực tế.

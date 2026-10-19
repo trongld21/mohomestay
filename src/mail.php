@@ -20,6 +20,16 @@ function build_booking_confirmation_email(array $booking): array
     $checkOut = booking_mail_local_time((string)$booking['check_out']);
     $guests = (int)$booking['number_of_guests'];
     $total = number_format((int)$booking['total_price'], 0, ',', '.') . 'đ';
+    $doorHtml = '<p>Mơ chưa có mã mở cửa phù hợp cho thời gian nhận phòng của bạn. Vui lòng liên hệ Mơ để được hướng dẫn.</p>';
+    if (!empty($booking['door_codes'])) {
+        $doorHtml = '<h2 style="font-size:20px">Mã mở cửa</h2><p>Mã dùng chung tại Mơ, được chọn theo thời gian nhận phòng:</p><ul>';
+        foreach ($booking['door_codes'] as $door) {
+            $doorHtml .= '<li><strong>' . $escape($door['code']) . '</strong> · Từ '
+                . $escape(booking_mail_local_time($door['starts_at'])) . ' đến '
+                . $escape(booking_mail_local_time($door['ends_at'])) . ' (giờ Việt Nam)</li>';
+        }
+        $doorHtml .= '</ul><p>Vui lòng giữ riêng mã mở cửa và chỉ sử dụng trong thời gian lưu trú đã đặt.</p>';
+    }
     $subject = 'Mơ Home xác nhận đặt phòng ' . $code;
     $html = '<!doctype html><html lang="vi"><body style="margin:0;background:#f7f3ed;color:#3e322b;font-family:Arial,sans-serif">'
         .'<div style="max-width:620px;margin:0 auto;padding:32px 20px"><div style="background:#fff;border:1px solid #e7e0d7;border-radius:14px;padding:32px">'
@@ -34,7 +44,7 @@ function build_booking_confirmation_email(array $booking): array
         .'<tr><td style="padding:10px 0;border-bottom:1px solid #eee">Trả phòng</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right">'.$escape($checkOut).'</td></tr>'
         .'<tr><td style="padding:10px 0;border-bottom:1px solid #eee">Số khách</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right">'.$guests.'</td></tr>'
         .'<tr><td style="padding:10px 0">Đã thanh toán</td><td style="padding:10px 0;text-align:right"><strong>'.$escape($total).'</strong></td></tr>'
-        .'</table><p style="padding:14px;background:#edf4e9;border-radius:8px">Mơ sẽ liên hệ riêng để hướng dẫn nhận phòng. Cần hỗ trợ, gọi <a href="tel:0357907153" style="color:#70432c">0357 907 153</a>.</p>'
+        .'</table>'.$doorHtml.'<p style="padding:14px;background:#edf4e9;border-radius:8px">Mơ sẽ liên hệ riêng để hướng dẫn nhận phòng. Cần hỗ trợ, gọi <a href="tel:0357907153" style="color:#70432c">0357 907 153</a>.</p>'
         .'</div></div></body></html>';
     return ['subject'=>$subject,'html'=>$html];
 }
@@ -73,6 +83,7 @@ function dispatch_confirmation_email(string $bookingId): bool
     $stmt->execute([$bookingId]);$booking=$stmt->fetch();
     if (!$booking) return false;
     try {
+        $booking['door_codes'] = booking_door_codes((string)$booking['check_in']);
         $sent = send_booking_confirmation_email($booking);
         $pdo->prepare("UPDATE bookings SET confirmation_email_status=?,confirmation_email_sent_at=IF(?='SENT',UTC_TIMESTAMP(),confirmation_email_sent_at),confirmation_email_error=? WHERE id=?")
             ->execute([$sent?'SENT':'FAILED',$sent?'SENT':'FAILED',$sent?null:'MAIL_FROM chưa cấu hình hoặc máy chủ mail từ chối thư.',$bookingId]);
