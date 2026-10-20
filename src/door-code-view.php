@@ -27,7 +27,6 @@ function render_door_codes(): void
             </section>
             <section aria-labelledby="door-list-title" class="min-w-0">
                 <div class="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 id="door-list-title" class="text-xl font-semibold">Danh sách mã</h2><button type="button" class="<?= e($button) ?>" data-door-refresh>Làm mới</button></div>
-                <p class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">Email xác nhận sau thanh toán chọn mã theo thời gian nhận phòng, ưu tiên Ngày → Tuần → Tháng. Nếu có nhiều mã cùng mức ưu tiên, khách nhận các mã đó kèm thời hạn.</p>
                 <p data-door-notice role="status" class="mb-3 text-sm text-stone-600" aria-live="polite"></p>
                 <div data-door-list class="grid gap-3"><p>Đang tải mã mở cửa…</p></div>
             </section>
