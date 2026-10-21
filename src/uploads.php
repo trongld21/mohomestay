@@ -37,8 +37,12 @@ function assert_room_image_limit(int $count):void
 
 function room_upload_disk_path(string $publicPath):string
 {
-    if(!is_managed_room_upload($publicPath))throw new BookingException('Đường dẫn ảnh không được quản lý.',422);
-    return APP_ROOT.'/public'.str_replace('/',DIRECTORY_SEPARATOR,$publicPath);
+    if (!is_managed_room_upload($publicPath)) {
+        throw new BookingException('Đường dẫn ảnh không được quản lý.', 422);
+    }
+    // DirectAdmin serves public_html; the local development server serves public.
+    $publicRoot = is_dir(APP_ROOT . '/public_html') ? APP_ROOT . '/public_html' : APP_ROOT . '/public';
+    return $publicRoot . str_replace('/', DIRECTORY_SEPARATOR, $publicPath);
 }
 
 function store_room_upload(array $file,string $roomId):array

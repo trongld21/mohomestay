@@ -22,13 +22,18 @@ function build_booking_confirmation_email(array $booking): array
     $total = number_format((int)$booking['total_price'], 0, ',', '.') . 'đ';
     $doorHtml = '<p>Mơ chưa có mã mở cửa phù hợp cho thời gian nhận phòng của bạn. Vui lòng liên hệ Mơ để được hướng dẫn.</p>';
     if (!empty($booking['door_codes'])) {
-        $doorHtml = '<h2 style="font-size:20px">Mã mở cửa</h2><p>Mã dùng chung tại Mơ, được chọn theo thời gian nhận phòng:</p><ul>';
+        $doorHtml = '<h2 style="font-size:20px">Mã mở cửa</h2><p>Mã dùng chung tại Mơ, được chọn theo thời gian nhận phòng:</p>';
         foreach ($booking['door_codes'] as $door) {
-            $doorHtml .= '<li><strong>' . $escape($door['code']) . '</strong> · Từ '
+            $doorHtml .= '<div class="rounded-xl border-2 bg-stone-50 p-5 text-center" '
+                . 'style="margin:16px 0;padding:20px 16px;border:2px solid #d8c3b2;border-radius:12px;background:#faf5ee;text-align:center">'
+                . '<strong class="block break-all text-4xl font-extrabold tracking-widest" '
+                . 'style="display:block;font-family:Arial,sans-serif;font-size:36px;font-weight:800;line-height:1.3;letter-spacing:3px;color:#70432c;word-break:break-all">'
+                . $escape($door['code']) . '</strong>'
+                . '<p class="mt-3 text-sm leading-relaxed" style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#6b5a4e">Từ '
                 . $escape(booking_mail_local_time($door['starts_at'])) . ' đến '
-                . $escape(booking_mail_local_time($door['ends_at'])) . ' (giờ Việt Nam)</li>';
+                . $escape(booking_mail_local_time($door['ends_at'])) . ' (giờ Việt Nam)</p></div>';
         }
-        $doorHtml .= '</ul><p>Vui lòng giữ riêng mã mở cửa và chỉ sử dụng trong thời gian lưu trú đã đặt.</p>';
+        $doorHtml .= '<p>Vui lòng giữ riêng mã mở cửa và chỉ sử dụng trong thời gian lưu trú đã đặt.</p>';
     }
     $subject = 'Mơ Home xác nhận đặt phòng ' . $code;
     $html = '<!doctype html><html lang="vi"><body style="margin:0;background:#f7f3ed;color:#3e322b;font-family:Arial,sans-serif">'
