@@ -2,6 +2,34 @@
 
 declare(strict_types=1);
 
+// Validate all package paths before contacting production, using the HTTP allowlist.
+if (PHP_SAPI === 'cli' && ($argv[1] ?? '') === '--check-package') {
+    $package = realpath($argv[2] ?? '');
+    if ($package === false || !is_dir($package)) {
+        fwrite(STDERR, "Deploy package directory not found\n");
+        exit(1);
+    }
+    $invalid = [];
+    $files = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($package, FilesystemIterator::SKIP_DOTS)
+    );
+    foreach ($files as $file) {
+        if (!$file->isFile()) {
+            continue;
+        }
+        $path = str_replace('\\', '/', substr($file->getPathname(), strlen($package) + 1));
+        if (!deploy_path_allowed($path)) {
+            $invalid[] = $path;
+        }
+    }
+    if ($invalid) {
+        fwrite(STDERR, "Unsupported deploy paths:\n" . implode("\n", $invalid) . "\n");
+        exit(1);
+    }
+    echo "Deploy package paths: OK\n";
+    exit(0);
+}
+
 // DirectAdmin may expose public_html as a symlink. Locate .env without exposing it.
 $host = preg_replace('/:\d+$/', '', strtolower((string)($_SERVER['HTTP_HOST'] ?? '')));
 $documentRoot = realpath((string)($_SERVER['DOCUMENT_ROOT'] ?? '')) ?: __DIR__;
@@ -50,8 +78,7 @@ try {
 function receive_file(string $root, string $deployKey): never
 {
     $path = str_replace('\\', '/', (string)($_POST['path'] ?? ''));
-    $allowed = '#^(?:\.env\.example|src/[A-Za-z0-9_.-]+\.php|database/migrations/[A-Za-z0-9_.-]+\.sql|public_html/(?:index\.php|\.htaccess|deploy-hook\.php|(?:favicon|apple-touch-icon)\.svg|assets/[A-Za-z0-9_./-]+\.(?:css|js)|images/[A-Za-z0-9_./-]+\.(?:jpg|jpeg|png|webp|svg)))$#i';
-    if (!preg_match($allowed, $path) || str_contains($path, '..')) respond(['error'=>'Unsupported deploy path'], 422);
+    if (!deploy_path_allowed($path)) respond(['error'=>'Unsupported deploy path'], 422);
 
     $upload = $_FILES['file'];
     if (($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string)$upload['tmp_name'])) {
@@ -72,6 +99,13 @@ function receive_file(string $root, string $deployKey): never
     chmod($temporary, 0644);
     if (!rename($temporary, $target)) { @unlink($temporary); respond(['error'=>'Cannot publish file'], 500); }
     respond(['ok'=>true, 'path'=>$path]);
+}
+
+function deploy_path_allowed(string $path): bool
+{
+    $allowed = '#^(?:\.env\.example|src/[A-Za-z0-9_.-]+\.php|database/migrations/[A-Za-z0-9_.-]+\.sql|public_html/(?:index\.php|\.htaccess|deploy-hook\.php|(?:favicon|apple-touch-icon)\.svg|assets/[A-Za-z0-9_./-]+\.(?:css|js)|images/[A-Za-z0-9_./-]+\.(?:jpg|jpeg|png|webp|svg)))$#i';
+
+    return preg_match($allowed, $path) === 1 && !str_contains($path, '..');
 }
 
 function respond(array $data, int $status = 200): never

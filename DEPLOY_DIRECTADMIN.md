@@ -76,3 +76,7 @@ Deploy hook chỉ nhận các đường dẫn nằm trong danh sách cho phép, 
 - Nếu migration lỗi, kiểm tra các biến `DB_*` và extension `pdo_mysql`.
 - Workflow không tự xóa file cũ; cần backup database định kỳ.
 - Sao lưu cả database và `public_html/uploads/rooms/`; ảnh upload không nằm trong Git.
+
+### HTTP 422: `public_html/p.zip`
+
+ZIP archives are not runtime files accepted by the hook. The workflow excludes ZIP files from the public package and validates every package path with `php public/deploy-hook.php --check-package .deploy` before uploading. Keep ZIP uploads disabled in the hook. If another path is rejected, correct the package to match the allowlist before running the workflow again.

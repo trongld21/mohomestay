@@ -31,7 +31,7 @@ jobs:
       - name: Build DirectAdmin upload package
         run: |
           mkdir -p .deploy/public_html
-          rsync -a --exclude 'uploads/' public/ .deploy/public_html/
+          rsync -a --exclude 'uploads/' --exclude '*.[zZ][iI][pP]' public/ .deploy/public_html/
           # Deploy PHP runtime files only; Tailwind source is a local build input.
           rsync -a --exclude 'styles/' src/ .deploy/src/
           cp -R database .deploy/
@@ -40,6 +40,7 @@ jobs:
           test ! -e .deploy/public_html/uploads
           test ! -e .deploy/src/styles
           test -s .deploy/public_html/assets/tailwind.css
+          php public/deploy-hook.php --check-package .deploy
       - name: Upload through signed HTTPS hook
         env:
           DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
