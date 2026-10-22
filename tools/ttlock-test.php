@@ -61,4 +61,36 @@ tt_expect(booking_access_allowed(['status' => 'CONFIRMED', 'payment_status' => '
 foreach ([['status' => 'PENDING', 'payment_status' => 'PAID'], ['status' => 'CANCELLED', 'payment_status' => 'PAID'], ['status' => 'CONFIRMED', 'payment_status' => 'PENDING']] as $booking) {
     tt_expect(!booking_access_allowed($booking), 'Unpaid or cancelled booking must not receive code');
 }
+$rounded = ttlock_generated_window(['check_in'=>'2026-10-23 04:30:00','check_out'=>'2026-10-23 05:00:00']);
+tt_expect($rounded === ['starts_at'=>'2026-10-23 03:00:00','ends_at'=>'2026-10-23 06:00:00'], 'Generated code rounds outward to hours after one-hour buffer');
+$generatedRow = array_replace($row, ['code'=>'', 'code_mode'=>'GENERATED']);
+$generated = new TTLockClient($options, static function(string $url,array $params): array {
+    if (str_ends_with($url,'/oauth2/token')) return ['access_token'=>'token'];
+    if (str_ends_with($url,'/listKeyboardPwd')) return ['list'=>[], 'pages'=>1];
+    tt_expect(str_ends_with($url,'/keyboardPwd/get') && $params['keyboardPwdType']===3 && !isset($params['addType']), 'Generated code must not require gateway');
+    return ['keyboardPwd'=>'0563456','keyboardPwdId'=>10236];
+});
+$result=$generated->ensureGeneratedPasscode($generatedRow);
+tt_expect($result===['code'=>'0563456','remote_id'=>10236], 'Persist returned PIN including leading zero');
+try {
+    $generated->ensureGeneratedPasscode($generatedRow,false);
+    throw new LogicException('Must not generate another code after ambiguous result');
+} catch (TTLockException $e) { tt_expect($e->uncertain,'Ambiguous code creation remains unresolved'); }
+$recovered = new TTLockClient($options, static function(string $url,array $params) use ($payload,$generatedRow): array {
+    if (str_ends_with($url,'/oauth2/token')) return ['access_token'=>'token'];
+    if (str_ends_with($url,'/listKeyboardPwd')) return ['list'=>[array_replace($payload,['keyboardPwdName'=>'MO-'.$generatedRow['booking_id'],'keyboardPwd'=>'0563456','keyboardPwdId'=>10236,'keyboardPwdType'=>3])],'pages'=>1];
+    throw new LogicException('Recovery must not generate again');
+});
+tt_expect($recovered->ensureGeneratedPasscode($generatedRow,false) === ['code'=>'0563456','remote_id'=>10236], 'Recover generated code by booking identity after timeout');
+foreach ([[], ['keyboardPwd'=>'123','keyboardPwdId'=>12], ['keyboardPwd'=>'0563456','keyboardPwdId'=>0]] as $invalidResult) {
+    $badGenerated = new TTLockClient($options, static function(string $url,array $params) use ($invalidResult): array {
+        if (str_ends_with($url,'/oauth2/token')) return ['access_token'=>'token'];
+        if (str_ends_with($url,'/listKeyboardPwd')) return ['list'=>[],'pages'=>1];
+        return $invalidResult;
+    });
+    try {
+        $badGenerated->ensureGeneratedPasscode($generatedRow);
+        throw new LogicException('Invalid generated PIN response accepted');
+    } catch (TTLockException $e) { tt_expect($e->uncertain,'Malformed result must require reconciliation'); }
+}
 echo "TTLock tests: OK\n";

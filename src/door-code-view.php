@@ -18,7 +18,7 @@ function render_door_codes(): void
         <section class="mb-6 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="booking-access-title">
             <h2 id="booking-access-title" class="text-xl font-semibold">Mã cổng theo đơn đặt phòng</h2>
             <p data-ttlock-status role="status" class="mt-2 text-sm text-stone-600"></p>
-            <p class="mt-2 text-sm text-stone-600">Mã có hiệu lực trước giờ nhận phòng 1 giờ và sau giờ trả phòng 1 giờ. Chỉ gửi email khi TTLock xác nhận tạo mã thành công.</p>
+            <p class="mt-2 text-sm text-stone-600">Mã tự sinh không cần gateway. Đệm ít nhất 1 giờ trước/sau lưu trú, làm tròn ra ngoài theo giờ. Dùng lần đầu trong 24 giờ từ lúc bắt đầu hiệu lực. Hủy đơn cần xóa mã tại khóa nếu không có gateway.</p>
             <div data-booking-access-list class="mt-4 grid gap-3" aria-live="polite"></div>
         </section>
         <section class="door-list-panel" aria-labelledby="door-list-title">

@@ -26,14 +26,23 @@ function sync_booking_access(string $bookingId, ?TTLockClient $client = null, bo
         $bookingQuery->execute([$bookingId]);
         $booking = $bookingQuery->fetch();
         if (!$booking) return null;
-        $window = ttlock_window($booking);
+        $window = ttlock_generated_window($booking);
         if (!$row) {
             if (!booking_access_allowed($booking) || $window['ends_at'] <= gmdate('Y-m-d H:i:s')) return null;
-            $pin = (string)random_int(10000000, 99999999);
-            $pdo->prepare('INSERT INTO booking_access_codes(booking_id,lock_id,code,starts_at,ends_at) VALUES(?,?,?,?,?)')
+            $pin = null;
+            $pdo->prepare("INSERT INTO booking_access_codes(booking_id,lock_id,code,starts_at,ends_at,code_mode) VALUES(?,?,?,?,?,'GENERATED')")
                 ->execute([$bookingId, (int)config('ttlock.lock_id'), $pin, $window['starts_at'], $window['ends_at']]);
             $find->execute([$bookingId]);
             $row = $find->fetch();
+        }
+        if (($row['code_mode'] ?? 'CUSTOM') === 'GENERATED' && $row['remote_id'] === null && $row['sync_status'] === 'PENDING') {
+            $pdo->prepare('UPDATE booking_access_codes SET starts_at=?,ends_at=? WHERE booking_id=?')
+                ->execute([$window['starts_at'], $window['ends_at'], $bookingId]);
+            $row = array_replace($row, $window);
+        }
+        if (($row['code_mode'] ?? 'CUSTOM') === 'GENERATED' && $row['ends_at'] <= gmdate('Y-m-d H:i:s')) {
+            $pdo->prepare("UPDATE booking_access_codes SET sync_status='REVOKED',sync_error=NULL WHERE booking_id=?")->execute([$bookingId]);
+            return null;
         }
         $eligible = booking_access_allowed($booking) && $row['ends_at'] > gmdate('Y-m-d H:i:s');
         if ($row['sync_status'] === 'REVOKED') return null;
@@ -55,17 +64,25 @@ function sync_booking_access(string $bookingId, ?TTLockClient $client = null, bo
             $eligible = $booking && booking_access_allowed($booking) && $row['ends_at'] > gmdate('Y-m-d H:i:s');
             $client ??= new TTLockClient(ttlock_options());
             if (!$eligible) {
+                if (($row['code_mode'] ?? 'CUSTOM') === 'GENERATED') {
+                    throw new TTLockException('Đơn đã hủy: mã tự sinh không thể xác nhận thu hồi từ xa khi không có gateway. Cần xóa qua Bluetooth tại khóa; mã vẫn có thể dùng đến hết hạn.');
+                }
                 $mutationStarted = true;
                 $client->deletePasscode($row);
                 $pdo->prepare("UPDATE booking_access_codes SET sync_status='REVOKED',sync_error=NULL WHERE booking_id=?")->execute([$bookingId]);
                 $pdo->commit();
                 return null;
             }
-            $remoteId = $client->ensurePasscode($row, $allowCreate, static function () use (&$mutationStarted): void {
+            $beforeCreate = static function () use (&$mutationStarted): void {
                 $mutationStarted = true;
-            });
-            $pdo->prepare("UPDATE booking_access_codes SET sync_status='READY',remote_id=?,sync_error=NULL WHERE booking_id=?")
-                ->execute([$remoteId, $bookingId]);
+            };
+            if (($row['code_mode'] ?? 'CUSTOM') === 'GENERATED') {
+                $result = $client->ensureGeneratedPasscode($row, $allowCreate, $beforeCreate);
+            } else {
+                $result = ['remote_id' => $client->ensurePasscode($row, $allowCreate, $beforeCreate), 'code' => $row['code']];
+            }
+            $pdo->prepare("UPDATE booking_access_codes SET sync_status='READY',remote_id=?,code=?,sync_error=NULL WHERE booking_id=?")
+                ->execute([$result['remote_id'], $result['code'], $bookingId]);
             $pdo->commit();
             $find->execute([$bookingId]);
             return $find->fetch() ?: null;

@@ -137,7 +137,7 @@
         try {
             pendingLoad = request("/api/admin/door-codes");
             const data = await pendingLoad;
-            const syncLabels = { PENDING: 'Chờ tạo mã', READY: 'Đã đồng bộ khóa', FAILED: 'Đồng bộ thất bại', UNKNOWN: 'Cần đối soát với khóa', REVOKED: 'Đã thu hồi' };
+            const syncLabels = { PENDING: 'Chờ tạo mã', READY: 'Đã cấp mã TTLock', FAILED: 'Đồng bộ thất bại', UNKNOWN: 'Cần đối soát với khóa', REVOKED: 'Đã thu hồi' };
             const mailLabels = { PENDING: 'Chờ gửi', SENDING: 'Đang gửi', SENT: 'Đã gửi', FAILED: 'Gửi thất bại' };
             root.querySelector('[data-ttlock-status]').textContent = !data.ttlockEnabled
                 ? 'TTLock chưa bật. Web đang dùng luồng email và mã thủ công hiện tại.'
@@ -145,7 +145,7 @@
             root.querySelector('[data-booking-access-list]').innerHTML = data.bookingCodes.length
                 ? data.bookingCodes.map(row => `<article class="rounded-xl border border-stone-200 p-4">
                     <h3 class="font-semibold">${escape(row.booking_code)} · ${escape(row.guest_name)}</h3>
-                    <p class="mt-2 text-sm">${escape(syncLabels[row.sync_status] || row.sync_status)} · Email: ${escape(mailLabels[row.email_status] || row.email_status)}</p>
+                    <p class="mt-2 text-sm">${escape(row.code_mode === 'GENERATED' && row.sync_status === 'REVOKED' ? 'Đã hết thời hạn' : syncLabels[row.sync_status] || row.sync_status)} · Email: ${escape(mailLabels[row.email_status] || row.email_status)}</p>
                     ${row.sync_status === 'READY' ? `<p class="mt-2 break-all font-mono text-xl font-semibold">${escape(row.code)}</p>` : ''}
                     <p class="mt-2 text-sm">${escape(localTime(row.starts_at))} → ${escape(localTime(row.ends_at))}</p>
                     ${row.sync_error ? `<p class="mt-2 text-sm text-red-800">${escape(row.sync_error)}</p>` : ''}
