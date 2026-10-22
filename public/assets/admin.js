@@ -336,7 +336,21 @@
             ? view.items
                   .map(
                       (room) =>
-                          `<article class="admin-room-card"><div class="admin-room-cover"><img src="${esc(room.image)}" alt=""><span class="badge status-${room.status.toLowerCase()}">${room.status === "COMING_SOON" ? "Sắp ra mắt" : room.status === "HIDDEN" ? "Đang ẩn" : "Đang hoạt động"}</span></div><div class="admin-room-content"><div><h3>${esc(room.name)}</h3><p>${esc(room.subtitle)}</p><span class="admin-room-path">/rooms/${esc(room.slug)}</span></div><div class="chip-row">${room.tags.map((tag) => `<span class="chip">${esc(tag)}</span>`).join("")}</div><div class="package-summary">${room.packages.map((pkg) => `<span>${esc(pkg.name)} <strong>${cash(pkg.price)}</strong></span>`).join("") || "<span>Chưa có gói giá</span>"}</div><div class="admin-card-actions"><button class="button outline small" type="button" data-room-visibility="${esc(room.id)}" aria-label="${room.status === "HIDDEN" ? "Hiển thị" : "Ẩn"} phòng ${esc(room.name)}" title="${room.status === "HIDDEN" ? "Hiển thị với khách" : "Ẩn khỏi website"}">${icon(room.status === "HIDDEN" ? "eye" : "eye-off")} ${room.status === "HIDDEN" ? "Hiển thị" : "Ẩn phòng"}</button><a class="button outline small" href="/admin/rooms/${encodeURIComponent(room.id)}/preview" target="_blank" rel="noopener">${icon("external-link")} Xem trước</a><button class="button outline small" data-edit-room="${esc(room.id)}">${icon("pencil")} Sửa</button><button class="icon-button danger-text" data-delete-room="${esc(room.id)}" aria-label="Xóa phòng">${icon("trash")}</button></div></div></article>`,
+                          `<article class="admin-room-card"><div class="admin-room-cover"><img src="${esc(room.image)}" alt=""><span class="badge status-${room.status.toLowerCase()}">${room.status === "COMING_SOON" ? "Sắp ra mắt" : room.status === "HIDDEN" ? "Đang ẩn" : "Đang hoạt động"}</span></div><div class="admin-room-content"><div><h3>${esc(room.name)}</h3><p>${esc(room.subtitle)}</p><span class="admin-room-path">/rooms/${esc(room.slug)}</span></div><div class="chip-row">${room.tags.map((tag) => `<span class="chip">${esc(tag)}</span>`).join("")}</div><div class="grid gap-2 text-sm">${room.packages.map((pkg) => {
+                              const base = Number(pkg.basePrice ?? pkg.price);
+                              const percent = Number(pkg.effectiveDiscountPercent || 0);
+                              const sale = percent > 0 && base > Number(pkg.price);
+                              return `<div class="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-stone-200 pb-2">
+                                  <span>${esc(pkg.name)}</span>
+                                  <div class="flex flex-col items-end gap-1">
+                                      ${sale ? `<span class="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Giảm ${esc(percent)}%</span>` : ''}
+                                      <div class="flex flex-wrap items-baseline justify-end gap-2">
+                                          ${sale ? `<del class="text-sm text-stone-500"><span class="sr-only">Giá gốc </span>${cash(base)}</del>` : ''}
+                                          <strong><span class="sr-only">Giá hiện tại </span>${cash(pkg.price)}</strong>
+                                      </div>
+                                  </div>
+                              </div>`;
+                          }).join("") || "<span>Chưa có gói giá</span>"}</div><div class="admin-card-actions"><button class="button outline small" type="button" data-room-visibility="${esc(room.id)}" aria-label="${room.status === "HIDDEN" ? "Hiển thị" : "Ẩn"} phòng ${esc(room.name)}" title="${room.status === "HIDDEN" ? "Hiển thị với khách" : "Ẩn khỏi website"}">${icon(room.status === "HIDDEN" ? "eye" : "eye-off")} ${room.status === "HIDDEN" ? "Hiển thị" : "Ẩn phòng"}</button><a class="button outline small" href="/admin/rooms/${encodeURIComponent(room.id)}/preview" target="_blank" rel="noopener">${icon("external-link")} Xem trước</a><button class="button outline small" data-edit-room="${esc(room.id)}">${icon("pencil")} Sửa</button><button class="icon-button danger-text" data-delete-room="${esc(room.id)}" aria-label="Xóa phòng">${icon("trash")}</button></div></div></article>`,
                   )
                   .join("")
             : '<div class="empty-state"><h3>Không có phòng phù hợp</h3><p>Thử đổi bộ lọc hoặc thêm không gian mới.</p></div>';

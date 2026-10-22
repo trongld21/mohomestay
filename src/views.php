@@ -147,11 +147,37 @@ function render_contact_widget(): void
                                                                                                                                                                                         {
                                                                                                                                                                                             return $package['mode'] === 'FIXED_TIME' ? substr((string)$package['checkInTime'], 0, 5) . ' – ' . substr((string)$package['checkOutTime'], 0, 5) : ((int)$package['durationMinutes'] >= 60 && ((int)$package['durationMinutes'] % 60 === 0) ? ((int)$package['durationMinutes'] / 60) . ' giờ' : (int)$package['durationMinutes'] . ' phút');
                                                                                                                                                                                         }
-                                                                                                                                                                                        function render_room_cards(): void
+function render_package_sale_price(array $package): void
+{
+    $base = (int)($package['basePrice'] ?? $package['price']);
+    $price = (int)$package['price'];
+    $percent = (int)($package['effectiveDiscountPercent'] ?? 0);
+    $sale = $percent > 0 && $base > $price;
+    ?>
+    <span class="inline-flex flex-col items-start gap-1">
+        <?php if ($sale): ?>
+            <span class="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Giảm <?= $percent ?>%</span>
+        <?php endif ?>
+        <span class="inline-flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <?php if ($sale): ?><del class="text-sm font-normal text-stone-500"><span class="sr-only">Giá gốc </span><?= money($base) ?></del><?php endif ?>
+            <strong><span class="sr-only">Giá hiện tại </span><?= money($price) ?></strong>
+        </span>
+    </span>
+    <?php
+}
+
+function render_room_cards(): void
                                                                                                                                                                                         {
                                                                                                                                                                                             $catalog = array_values(rooms()); ?>
     <div class="room-grid" data-public-room-grid><?php foreach ($catalog as $index => $room): $packages = array_values(array_filter($room['packages'] ?? [], fn($package) => $package['enabled']));
                                                                                                                                                                                                 $minimum = $packages ? min(array_column($packages, 'price')) : null;
+    $minimumPackage = null;
+    foreach ($packages as $candidate) {
+        if ($candidate['price'] === $minimum) {
+            $minimumPackage = $candidate;
+            break;
+        }
+    }
                                                                                                                                                                                                 $coming = $room['status'] === 'COMING_SOON'; ?><article class="room-card room-product-card <?= $coming ? 'coming-soon' : '' ?>">
                 <div class="room-image"><a href="/rooms/<?= e($room['slug']) ?>"><img src="<?= e($room['image']) ?>" alt="Phòng <?= e($room['name']) ?>" loading="lazy"></a><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php elseif ($room['tag']): ?><span class="room-tag"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
                                 <rect x="5" y="10" width="14" height="11" rx="2" />
@@ -182,7 +208,7 @@ function render_contact_widget(): void
                                 <path d="M3 12h18v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5ZM6 12V5a2 2 0 0 1 4 0M6 20v2m12-2v2" />
                             </svg><?= e($room['bathrooms']) ?> phòng tắm</span></div>
                     <div class="room-price">
-                        <div><?php if ($minimum !== null): ?><small>Từ</small><strong><?= money($minimum) ?></strong><?php else: ?><span>Liên hệ để biết giá</span><?php endif ?></div><?php if ($coming): ?><span class="disabled-action" aria-disabled="true">Sắp mở</span><?php else: ?><a href="/bookings?room=<?= e($room['id']) ?>" aria-label="Đặt <?= e($room['name']) ?>">→</a><?php endif ?>
+                        <div><?php if ($minimum !== null): ?><small>Từ</small><?php render_package_sale_price($minimumPackage); ?><?php else: ?><span>Liên hệ để biết giá</span><?php endif ?></div><?php if ($coming): ?><span class="disabled-action" aria-disabled="true">Sắp mở</span><?php else: ?><a href="/bookings?room=<?= e($room['id']) ?>" aria-label="Đặt <?= e($room['name']) ?>">→</a><?php endif ?>
                     </div>
                 </div>
             </article><?php endforeach ?><?php if (!$catalog): ?><div class="empty-state">
@@ -426,7 +452,7 @@ function render_room(array $r): void
                                     <<?= $tag ?> class="room-stay-option" data-flex-package <?= $coming || $hidden ? 'aria-disabled="true"' : 'href="' . e('/bookings?' . http_build_query(['room' => $r['id'], 'package' => $package['id']])) . '"' ?>>
                                         <span class="room-stay-number" aria-hidden="true"><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span>
                                         <span class="rate-name"><strong><?= e($package['name']) ?></strong><small><?= e(package_timing_label($package)) ?></small></span>
-                                        <span class="rate-price"><strong><?= money($package['price']) ?></strong><?= room_detail_icon('right') ?></span>
+                                        <span class="rate-price"><?php render_package_sale_price($package); ?><?= room_detail_icon('right') ?></span>
                                     </<?= $tag ?>>
                                 <?php endforeach ?>
                             </div>
