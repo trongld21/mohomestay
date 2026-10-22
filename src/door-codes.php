@@ -53,6 +53,15 @@ function booking_door_codes(string $checkIn): array
     return select_door_codes($stmt->fetchAll(), $checkIn);
 }
 
+function delete_door_code(PDO $pdo, string $id): void
+{
+    $delete = $pdo->prepare('DELETE FROM door_codes WHERE id=?');
+    $delete->execute([$id]);
+    if ($delete->rowCount() === 0) {
+        throw new BookingException('Không tìm thấy mã mở cửa.', 404);
+    }
+}
+
 function admin_door_codes_api(string $method, ?string $id = null): never
 {
     require_admin();
@@ -64,6 +73,10 @@ function admin_door_codes_api(string $method, ?string $id = null): never
         json_response(['codes' => $rows, 'csrf' => csrf_token()]);
     }
     require_csrf();
+    if ($method === 'DELETE' && $id !== null) {
+        delete_door_code(db(), $id);
+        json_response(['ok' => true]);
+    }
     $row = validate_door_code(json_body());
     if ($method === 'POST') {
         $id = uuid();

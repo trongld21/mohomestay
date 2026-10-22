@@ -54,6 +54,16 @@ final class RoomRepository
 
     public function allRooms(): array { return $this->load('1=1'); }
 
+    public function setVisibility(string $id, string $status): array
+    {
+        if (!in_array($status, ['ACTIVE', 'HIDDEN'], true)) {
+            throw new BookingException('Trạng thái hiển thị phòng không hợp lệ.', 422);
+        }
+        $update = $this->pdo->prepare('UPDATE rooms SET status=?,is_active=? WHERE id=?');
+        $update->execute([$status, $status === 'ACTIVE' ? 1 : 0, $id]);
+        return $this->findById($id) ?? throw new BookingException('Không tìm thấy phòng.', 404);
+    }
+
     public function findById(string $id): ?array { return $this->load('id=?', [$id])[$id] ?? null; }
 
     public function findPublicBySlug(string $slug): ?array

@@ -2,7 +2,7 @@
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
-@source "../views.php";
+@source "../*.php";
 @source "../../public/assets/*.js";
 
 .room-detail-page { @apply bg-[#f8f3ed]; background-image:linear-gradient(#f8f3ed55,#f8f3ed55),var(--room-background);background-size:100% 100%; }
@@ -463,6 +463,9 @@
 }
 
 /* Unlayered shared states override legacy CSS and cover dynamically created buttons. */
+:is(button, .button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"]):not(:disabled):not([aria-disabled="true"]) {
+    @apply cursor-pointer;
+}
 :is(button, .button, [role="button"], .floating-contact, .room-price > a) {
   @apply transition-[background-color,color,border-color,box-shadow,transform,filter] duration-200 ease-out;
 }
@@ -491,7 +494,7 @@
     @apply bg-[#eee5d9] text-[#53301f];
   }
 }
-:is(button, .button, [role="button"]):is(:disabled, [aria-disabled="true"]) {
+:is(button, .button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"]):is(:disabled, [aria-disabled="true"]) {
   @apply cursor-not-allowed;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -504,4 +507,722 @@
   .button:hover, .floating-contact:hover {
     @apply transform-none;
   }
+}
+/* Admin workspace: the reference's cream/coffee palette, with readable operational type. */
+.admin-page {
+    @apply m-0 bg-[#f7f6f2] text-[#302d29] text-sm lg:text-[15px] 2xl:text-base;
+    background-image: none;
+    font-family: "Be Vietnam Pro", sans-serif;
+}
+.admin-page h1,
+.admin-page h2,
+.admin-page h3 {
+    font-family: inherit;
+    @apply tracking-normal;
+}
+.admin-page h1 {
+    @apply mt-1 mb-2 text-2xl font-semibold lg:text-3xl 2xl:text-[34px];
+}
+.admin-page h2 {
+    @apply text-lg font-semibold;
+}
+.admin-page h3 {
+    @apply text-base font-semibold;
+}
+.admin-page p {
+    @apply leading-relaxed;
+}
+.admin-page .eyebrow {
+    @apply text-[10px] lg:text-xs tracking-[.15em] text-[#79543e];
+}
+.admin-page .muted {
+    @apply text-sm lg:text-[15px] text-[#736b61];
+}
+.admin-page :is(button, a, input, select, textarea):focus-visible {
+    @apply outline-2 outline-offset-2 outline-[#79543e];
+}
+.admin-page :is(input, select, textarea) {
+    @apply accent-[#79543e] caret-[#79543e];
+}
+.admin-page ::selection {
+    @apply bg-[#e8dccd] text-[#302d29];
+}
+.admin-page [hidden] {
+    display: none !important;
+}
+.admin-sidebar {
+    @apply flex flex-col border-b border-[#e5e0d8] bg-[#fdfcf9] px-5 py-5 lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-[250px] lg:border-b-0 lg:border-r lg:px-5 lg:pt-8 lg:pb-4 2xl:w-[280px] 2xl:px-6;
+}
+.admin-wordmark {
+    @apply block w-fit px-3 text-[38px] italic leading-none text-[#79543e];
+    font-family: Georgia, serif;
+}
+.admin-wordmark span {
+    @apply ml-1 text-3xl;
+}
+.admin-wordmark small {
+    @apply mt-3 block text-[9px] not-italic tracking-[.2em];
+    font-family: "Be Vietnam Pro", sans-serif;
+}
+.admin-property {
+    @apply mt-8 hidden items-center gap-3 rounded-xl border border-[#e8e2d9] bg-white p-3 lg:flex;
+}
+.admin-property-icon {
+    @apply flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#f4efe7] text-2xl text-[#79543e];
+}
+.admin-property strong,
+.admin-profile strong {
+    @apply block text-sm;
+}
+.admin-property small,
+.admin-profile small {
+    @apply mt-1 block text-xs text-[#736b61];
+}
+.admin-nav-label {
+    @apply mb-3 mt-8 hidden px-3 text-[10px] tracking-widest text-[#736b61] lg:block;
+}
+.admin-navigation {
+    @apply mt-5 flex gap-2 overflow-x-auto lg:mt-0 lg:grid lg:grid-cols-1 lg:overflow-visible;
+}
+.admin-navigation :is(button, a) {
+    @apply m-0 flex min-h-12 w-max shrink-0 items-center justify-start gap-3 lg:w-full rounded-lg border-0 bg-transparent px-3 py-3 text-left text-sm text-[#6e665b] no-underline transition-colors 2xl:text-[15px];
+}
+.admin-navigation :is(button, a):hover {
+    @apply bg-[#f2eee7];
+}
+.admin-navigation :is(.selected, [aria-current="page"]) {
+    @apply bg-[#eee7dc] font-semibold text-[#79543e];
+}
+.admin-navigation :is(button, a) > span {
+    @apply text-xl;
+}
+.admin-sidebar-bottom {
+    @apply mt-3 flex items-center justify-between pt-0 lg:mt-auto lg:block lg:pt-8;
+}
+.admin-website-link {
+    @apply mb-0 inline-flex px-3 py-2 lg:mb-5 text-sm text-[#79543e] underline-offset-4 hover:underline;
+}
+.admin-profile-row {
+    @apply flex items-center gap-2 lg:border-t lg:border-[#e8e2d9] lg:pt-4 lg:pb-0;
+}
+.admin-profile {
+    @apply hidden min-w-0 flex-1 items-center gap-2 lg:flex;
+}
+.admin-profile > span {
+    @apply flex size-10 shrink-0 items-center justify-center rounded-full bg-[#e8dccd] text-lg text-[#79543e];
+}
+.admin-sidebar-bottom form button {
+    @apply size-11 shrink-0 rounded-lg border border-[#e8e2d9] bg-transparent p-0 text-sm enabled:hover:bg-[#eee7dc];
+}
+.admin-workspace {
+    @apply min-w-0 lg:ml-[250px] 2xl:ml-[280px];
+}
+.admin-topbar {
+    @apply flex min-h-16 flex-wrap items-center justify-between gap-2 border-b border-[#e8e2d9] bg-[#fdfcf9] px-5 py-3 text-xs text-[#736b61] lg:px-8 2xl:px-10;
+}
+.admin-topbar div {
+    @apply flex items-center gap-3;
+}
+.admin-topbar strong {
+    @apply font-medium text-[#534a40];
+}
+.admin-timezone {
+    @apply rounded bg-[#f0eee7] px-2 py-1;
+}
+.admin-workspace > main {
+    @apply mx-auto w-full max-w-[1920px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 2xl:px-10 2xl:py-10;
+}
+.admin-page-heading,
+.admin-panel-heading {
+    @apply mb-6 flex flex-wrap items-center justify-between gap-4;
+}
+.admin-page-heading .muted {
+    @apply m-0;
+}
+.admin-page .button {
+    @apply min-h-11 rounded-lg border border-[#79543e] bg-[#79543e] px-4 py-2 text-sm font-medium text-white shadow-none;
+}
+.admin-page .button.outline {
+    @apply border-[#ddd5ca] bg-white text-[#79543e];
+}
+.admin-page .button:not(:disabled):hover {
+    @apply border-[#553b2c] bg-[#553b2c] text-white;
+    transform: none;
+}
+.admin-page .button:disabled {
+    @apply cursor-not-allowed opacity-50;
+}
+.admin-page :is(button, .button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"]) {
+    @apply translate-none! scale-none! rotate-none! transform-none!;
+    transition-property: background-color, color, border-color, box-shadow, filter;
+}
+.admin-page .panel {
+    @apply rounded-xl border border-[#e8e2d9] bg-white p-5 shadow-none;
+}
+.admin-page .admin-stats {
+    @apply mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4 2xl:gap-5;
+}
+.admin-stats .panel:first-child {
+    @apply border-[#dce5d5] bg-[#eff2e9];
+}
+.admin-stats .panel p {
+    @apply m-0 text-xs text-[#6e665b] 2xl:text-sm;
+}
+.admin-stats .panel h2 {
+    @apply my-3 text-2xl font-semibold tabular-nums 2xl:text-3xl;
+}
+.admin-stats .panel:first-child h2 {
+    @apply text-[#4b6547];
+}
+.admin-stats .panel small {
+    @apply text-xs leading-relaxed text-[#736b61];
+}
+.admin-booking-panel {
+    @apply overflow-hidden rounded-xl border border-[#e8e2d9] bg-white;
+}
+.admin-table-heading {
+    @apply flex flex-wrap items-center justify-between gap-3 p-5 lg:p-6;
+}
+.admin-table-heading h2 {
+    @apply m-0;
+}
+.admin-table-heading p,
+.admin-table-heading > span {
+    @apply mb-0 mt-2 text-xs text-[#736b61];
+}
+.admin-count {
+    @apply ml-2 inline-block rounded bg-[#f1eee7] px-2 py-1 text-xs text-[#79543e];
+}
+.admin-filters {
+    @apply mb-0 flex flex-wrap items-end gap-3 px-5 pb-5 lg:px-6;
+}
+.admin-filters label {
+    @apply grid min-w-0 gap-2 text-xs text-[#736b61];
+}
+.admin-filters .admin-search {
+    @apply min-w-48 flex-1;
+}
+.admin-filters :is(input, select) {
+    @apply min-h-11 w-full rounded-lg border border-[#ddd5ca] bg-white px-3 py-2 text-sm text-[#302d29];
+}
+.admin-filters > label:not(.admin-search) {
+    @apply min-w-40 flex-1 sm:flex-none;
+}
+.admin-filters .mo-select {
+    @apply min-w-40;
+}
+.admin-page .mo-select-trigger {
+    @apply min-h-11 rounded-lg border-[#ddd5ca] bg-white text-sm;
+}
+.admin-room-filters {
+    @apply mb-6 rounded-xl border border-[#e8e2d9] bg-white p-4;
+}
+.admin-room-filters > span {
+    @apply py-3 text-xs text-[#736b61];
+}
+.admin-table-scroll {
+    @apply overflow-x-auto;
+}
+.admin-booking-table {
+    @apply w-full min-w-[780px] border-collapse text-left text-sm tabular-nums;
+}
+.admin-booking-table th {
+    @apply border-y border-[#e8e2d9] bg-[#faf9f6] px-5 py-3 text-xs font-medium text-[#736b61];
+}
+.admin-booking-table td {
+    @apply border-b border-[#f0ede7] px-5 py-5 align-top;
+}
+.admin-booking-table td > :is(strong, span, a) {
+    @apply mb-1 block;
+}
+.admin-booking-table td > :is(span, a) {
+    @apply text-xs leading-6 text-[#736b61] 2xl:text-sm;
+}
+.admin-booking-table td > a:hover {
+    @apply text-[#79543e] underline;
+}
+.admin-booking-table tbody tr:hover {
+    @apply bg-[#fdfbf7];
+}
+.admin-booking-status {
+    @apply w-fit rounded-md bg-[#f3ede1] px-2 py-1 text-xs;
+}
+.admin-booking-status[data-status="CONFIRMED"],
+.admin-booking-status[data-status="CHECKED_IN"] {
+    @apply bg-[#edf3eb] text-[#47694b];
+}
+.admin-booking-status[data-status="CANCELLED"] {
+    @apply bg-[#f8e9e5] text-[#974b3e];
+}
+.admin-booking-table .admin-reconcile {
+    @apply max-w-56 whitespace-normal text-[#974b3e];
+}
+.admin-page .admin-actions {
+    @apply flex-wrap gap-2;
+}
+.admin-page .admin-actions button {
+    @apply min-h-10 rounded-lg border border-[#ddd5ca] bg-white px-3 py-2 text-xs text-[#79543e] enabled:hover:bg-[#f2eee7];
+}
+.admin-table-footer {
+    @apply px-5 py-4 text-xs text-[#736b61];
+}
+.admin-page .admin-room-grid {
+    @apply grid grid-cols-1 gap-5 min-[700px]:grid-cols-2 min-[1500px]:grid-cols-3 min-[2100px]:grid-cols-4;
+}
+.admin-page .admin-room-card {
+    @apply rounded-xl border border-[#e8e2d9] bg-white;
+}
+.admin-page .admin-room-card:hover {
+    @apply shadow-none;
+    transform: none;
+}
+.admin-page .admin-room-cover {
+    @apply h-52 2xl:h-60;
+}
+.admin-page .admin-room-content {
+    @apply gap-4 p-5;
+}
+.admin-page .admin-room-content h3 {
+    @apply m-0 text-xl;
+}
+.admin-page .admin-room-content > div > p {
+    @apply text-sm text-[#736b61];
+}
+.admin-room-path {
+    @apply mt-2 block break-all text-xs text-[#79543e] hover:underline;
+}
+.admin-page .package-summary {
+    @apply text-sm;
+}
+.admin-page .chip {
+    @apply rounded-md bg-[#f3efe8] px-2 py-1 text-xs text-[#6e5845];
+}
+.admin-page .admin-card-actions {
+    @apply flex-wrap;
+}
+.admin-page .admin-card-actions .button {
+    @apply min-h-10 px-3 text-xs;
+}
+.admin-page .icon-button {
+    @apply flex size-10 shrink-0 items-center justify-center rounded-lg border border-[#ddd5ca] bg-white text-lg enabled:hover:bg-[#f2eee7];
+}
+.admin-page .empty-state {
+    @apply col-span-full rounded-xl p-8 text-center text-sm text-[#736b61];
+}
+.admin-page .room-editor-root {
+    @apply z-[110];
+}
+.admin-page .room-editor-backdrop {
+    @apply bg-[#30251c]/40 backdrop-blur-[2px];
+}
+.admin-page .room-editor {
+    @apply overscroll-contain inset-y-0 right-0 w-full max-w-[1200px] bg-[#f7f6f2] shadow-xl;
+    animation: none;
+}
+.admin-page .room-editor > header {
+    @apply gap-3 border-[#e8e2d9] bg-[#fdfcf9] px-5 py-5 sm:px-8;
+}
+.admin-page .room-editor > header h2 {
+    @apply mt-2 mb-0 text-xl sm:text-2xl;
+}
+.admin-page .room-editor form {
+    @apply px-5 pb-28 sm:px-8;
+}
+.admin-page .editor-section {
+    @apply border-[#e8e2d9] py-6;
+}
+.admin-page .editor-section > h3,
+.admin-page .editor-section-title h3 {
+    @apply mb-4 text-lg;
+}
+.admin-page .editor-section-title {
+    @apply flex-wrap gap-3;
+}
+.admin-page .editor-section-title p {
+    @apply text-sm leading-relaxed text-[#736b61];
+}
+.admin-page .form-grid {
+    @apply grid grid-cols-1 gap-5 md:grid-cols-2;
+}
+.admin-page .form-grid .full {
+    @apply col-span-full;
+}
+.admin-page .form-grid.four {
+    @apply grid-cols-2 xl:grid-cols-4;
+}
+.admin-page .field {
+    @apply min-w-0 gap-2 text-sm text-[#534a40] 2xl:text-[15px];
+}
+.admin-page .field :is(input, select, textarea) {
+    @apply min-h-11 min-w-0 rounded-lg border-[#ddd5ca] bg-white px-3 py-3 text-sm 2xl:text-[15px];
+}
+.admin-page .field small {
+    @apply text-xs leading-relaxed text-[#736b61];
+}
+.admin-page .check {
+    @apply text-sm;
+}
+.admin-page .admin-slug-input {
+    @apply flex min-h-11 items-center rounded-lg border border-[#ddd5ca] bg-white;
+}
+.admin-page .admin-slug-input:focus-within {
+    @apply outline-2 outline-offset-2 outline-[#79543e];
+}
+.admin-slug-input > span {
+    @apply shrink-0 pl-3 text-sm text-[#736b61];
+}
+.admin-page .admin-slug-input input {
+    @apply min-w-0 flex-1 rounded-none border-0 bg-transparent pl-1 shadow-none;
+}
+.admin-page .admin-slug-input input:focus {
+    @apply outline-none shadow-none;
+}
+.admin-room-url {
+    @apply block break-all text-xs leading-6 text-[#79543e];
+}
+.admin-page [data-slug-error],
+.admin-page [data-slug-warning] {
+    @apply m-0 text-xs text-[#974b3e];
+}
+.admin-page .package-row {
+    @apply relative grid grid-cols-1 gap-4 rounded-xl border-[#e8e2d9] bg-white p-4 sm:grid-cols-2 xl:grid-cols-3;
+}
+.admin-page .package-row .field {
+    @apply text-sm;
+}
+.admin-page .package-remove {
+    @apply static;
+}
+.package-row-actions {
+    @apply col-span-full flex items-center justify-between gap-4 border-t border-[#e8e2d9] pt-3;
+}
+.package-visibility-switch {
+    @apply relative ml-auto inline-flex min-h-11 cursor-pointer items-center gap-3 text-sm text-[#534a40];
+}
+.package-switch-track {
+    @apply inline-flex h-6 w-12 shrink-0 items-center rounded-full bg-[#afa69a] p-0.5 transition-colors motion-reduce:transition-none;
+}
+.package-switch-track > span {
+    @apply block size-5 rounded-full bg-white shadow-sm transition-transform motion-reduce:transition-none;
+}
+.package-visibility-switch input:checked + .package-switch-track {
+    @apply bg-[#79543e];
+}
+.package-visibility-switch input:checked + .package-switch-track > span {
+    @apply translate-x-6;
+}
+.package-visibility-switch input:focus-visible + .package-switch-track {
+    @apply outline-2 outline-offset-2 outline-[#79543e];
+}
+.package-visibility-switch:hover input:not(:disabled) + .package-switch-track {
+    @apply brightness-95;
+}
+.package-visibility-switch:has(input:disabled) {
+    @apply cursor-not-allowed opacity-50;
+}
+.admin-page .tag-editor {
+    @apply rounded-lg border-[#ddd5ca] bg-white;
+}
+.admin-page .tag-editor input {
+    @apply min-h-11 text-sm;
+}
+.admin-page .upload-zone {
+    @apply relative min-h-32 rounded-xl border border-dashed border-[#bba48c] bg-white p-6 focus-within:outline-2 focus-within:outline-[#79543e] hover:bg-[#f2eee7];
+}
+.admin-page .upload-zone span {
+    @apply text-sm;
+}
+.admin-page .image-manager {
+    @apply grid-cols-1 lg:grid-cols-2;
+}
+.admin-page .image-tile {
+    @apply min-w-0 bg-white;
+}
+.admin-page .image-tile > div {
+    @apply min-w-0;
+}
+.admin-page .image-tile button {
+    @apply min-h-10 rounded px-2 text-xs enabled:hover:bg-[#f2eee7];
+}
+.admin-page .image-tile button:disabled {
+    @apply opacity-50;
+}
+.admin-page .editor-footer {
+    @apply w-full max-w-[1200px] border-[#e8e2d9] bg-[#fdfcf9] px-5 py-4 sm:px-8;
+}
+.admin-page .editor-footer .button {
+    @apply flex-none;
+}
+.admin-page [data-door-codes] {
+    @apply m-0 w-full max-w-none p-0;
+}
+.admin-page [data-door-codes] > div:first-child h1 {
+    @apply mt-2;
+}
+.admin-page [data-door-codes] > div:first-child > a {
+    @apply hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+    .admin-page *,
+    .admin-page *::before,
+    .admin-page *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+.admin-page .upload-zone input[type="file"] {
+    @apply absolute inset-0 block h-full w-full cursor-pointer opacity-0;
+}
+.admin-door-filters {
+    @apply px-0 lg:px-0;
+}
+.admin-door-table {
+    @apply overflow-hidden rounded-xl border border-[#e8e2d9] bg-white;
+}
+.admin-page .admin-door-table h3 {
+    @apply m-0 font-mono text-base;
+}
+
+.admin-icon {
+    @apply inline-block size-5 shrink-0 align-middle;
+}
+.admin-navigation .admin-icon {
+    @apply size-[21px];
+}
+.admin-page :is(.admin-website-link, .admin-sidebar-bottom form button, .admin-card-actions .button, .admin-page-heading .button, .editor-section-title .button, .editor-footer .button) {
+    @apply inline-flex items-center justify-center gap-2;
+}
+.admin-page .chip:has(.admin-icon) {
+    @apply inline-flex items-center gap-1;
+}
+.admin-page .chip .admin-icon {
+    @apply size-3;
+}
+.admin-page button:disabled {
+    @apply pointer-events-none;
+}
+
+.admin-door-table .admin-booking-table {
+    @apply min-w-[600px];
+}
+/* Door code management: a full-width list with a focused add/edit dialog. */
+.admin-page .door-page-heading {
+    @apply mb-8 items-start;
+}
+.door-list-panel {
+    @apply overflow-hidden rounded-xl border border-[#e8e2d9] bg-white;
+}
+.door-list-heading {
+    @apply flex flex-wrap items-start justify-between gap-3 px-5 pt-6 pb-5 lg:px-6;
+}
+.door-list-heading h2 {
+    @apply m-0;
+}
+.door-list-heading p {
+    @apply mb-0 mt-3 text-sm text-[#736b61];
+}
+.door-time-note {
+    @apply rounded-md bg-[#f7f4ee] px-3 py-2 text-xs text-[#736b61];
+}
+.admin-page .door-filters {
+    @apply border-b border-[#e8e2d9] px-5 pb-5 lg:px-6;
+}
+.door-notice {
+    @apply mx-5 my-4 rounded-lg bg-[#faf0e5] p-4 text-sm text-[#80512e] lg:mx-6;
+}
+.door-loading {
+    @apply m-0 px-6 py-12 text-sm text-[#736b61];
+}
+.door-empty {
+    @apply flex flex-col items-center px-5 py-14 text-center sm:py-20;
+}
+.door-empty-icon {
+    @apply mb-5 flex size-14 items-center justify-center rounded-2xl bg-[#f3eee6] text-[#79543e];
+}
+.door-empty-icon .admin-icon {
+    @apply size-7;
+}
+.admin-page .door-empty h3 {
+    @apply m-0 text-lg;
+}
+.door-empty p {
+    @apply mt-3 mb-6 max-w-md text-sm text-[#736b61];
+}
+.admin-page .door-empty .button, .door-dialog-footer .button, .door-actions-cell .button {
+    @apply inline-flex items-center justify-center gap-2;
+}
+.door-page-note {
+    @apply mt-5 flex items-start gap-2 text-xs leading-6 text-[#736b61];
+}
+.door-page-note .admin-icon {
+    @apply size-4 mt-1;
+}
+.admin-page .door-code-table {
+    @apply min-w-0;
+}
+.door-code-value {
+    @apply break-all font-mono text-base tracking-wide text-[#4e3828];
+}
+.admin-page .door-code-table td > .door-status-badge {
+    @apply inline-flex w-fit items-center rounded-md bg-[#efede8] px-3 py-1 text-xs text-[#645d54];
+}
+.admin-page .door-code-table .door-status-badge[data-status=ACTIVE] {
+    @apply bg-[#edf3eb] text-[#47694b];
+}
+.admin-page .door-code-table .door-status-badge[data-status=SCHEDULED] {
+    @apply bg-[#f8efdc] text-[#805f27];
+}
+.admin-page .door-code-table .door-actions-cell .button {
+    @apply min-h-10 whitespace-nowrap px-3 text-sm;
+}
+.door-mobile-label {
+    @apply hidden;
+}
+.door-dialog {
+    @apply fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-[640px] max-h-[calc(100dvh-2rem)] overflow-auto overscroll-contain rounded-2xl border-0 bg-[#fffdf9] p-0 text-[#302d29] shadow-2xl;
+}
+.door-dialog::backdrop {
+    background: rgb(42 33 26 / 45%);
+}
+.door-dialog-heading {
+    @apply sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[#e8e2d9] bg-[#fffdf9] p-5 sm:p-6;
+}
+.admin-page .door-dialog-heading h2 {
+    @apply mb-0 mt-0 text-xl;
+}
+.door-dialog-heading p {
+    @apply mt-2 mb-0 text-sm text-[#736b61];
+}
+.door-dialog form {
+    @apply m-0;
+}
+.door-dialog-body {
+    @apply grid grid-cols-1 gap-5 p-5 text-sm sm:grid-cols-2 sm:p-6;
+}
+.door-dialog-body label {
+    @apply min-w-0;
+}
+.door-dialog-body input {
+    @apply min-w-0;
+}
+.door-dialog-body select[data-native-select] {
+    @apply appearance-none pr-10;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236e665b' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 14px center;
+    background-repeat: no-repeat;
+    background-size: 16px 16px;
+}
+.door-time-heading {
+    @apply mt-1 flex flex-wrap items-center justify-between gap-2 border-t border-[#e8e2d9] pt-5;
+}
+.admin-page .door-time-heading h3 {
+    @apply m-0 text-sm;
+}
+.door-time-heading span {
+    @apply text-xs text-[#736b61];
+}
+.door-time-help {
+    @apply m-0 rounded-lg bg-[#f5f1e9] p-3 text-xs leading-6 text-[#6d604f];
+}
+.door-form-error {
+    @apply m-0 rounded-lg bg-[#faece7] p-3 text-sm text-[#974837];
+}
+.door-discard {
+    @apply rounded-lg border border-[#d7b7a5] bg-[#faf0e5] p-4;
+}
+.door-discard p {
+    @apply mt-2 mb-4 text-sm text-[#736b61];
+}
+.door-dialog-footer {
+    @apply sticky bottom-0 flex justify-end gap-3 border-t border-[#e8e2d9] bg-[#fffdf9] p-4 sm:px-6;
+}
+@media (max-width: 767px) {
+    .door-code-table thead {
+        @apply sr-only;
+    }
+    .door-code-table tbody {
+        @apply block;
+    }
+    .door-code-table tr {
+        @apply grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-4 border-b border-[#e8e2d9] p-5;
+    }
+    .admin-page .door-code-table td {
+        @apply block border-0 p-0;
+    }
+    .door-code-cell {
+        @apply col-start-1 row-start-1;
+    }
+    .door-status-cell {
+        @apply col-start-2 row-start-1;
+    }
+    .door-time-cell {
+        @apply col-span-2 row-start-2;
+    }
+    .door-end-cell {
+        @apply col-span-2 row-start-3;
+    }
+    .door-actions-cell {
+        @apply col-span-2 row-start-4;
+    }
+    .door-mobile-label {
+        @apply inline;
+    }
+    .admin-page .door-code-table .door-actions-cell .button {
+        @apply w-full;
+    }
+}
+/* Shared administration list pagination. */
+.admin-pagination {
+    @apply flex flex-wrap items-center justify-between gap-4 border-t border-[#e8e2d9] bg-white px-4 py-4 text-xs text-[#736b61] sm:px-5;
+}
+.admin-pagination nav {
+    @apply flex max-w-full flex-wrap items-center gap-1 sm:gap-2;
+}
+.admin-page .admin-pagination button {
+    @apply flex size-8 items-center justify-center rounded-lg border border-[#d8c7b7] bg-[#fffdf9] p-0 text-sm font-medium text-[#79543e] shadow-none sm:size-10;
+}
+.admin-page .admin-pagination button:not(:disabled):hover {
+    @apply border-[#79543e] bg-[#eee7dc];
+}
+.admin-page .admin-pagination button[aria-current=page] {
+    @apply border-[#79543e] bg-[#79543e] text-white;
+}
+.admin-page .admin-pagination button:disabled {
+    @apply border-transparent bg-[#f7f4ee] text-[#b4a99c] opacity-60;
+}
+.admin-pagination nav > span {
+    @apply flex size-6 items-center justify-center;
+}
+[data-room-pagination] {
+    @apply mt-5 overflow-hidden rounded-xl;
+}
+.door-row-actions {
+    @apply flex items-center gap-2;
+}
+.admin-page .door-row-actions .icon-button {
+    @apply size-10 p-0;
+}
+.admin-page .door-row-actions .door-delete-button {
+    @apply text-[#974837] enabled:hover:border-[#c89788] enabled:hover:bg-[#faece7];
+}
+
+.admin-page .door-code-table .door-time-cell > span,
+.admin-page .door-code-table .door-end-cell > span {
+    @apply whitespace-nowrap;
+}
+.admin-page .door-code-table .door-mobile-label {
+    @apply hidden;
+}
+@media (max-width: 767px) {
+    .admin-page .door-code-table .door-mobile-label {
+        @apply block text-xs text-[#736b61];
+    }
+}
+
+@media (min-width: 768px) {
+    .admin-page .door-code-table {
+        @apply min-w-[760px];
+    }
 }

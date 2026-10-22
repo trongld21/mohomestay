@@ -28,6 +28,10 @@ expect_door(door_code_status($base, '2027-02-01 00:00:00') === 'EXPIRED', 'Expir
 expect_door(door_code_status($disabled, $at) === 'DISABLED', 'Manual disabling honored');
 $input = ['code'=>'001234#','period'=>'DAY','status'=>'ACTIVE','startsAt'=>'2027-01-15T14:00','endsAt'=>'2027-01-16T14:00'];
 $valid = validate_door_code($input);
+foreach (['DAY', 'WEEK', 'MONTH'] as $period) {
+    $periodInput = validate_door_code(array_replace($input, ['period' => $period]));
+    expect_door($periodInput['period'] === $period, 'Preserve the selected day/week/month period');
+}
 expect_door($valid['starts_at'] === '2027-01-15 07:00:00' && $valid['code'] === '001234#', 'Vietnam time converted; leading zeros preserved');
 foreach ([['endsAt'=>'2027-01-15T14:00'],['startsAt'=>'2027-02-30T14:00'],['period'=>'YEAR'],['status'=>'EXPIRED'],['code'=>'']] as $invalid) {
     try {

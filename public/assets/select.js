@@ -2,7 +2,12 @@
 (() => {
   let nextId = 0;
   const enhance = select => {
-    if (select.dataset.selectEnhanced || select.multiple || select.size > 1) return;
+    if (
+        select.hasAttribute('data-native-select') ||
+        select.dataset.selectEnhanced ||
+        select.multiple ||
+        select.size > 1
+    ) return;
     select.dataset.selectEnhanced = 'true';
     const root = document.createElement('div');
     root.className = 'mo-select';

@@ -15,9 +15,21 @@ function handle_api(string $path, string $method): never
         if ($path === '/api/bookings/lookup' && $method === 'POST') lookup_booking_api();
         if ($path === '/api/payments/webhook' && $method === 'POST') payment_webhook_api();
         if ($path === '/api/admin/door-codes' && in_array($method, ['GET', 'POST'], true)) admin_door_codes_api($method);
-        if (preg_match('#^/api/admin/door-codes/([a-f0-9]{32})$#', $path, $matches) && $method === 'PATCH') admin_door_codes_api($method, $matches[1]);
+        if (
+            preg_match('#^/api/admin/door-codes/([a-f0-9]{32})$#', $path, $matches)
+            && in_array($method, ['PATCH', 'DELETE'], true)
+        ) {
+            admin_door_codes_api($method, $matches[1]);
+        }
         if ($path === '/api/admin/rooms' && $method === 'GET') admin_rooms_api();
         if ($path === '/api/admin/rooms' && $method === 'POST') create_room_api();
+        if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)/visibility$#', $path, $matches) && $method === 'PATCH') {
+            require_admin();
+            require_csrf();
+            $body = json_body();
+            $room = room_repository()->setVisibility($matches[1], (string)($body['status'] ?? ''));
+            json_response(['room' => $room]);
+        }
         if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)/images$#',$path,$matches) && $method === 'POST') upload_room_image_api($matches[1]);
         if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)/images/([a-zA-Z0-9_-]+)$#',$path,$matches) && $method === 'PATCH') update_room_image_api($matches[1],$matches[2]);
         if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)/images/([a-zA-Z0-9_-]+)$#',$path,$matches) && $method === 'DELETE') delete_room_image_api($matches[1],$matches[2]);
@@ -122,7 +134,11 @@ function payment_webhook_api(): never
 function admin_bookings_api(): never
 {
     require_admin();
-    $rows=db()->query('SELECT b.*,r.name room_name,p.failure_reason FROM bookings b JOIN rooms r ON r.id=b.room_id LEFT JOIN payments p ON p.booking_id=b.id ORDER BY b.created_at DESC LIMIT 100')->fetchAll();
+    $rows = db()->query(
+        'SELECT b.*,r.name room_name,p.failure_reason FROM bookings b '
+        . 'JOIN rooms r ON r.id=b.room_id LEFT JOIN payments p ON p.booking_id=b.id '
+        . 'ORDER BY b.created_at DESC,b.id'
+    )->fetchAll();
     json_response(['bookings'=>$rows,'csrf'=>csrf_token()]);
 }
 function update_booking_api(): never

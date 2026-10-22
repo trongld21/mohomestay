@@ -49,6 +49,9 @@ function render_contact_widget(): void
             function render_page(string $title, callable $content, array $options = []): never
             {
                 $fullTitle = e($title) . ' | Mơ Home';
+                $adminPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+                $adminLayout = in_array($adminPath, ['/admin', '/admin/door-codes'], true);
+                if ($adminLayout) require_once APP_ROOT . '/src/admin-layout.php';
                 $robots = ($options['robots'] ?? true) ? 'index,follow' : 'noindex,nofollow';
                 ?>
     <!doctype html>
@@ -60,14 +63,15 @@ function render_contact_widget(): void
         <title><?= $fullTitle ?></title>
         <meta name="description" content="Mơ Home — homestay riêng tư tại Ninh Kiều, Cần Thơ.">
         <meta name="robots" content="<?= $robots ?>">
-        <link rel="icon" href="<?= e(asset_url('/images/mo-home-favicon.png')) ?>" type="image/png">
-        <link rel="apple-touch-icon" href="<?= e(asset_url('/images/mo-home-favicon.png')) ?>">
+        <link rel="icon" href="<?= e(asset_url('/images/mo-home-favicon-m.png')) ?>" type="image/png">
+        <link rel="apple-touch-icon" href="<?= e(asset_url('/images/mo-home-favicon-m.png')) ?>">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Noto+Sans:wght@400;500;600;700&amp;family=Noto+Serif:wght@400;500;600&amp;display=swap" rel="stylesheet">
         <link rel="stylesheet" href="<?= e(asset_url('/assets/app.css')) ?>">
         <link rel="stylesheet" href="<?= e(asset_url('/assets/tailwind.css')) ?>">
         <script src="<?= e(asset_url('/assets/contact.js')) ?>" defer></script>
+        <script src="<?= e(asset_url('/assets/pagination.js')) ?>" defer></script>
         <script src="<?= e(asset_url('/assets/date-picker.js')) ?>" defer></script>
         <script src="<?= e(asset_url('/assets/select.js')) ?>" defer></script>
         <script src="<?= e(asset_url('/assets/hero-carousel.js')) ?>" defer></script>
@@ -77,8 +81,15 @@ function render_contact_widget(): void
         <?php if (dev_reload_enabled()): ?><script src="<?= e(asset_url('/assets/dev-reload.js')) ?>" defer></script><?php endif ?>
     </head>
 
-    <body>
-        <a class="skip-link" href="#main">Đi đến nội dung</a><?php render_header(); ?><main id="main"><?php $content(); ?></main><?php render_footer(); ?><div class="ui-toast-region" data-toast-region aria-live="polite" aria-atomic="false"></div>
+    <body<?= $adminLayout ? ' class="admin-page"' : '' ?>>
+        <a class="skip-link" href="#main">Đi đến nội dung</a>
+        <?php if ($adminLayout): ?>
+            <?php render_admin_icons(); render_admin_navigation($adminPath); ?>
+            <div class="admin-workspace"><?php render_admin_topbar(); ?><main id="main"><?php $content(); ?></main></div>
+        <?php else: ?>
+            <?php render_header(); ?><main id="main"><?php $content(); ?></main><?php render_footer(); ?>
+        <?php endif ?>
+        <div class="ui-toast-region" data-toast-region aria-live="polite" aria-atomic="false"></div>
         <div class="ui-dialog-root" data-dialog-root></div>
         <?php $pagePath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
         if (!preg_match('#^/(admin|auth)(/|$)#', $pagePath)) render_contact_widget(); ?>
@@ -93,6 +104,7 @@ function render_contact_widget(): void
         <script defer src="<?= e(asset_url('/assets/app.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/booking-slots.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/rooms.js')) ?>"></script>
+        <script defer src="<?= e(asset_url('/assets/admin-slug.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin.js')) ?>"></script>
     </body>
 
@@ -440,54 +452,138 @@ function render_contact_widget(): void
             <form method="post" class="stack"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><label class="field">Email<input name="email" type="email" required></label><label class="field">Mật khẩu<input name="password" type="password" required></label><?php if ($error): ?><p class="notice error"><?= e($error) ?></p><?php endif ?><button class="button">Đăng nhập</button></form>
         </div>
     </div><?php }
-                                                                                                                                                                                        function render_admin(): void
-                                                                                                                                                                                        { ?><div class="container section admin-shell">
-        <div class="section-heading">
-            <div><span class="eyebrow">KHÔNG GIAN QUẢN LÝ</span>
-                <h1>Chào chủ nhà.</h1>
-                <p>Quản lý đơn và không gian tại một nơi.</p>
-            </div>
-            <form action="/logout" method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><button class="button outline">Đăng xuất</button></form>
-        </div>
-        <a href="/admin/door-codes" class="mb-5 inline-flex min-h-11 items-center rounded-xl border border-stone-300 bg-white px-4 py-2 font-medium text-amber-950 hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Quản lý mã mở cửa →</a>
-        <div class="admin-tabs" role="tablist" aria-label="Khu vực quản lý"><button class="selected" role="tab" data-admin-tab="bookings">Đơn đặt phòng</button><button role="tab" data-admin-tab="rooms">Quản lý phòng</button></div>
+
+function render_admin(): void
+{
+    ?>
+    <div class="admin-shell">
         <section data-admin-panel="bookings">
-            <div id="admin-bookings">
-                <p class="notice">Đang tải danh sách đơn…</p>
+            <div class="admin-page-heading">
+                <div>
+                    <span class="eyebrow">MỖI LƯỢT GHÉ, MỘT NIỀM VUI</span>
+                    <h1>Tổng quan & đặt phòng</h1>
+                    <p class="muted">Chăm chút từng lượt lưu trú, từ lúc đặt đến khi trả phòng.</p>
+                </div>
+                <button type="button" class="button outline" data-refresh-bookings>
+                    <?= admin_icon('refresh') ?> Làm mới
+                </button>
             </div>
+            <div id="admin-bookings"><p class="notice">Đang tải danh sách đơn…</p></div>
         </section>
         <section data-admin-panel="rooms" hidden>
-            <div class="admin-panel-heading">
+            <div class="admin-page-heading">
                 <div>
-                    <h2>Không gian của Mơ</h2>
+                    <span class="eyebrow">MỖI CĂN PHÒNG, MỘT CÂU CHUYỆN</span>
+                    <h1>Không gian của Mơ</h1>
                     <p class="muted">Phòng, hình ảnh, tiện nghi và các gói giá.</p>
-                </div><button class="button" type="button" data-add-room>＋ Thêm phòng</button>
+                </div>
+                <button class="button" type="button" data-add-room><?= admin_icon('plus') ?> Thêm phòng</button>
             </div>
-            <div class="admin-room-grid" data-admin-rooms>
-                <div class="skeleton" style="height:260px"></div>
+            <div class="admin-filters admin-room-filters">
+                <label class="admin-search">
+                    Tìm phòng
+                    <input type="search" data-room-search placeholder="Tên phòng hoặc đường dẫn…" />
+                </label>
+                <label>
+                    Trạng thái
+                    <select data-room-status>
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="ACTIVE">Đang hoạt động</option>
+                        <option value="COMING_SOON">Sắp ra mắt</option>
+                        <option value="HIDDEN">Đang ẩn</option>
+                    </select>
+                </label>
+                <span data-room-count aria-live="polite"></span>
             </div>
+            <div class="admin-room-grid" data-admin-rooms><p class="notice">Đang tải phòng…</p></div>
+            <div data-room-pagination></div>
         </section>
     </div>
     <div class="room-editor-root" data-room-editor hidden>
         <div class="room-editor-backdrop" data-close-editor></div>
         <aside class="room-editor" role="dialog" aria-modal="true" aria-labelledby="room-editor-title">
             <header>
-                <div><span class="eyebrow">QUẢN LÝ KHÔNG GIAN</span>
+                <div>
+                    <span class="eyebrow">QUẢN LÝ KHÔNG GIAN</span>
                     <h2 id="room-editor-title" data-editor-title>Thêm phòng</h2>
                 </div>
-                <div class="editor-heading-actions"><span class="dirty-indicator" data-dirty-indicator hidden>Chưa lưu</span><button class="icon-button" type="button" data-close-editor aria-label="Đóng">×</button></div>
+                <div class="editor-heading-actions">
+                    <span class="dirty-indicator" data-dirty-indicator hidden>Chưa lưu</span>
+                    <button class="icon-button" type="button" data-close-editor aria-label="Đóng">
+                        <?= admin_icon('x') ?>
+                    </button>
+                </div>
             </header>
-            <form data-room-form><input type="hidden" name="id">
+            <form data-room-form>
+                <input type="hidden" name="id" />
                 <section class="editor-section">
                     <h3>Thông tin cơ bản</h3>
-                    <div class="form-grid"><label class="field">Tên phòng *<input name="name" maxlength="100" required></label><label class="field">Đường dẫn (slug)<input name="slug" maxlength="100" placeholder="Tự tạo từ tên"></label><label class="field full">Mô tả ngắn<input name="subtitle" maxlength="255"></label><label class="field full">Mô tả chi tiết<textarea name="description" rows="5" maxlength="5000"></textarea></label><label class="field">Trạng thái<select name="visibility">
+                    <div class="form-grid">
+                        <label class="field">
+                            Tên phòng *
+                            <input name="name" maxlength="100" required />
+                        </label>
+                        <div class="field admin-slug-field">
+                            <label for="room-slug">Đường dẫn phòng (slug)</label>
+                            <div class="admin-slug-input">
+                                <span>/rooms/</span>
+                                <input
+                                    id="room-slug"
+                                    name="slug"
+                                    maxlength="100"
+                                    placeholder="phong-may"
+                                    spellcheck="false"
+                                    autocomplete="off"
+                                    aria-describedby="room-slug-error"
+                                />
+                            </div>
+                            <output data-room-url class="admin-room-url" aria-live="polite"></output>
+                            <p id="room-slug-error" data-slug-error role="alert" hidden></p>
+                            <small data-slug-warning hidden>
+                                Đổi đường dẫn sẽ làm liên kết cũ không còn truy cập được.
+                            </small>
+                        </div>
+                        <label class="field full">
+                            Mô tả ngắn
+                            <input name="subtitle" maxlength="255" />
+                        </label>
+                        <label class="field full">
+                            Mô tả chi tiết
+                            <textarea name="description" rows="5" maxlength="5000"></textarea>
+                        </label>
+                        <label class="field">
+                            Trạng thái
+                            <select name="visibility">
                                 <option value="ACTIVE">Đang hoạt động</option>
                                 <option value="HIDDEN">Ẩn khỏi website</option>
-                            </select></label><label class="check editor-check"><input type="checkbox" name="comingSoon"> Hiển thị “Sắp ra mắt”</label></div>
+                            </select>
+                        </label>
+                        <label class="check editor-check">
+                            <input type="checkbox" name="comingSoon" />
+                            Hiển thị “Sắp ra mắt”
+                        </label>
+                    </div>
                 </section>
                 <section class="editor-section">
                     <h3>Sức chứa & sắp xếp</h3>
-                    <div class="form-grid four"><label class="field">Số khách<input name="maxGuests" type="number" min="1" max="50" value="2"></label><label class="field">Phòng ngủ<input name="bedrooms" type="number" min="0" max="20" value="1"></label><label class="field">Phòng tắm<input name="bathrooms" type="number" min="0" max="20" value="1"></label><label class="field">Thứ tự<input name="sortOrder" type="number" value="0"></label></div>
+                    <div class="form-grid four">
+                        <label class="field">
+                            Số khách
+                            <input name="maxGuests" type="number" min="1" max="50" value="2" />
+                        </label>
+                        <label class="field">
+                            Phòng ngủ
+                            <input name="bedrooms" type="number" min="0" max="20" value="1" />
+                        </label>
+                        <label class="field">
+                            Phòng tắm
+                            <input name="bathrooms" type="number" min="0" max="20" value="1" />
+                        </label>
+                        <label class="field">
+                            Thứ tự
+                            <input name="sortOrder" type="number" value="0" />
+                        </label>
+                    </div>
                 </section>
                 <section class="editor-section">
                     <div class="editor-section-title">
@@ -497,21 +593,87 @@ function render_contact_widget(): void
                         </div>
                     </div>
                     <div class="tag-editor">
-                        <div data-tag-chips></div><input data-tag-input placeholder="Netflix, Máy chiếu, Bàn bida…">
+                        <div data-tag-chips></div>
+                        <input data-tag-input placeholder="Netflix, Máy chiếu, Bàn bida…" />
                     </div>
                 </section>
                 <section class="editor-section">
                     <div class="editor-section-title">
                         <div>
                             <h3>Gói thời gian & giá</h3>
-                            <p>Tất cả gói đang bật sẽ xuất hiện trên trang đặt phòng. Gói theo số phút cho khách tự chọn giờ nhận phòng.</p>
-                        </div><button class="button outline small" type="button" data-add-package>＋ Thêm gói</button>
+                            <p>
+                                Tất cả gói đang bật sẽ xuất hiện trên trang đặt phòng. Gói theo số phút
+                                cho khách tự chọn giờ nhận phòng.
+                            </p>
+                        </div>
+                        <button class="button outline small" type="button" data-add-package>
+                            <?= admin_icon('plus') ?> Thêm gói
+                        </button>
                     </div>
-                    <div class="package-editor" data-package-list></div><template data-package-template>
-                        <div class="package-row"><input type="hidden" data-package-field="id"><label class="field">Tên gói<input data-package-field="name" maxlength="80" required></label><label class="field">Kiểu thời gian<select data-package-field="mode">
+                    <div class="package-editor" data-package-list></div>
+                    <template data-package-template>
+                        <div class="package-row">
+                            <input type="hidden" data-package-field="id" />
+                            <label class="field">
+                                Tên gói
+                                <input data-package-field="name" maxlength="80" required />
+                            </label>
+                            <label class="field">
+                                Kiểu thời gian
+                                <select data-package-field="mode">
                                     <option value="FIXED_TIME">Giờ cố định</option>
                                     <option value="DURATION">Theo số phút (khách chọn giờ)</option>
-                                </select></label><label class="field" data-duration-field>Thời lượng (phút)<input data-package-field="durationMinutes" type="number" min="30" max="43200" value="180"></label><label class="field" data-fixed-field hidden>Nhận phòng<input data-package-field="checkInTime" type="time"></label><label class="field" data-fixed-field hidden>Trả phòng<input data-package-field="checkOutTime" type="time"></label><label class="field">Giá (đ)<input data-package-field="price" type="number" min="0" max="1000000000" step="1000" required></label><label class="check"><input data-package-field="enabled" type="checkbox" checked> Hiển thị</label><label class="field">Thứ tự<input data-package-field="sortOrder" type="number" value="10"></label><button class="icon-button package-remove" type="button" data-remove-package aria-label="Xóa gói">×</button></div>
+                                </select>
+                            </label>
+                            <label class="field" data-duration-field>
+                                Thời lượng (phút)
+                                <input
+                                    data-package-field="durationMinutes"
+                                    type="number"
+                                    min="30"
+                                    max="43200"
+                                    value="180"
+                                />
+                            </label>
+                            <label class="field" data-fixed-field hidden>
+                                Nhận phòng
+                                <input data-package-field="checkInTime" type="time" />
+                            </label>
+                            <label class="field" data-fixed-field hidden>
+                                Trả phòng
+                                <input data-package-field="checkOutTime" type="time" />
+                            </label>
+                            <label class="field">
+                                Giá (đ)
+                                <input
+                                    data-package-field="price"
+                                    type="number"
+                                    min="0"
+                                    max="1000000000"
+                                    step="1000"
+                                    required
+                                />
+                            </label>
+                            <label class="field">
+                                Thứ tự
+                                <input data-package-field="sortOrder" type="number" value="10" />
+                            </label>
+                            <div class="package-row-actions">
+                                <button
+                                    class="icon-button package-remove"
+                                    type="button"
+                                    data-remove-package
+                                    aria-label="Xóa gói"
+                                >
+                                    <?= admin_icon('trash') ?>
+                                </button>
+                                <label class="package-visibility-switch">
+                                    <span>Hiển thị</span>
+                                    <input class="sr-only" data-package-field="enabled" type="checkbox" role="switch" checked />
+                                    <span class="package-switch-track" aria-hidden="true"><span></span></span>
+                                </label>
+                            </div>
+                        </div>
                     </template>
                 </section>
                 <section class="editor-section">
@@ -520,10 +682,28 @@ function render_contact_widget(): void
                             <h3>Hình ảnh</h3>
                             <p>Tối đa 12 ảnh, JPEG/PNG/WebP, mỗi ảnh dưới 8 MiB.</p>
                         </div>
-                    </div><label class="upload-zone"><input data-image-input type="file" accept="image/jpeg,image/png,image/webp" multiple hidden><strong>Thả ảnh vào đây hoặc chọn từ máy</strong><span>Ảnh đầu tiên sẽ làm ảnh bìa</span></label>
+                    </div>
+                    <label class="upload-zone">
+                        <input
+                            data-image-input
+                            type="file"
+                            aria-label="Chọn ảnh phòng"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                        />
+                        <strong>Thả ảnh vào đây hoặc chọn từ máy</strong>
+                        <span>Ảnh đầu tiên sẽ làm ảnh bìa</span>
+                    </label>
                     <div class="image-manager" data-image-list></div>
                 </section>
-                <footer class="editor-footer"><button class="button outline" type="button" data-close-editor>Hủy</button><button class="button" type="submit" data-save-room>Lưu phòng</button></footer>
+                <footer class="editor-footer">
+                    <button class="button outline" type="button" data-close-editor>Hủy</button>
+                    <button class="button" type="submit" data-save-room>
+                        <?= admin_icon('device-floppy') ?> Lưu phòng
+                    </button>
+                </footer>
             </form>
         </aside>
-    </div><?php }
+    </div>
+    <?php
+}
