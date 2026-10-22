@@ -160,3 +160,19 @@ Tài liệu API: https://euopen.ttlock.com/doc/oauth2,
 https://euopen.ttlock.com/documentPages/htmlPages/cloud/passcode/addEn.html,
 https://euopen.ttlock.com/doc/api/v3/lock/listKeyboardPwd,
 https://euopen.ttlock.com/doc/api/v3/keyboardPwd/delete.
+
+## Mã TTLock tự sinh không cần gateway (cập nhật)
+
+Mã mới dùng `/v3/keyboardPwd/get`, loại 3 có thời hạn, không dùng custom/add.
+Migration 006 giữ mã cũ đã cấp ở chế độ CUSTOM; chỉ chuyển đơn FAILED lỗi -2012 chưa có
+remote_id sang GENERATED để có thể bấm Đối soát / thử lại sau deploy. Không cần đổi key .env.
+Khoảng đệm 1 giờ được làm tròn ra ngoài theo giờ: lưu trú 11:30–12:00 → mã 10:00–13:00.
+Giới hạn của TTLock: phải dùng lần đầu trong 24 giờ từ thời điểm bắt đầu hiệu lực,
+không phải từ thời điểm đặt phòng hoặc sinh mã. Email hiển thị thời hạn thực tế và điều kiện này.
+
+Khi không có gateway, không thể bảo đảm thu hồi mã trước hạn từ xa. Đơn hủy sẽ được báo
+FAILED kèm yêu cầu xóa mã qua Bluetooth tại khóa; không báo Đã thu hồi chỉ vì hủy trên web.
+Mã hết thời hạn được đóng trên web theo thời hạn, không gọi xóa từ xa. READY của mã tự sinh
+nghĩa là cloud TTLock đã trả mã hợp lệ, chưa chứng minh mở cổng thật thành công.
+Timeout tìm lại mã bằng tên định danh đơn và thời hạn trước khi cấp lại, giữ số 0 đầu.
+Không tự sinh mã mới khi chưa xác định được kết quả lần gửi trước.

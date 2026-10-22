@@ -35,6 +35,9 @@ function build_booking_confirmation_email(array $booking): array
                 . $escape(booking_mail_local_time($door['starts_at'])) . ' đến '
                 . $escape(booking_mail_local_time($door['ends_at'])) . ' (giờ Việt Nam)</p></div>';
         }
+        if (!empty($booking['generated_door_code'])) {
+            $doorHtml .= '<p>Mã cần được sử dụng lần đầu trong vòng 24 giờ kể từ thời điểm bắt đầu hiệu lực. Nhập mã rồi nhấn #.</p>';
+        }
         $doorHtml .= '<p>Vui lòng giữ riêng mã mở cửa và chỉ sử dụng trong thời gian lưu trú đã đặt.</p>';
     }
     $subject = 'Mơ Home xác nhận đặt phòng ' . $code;
@@ -98,6 +101,7 @@ function dispatch_confirmation_email(string $bookingId, ?callable $transport = n
     try {
         $booking['door_codes'] = $access ? [$access] : booking_door_codes((string)$booking['check_in']);
         $booking['private_door_code'] = $access !== null;
+        $booking['generated_door_code'] = ($access['code_mode'] ?? '') === 'GENERATED';
         $sent = send_booking_confirmation_email($booking, $transport);
         $pdo->prepare("UPDATE bookings SET confirmation_email_status=?,confirmation_email_sent_at=IF(?='SENT',UTC_TIMESTAMP(),confirmation_email_sent_at),confirmation_email_error=? WHERE id=?")
             ->execute([$sent?'SENT':'FAILED',$sent?'SENT':'FAILED',$sent?null:'MAIL_FROM chưa cấu hình hoặc máy chủ mail từ chối thư.',$bookingId]);

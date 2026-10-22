@@ -22,6 +22,17 @@ function ttlock_window(array $booking): array
     ];
 }
 
+function ttlock_generated_window(array $booking): array
+{
+    $window = ttlock_window($booking);
+    $start = strtotime($window['starts_at'] . ' UTC');
+    $end = strtotime($window['ends_at'] . ' UTC');
+    return [
+        'starts_at' => gmdate('Y-m-d H:i:s', (int)(floor($start / 3600) * 3600)),
+        'ends_at' => gmdate('Y-m-d H:i:s', (int)(ceil($end / 3600) * 3600)),
+    ];
+}
+
 function ttlock_options(): array
 {
     $options = [];
@@ -143,6 +154,50 @@ final class TTLockClient
             throw new TTLockException('TTLock chưa xác nhận mã đã tạo.', true);
         }
         return (int)$data['keyboardPwdId'];
+    }
+
+    public function ensureGeneratedPasscode(array $row, bool $allowCreate = true, ?callable $beforeCreate = null): array
+    {
+        $match = null;
+        for ($page = 1; $page <= 20; $page++) {
+            $data = $this->request('/v3/lock/listKeyboardPwd', [
+                'lockId' => (int)$row['lock_id'], 'pageNo' => $page, 'pageSize' => 100,
+            ]);
+            if (!isset($data['list']) || !is_array($data['list'])) throw new TTLockException('Không đọc được danh sách mã TTLock.', true);
+            foreach ($data['list'] as $remote) {
+                if (($remote['keyboardPwdName'] ?? '') !== 'MO-' . $row['booking_id']) continue;
+                if ((int)($remote['keyboardPwdType'] ?? 0) !== 3
+                    || (int)($remote['startDate'] ?? 0) !== $this->milliseconds($row['starts_at'])
+                    || (int)($remote['endDate'] ?? 0) !== $this->milliseconds($row['ends_at'])
+                    || (isset($remote['status']) && (int)$remote['status'] !== 1)) {
+                    throw new TTLockException('Mã TTLock theo đơn chưa khớp thời hạn hoặc chưa sẵn sàng.', true);
+                }
+                $candidate = $this->generatedResult($remote);
+                if ($match !== null && $match !== $candidate) throw new TTLockException('Có nhiều mã theo đơn. Cần đối soát TTLock.', true);
+                $match = $candidate;
+            }
+            if (count($data['list']) < 100 || (isset($data['pages']) && $page >= (int)$data['pages'])) {
+                if ($match !== null) return $match;
+                if (!$allowCreate) throw new TTLockException('Chưa tìm thấy mã sau lần gửi gián đoạn. Không tự tạo thêm mã.', true);
+                if ($beforeCreate !== null) $beforeCreate();
+                return $this->generatedResult($this->request('/v3/keyboardPwd/get', [
+                    'lockId' => (int)$row['lock_id'], 'keyboardPwdType' => 3,
+                    'keyboardPwdName' => 'MO-' . $row['booking_id'],
+                    'startDate' => $this->milliseconds($row['starts_at']),
+                    'endDate' => $this->milliseconds($row['ends_at']),
+                ]));
+            }
+        }
+        throw new TTLockException('Danh sách mã quá dài; cần đối soát.', true);
+    }
+
+    private function generatedResult(array $data): array
+    {
+        $code = $data['keyboardPwd'] ?? null;
+        if (!is_string($code) || !preg_match('/^[0-9]{6,9}$/D', $code) || (int)($data['keyboardPwdId'] ?? 0) < 1) {
+            throw new TTLockException('TTLock chưa trả về mã và ID hợp lệ.', true);
+        }
+        return ['code' => $code, 'remote_id' => (int)$data['keyboardPwdId']];
     }
 
     public function deletePasscode(array $row): void

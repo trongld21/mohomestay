@@ -29,7 +29,7 @@ require dirname(__DIR__) . '/src/mail.php';
 $testDb->exec("CREATE TABLE bookings (id TEXT PRIMARY KEY, room_id TEXT, booking_code TEXT, guest_name TEXT, guest_email TEXT, room_name TEXT, package_name_snapshot TEXT, stay_package TEXT, check_in TEXT, check_out TEXT, number_of_guests INT, total_price INT, status TEXT, payment_status TEXT, confirmation_email_status TEXT DEFAULT 'PENDING', confirmation_email_attempts INT DEFAULT 0, confirmation_email_sent_at TEXT, confirmation_email_error TEXT);
     CREATE TABLE rooms (id TEXT PRIMARY KEY, name TEXT);
     INSERT INTO rooms VALUES ('pink','Pink');
-    CREATE TABLE booking_access_codes (booking_id TEXT PRIMARY KEY, lock_id INT, code TEXT, starts_at TEXT, ends_at TEXT, remote_id INT, sync_status TEXT DEFAULT 'PENDING', sync_error TEXT, attempts INT DEFAULT 0, last_attempt_at TEXT, UNIQUE(lock_id,code));");
+    CREATE TABLE booking_access_codes (booking_id TEXT PRIMARY KEY, lock_id INT, code TEXT, starts_at TEXT, ends_at TEXT, remote_id INT, code_mode TEXT DEFAULT 'CUSTOM', sync_status TEXT DEFAULT 'PENDING', sync_error TEXT, attempts INT DEFAULT 0, last_attempt_at TEXT, UNIQUE(lock_id,code));");
 $booking = ['id' => str_repeat('b',32), 'room_id' => 'pink', 'booking_code' => 'MO-TEST', 'guest_name' => 'An', 'guest_email' => 'an@example.com', 'room_name' => 'Pink', 'package_name_snapshot' => 'Qua đêm', 'stay_package' => 'overnight', 'check_in' => '2099-01-15 07:00:00', 'check_out' => '2099-01-16 05:00:00', 'number_of_guests' => 2, 'total_price' => 200000, 'status' => 'CONFIRMED', 'payment_status' => 'PAID'];
 $testDb->prepare('INSERT INTO bookings (' . implode(',', array_keys($booking)) . ') VALUES (' . implode(',', array_fill(0,count($booking),'?')) . ')')->execute(array_values($booking));
 $remote = [];
@@ -38,11 +38,11 @@ $timeout = false;
 $client = new TTLockClient(ttlock_options(), function(string $url, array $params) use (&$remote, &$adds, &$timeout): array {
     if (str_ends_with($url, '/oauth2/token')) return ['access_token' => 'test-token'];
     if (str_ends_with($url, '/listKeyboardPwd')) return ['list' => array_values($remote), 'pages' => 1];
-    if (str_ends_with($url, '/add')) {
+    if (str_ends_with($url, '/keyboardPwd/get')) {
         $adds++;
-        $remote[$adds] = $params + ['keyboardPwdId' => $adds];
+        $remote[$adds] = $params + ['keyboardPwdId' => $adds, 'keyboardPwd' => '0563456'];
         if ($timeout) throw new TTLockException('Timeout', true);
-        return ['keyboardPwdId' => $adds];
+        return ['keyboardPwdId' => $adds, 'keyboardPwd' => '0563456'];
     }
     if (str_ends_with($url, '/delete')) {
         unset($remote[$params['keyboardPwdId']]);
@@ -67,10 +67,11 @@ verify_access(dispatch_confirmation_email($id, $transport), 'Ready code can be e
 verify_access(str_contains($sent[0], $access['code']) && str_contains($sent[0], 'Mã mở cổng của bạn'), 'Email must contain booking-specific PIN');
 verify_access(!dispatch_confirmation_email($id, $transport) && count($sent) === 1, 'Repeated webhook must not resend successful email');
 $testDb->prepare("UPDATE bookings SET status='CANCELLED' WHERE id=?")->execute([$id]);
-verify_access(sync_booking_access($id, $client) === null && !$remote, 'Cancellation must remove PIN from lock');
-verify_access($testDb->query('SELECT sync_status FROM booking_access_codes')->fetchColumn() === 'REVOKED', 'Track physical revocation');
+verify_access(sync_booking_access($id, $client) === null && count($remote) === 1, 'Offline generated code cannot be falsely marked physically revoked');
+verify_access($testDb->query('SELECT sync_status FROM booking_access_codes')->fetchColumn() === 'FAILED', 'Warn administrator that physical revocation is unavailable');
 verify_access(!dispatch_confirmation_email($id, $transport), 'Cancelled booking must not receive email');
 // Paid but unconfirmed orders must not get a PIN.
+$remote = [];
 $testDb->exec('DELETE FROM booking_access_codes');
 $testDb->exec("UPDATE bookings SET status='PENDING'");
 verify_access(sync_booking_access($id, $client) === null && $adds === 1, 'Payment alone is not sufficient');

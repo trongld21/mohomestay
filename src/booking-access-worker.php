@@ -17,7 +17,7 @@ $query = $pdo->query("SELECT b.id FROM bookings b LEFT JOIN booking_access_codes
     WHERE (a.last_attempt_at IS NULL OR a.last_attempt_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 MINUTE))
     AND ((b.status IN ('CONFIRMED','CHECKED_IN') AND b.payment_status='PAID'
         AND b.check_out > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 HOUR)
-        AND (a.booking_id IS NULL OR a.sync_status<>'READY' OR (b.confirmation_email_status IN ('PENDING','FAILED') AND b.confirmation_email_attempts<3)))
+        AND (a.booking_id IS NULL OR (a.sync_status<>'READY' AND a.sync_status<>'REVOKED') OR (b.confirmation_email_status IN ('PENDING','FAILED') AND b.confirmation_email_attempts<3)))
         OR (a.booking_id IS NOT NULL AND a.sync_status<>'REVOKED'
             AND (b.status='CANCELLED' OR a.ends_at<=UTC_TIMESTAMP())))
     ORDER BY COALESCE(a.last_attempt_at, b.created_at) LIMIT 30");
