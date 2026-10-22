@@ -12,7 +12,8 @@ function render_door_codes(): void
             </div>
             <div class="flex flex-wrap items-center gap-3">
                 <button type="button" class="button outline" data-door-refresh><?= admin_icon('refresh') ?> Làm mới</button>
-                <button type="button" class="button" data-door-add><?= admin_icon('plus') ?> Lưu mã có sẵn</button>
+                <button type="button" class="button" data-manual-open><?= admin_icon('plus') ?> Tạo mã TTLock</button>
+                <button type="button" class="button outline" data-door-add><?= admin_icon('plus') ?> Lưu mã có sẵn</button>
             </div>
         </div>
         <section class="mb-6 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="booking-access-title">
@@ -21,9 +22,16 @@ function render_door_codes(): void
             <p class="mt-2 text-sm text-stone-600">Mã tự sinh không cần gateway. Đệm ít nhất 1 giờ trước/sau lưu trú, làm tròn ra ngoài theo giờ. Dùng lần đầu trong 24 giờ từ lúc bắt đầu hiệu lực. Hủy đơn cần xóa mã tại khóa nếu không có gateway.</p>
             <div data-booking-access-list class="mt-4 grid gap-3" aria-live="polite"></div>
         </section>
-        <section class="mb-6 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="manual-access-title">
-            <h2 id="manual-access-title" class="text-xl font-semibold">Tạo mã trực tiếp trên khóa TTLock</h2>
-            <p class="mt-2 text-sm text-stone-600">Không cần đơn đặt phòng. Nhập thời hạn sử dụng theo giờ Việt Nam; hệ thống làm tròn bắt đầu xuống và kết thúc lên theo giờ, không cộng đệm 1 giờ. Dùng mã lần đầu trong 24 giờ từ lúc bắt đầu hiệu lực. Muốn thu hồi sớm cần xóa tại khóa bằng Bluetooth nếu không có gateway.</p>
+        <section data-manual-access-panel class="mb-6 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="manual-list-title" hidden>
+            <h2 id="manual-list-title" class="text-xl font-semibold">Mã TTLock tạo trực tiếp</h2>
+            <div data-manual-access-list class="mt-4 grid gap-3" aria-live="polite"></div>
+        </section>
+        <dialog data-manual-dialog aria-labelledby="manual-access-title" aria-describedby="manual-access-help" class="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border border-stone-200 bg-white p-5 text-[#302d29] shadow-xl backdrop:bg-black/40 sm:p-6">
+            <header class="flex items-start justify-between gap-4">
+                <h2 id="manual-access-title" class="text-xl font-semibold">Tạo mã TTLock</h2>
+                <button type="button" data-manual-close aria-label="Đóng biểu mẫu tạo mã TTLock" class="min-h-11 min-w-11 rounded-lg border border-stone-200 enabled:hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:opacity-50"><?= admin_icon('x') ?></button>
+            </header>
+            <p id="manual-access-help" class="mt-2 text-sm text-stone-600">Không cần đơn đặt phòng. Nhập thời hạn sử dụng theo giờ Việt Nam; hệ thống làm tròn bắt đầu xuống và kết thúc lên theo giờ, không cộng đệm 1 giờ. Dùng mã lần đầu trong 24 giờ từ lúc bắt đầu hiệu lực. Muốn thu hồi sớm cần xóa tại khóa bằng Bluetooth nếu không có gateway.</p>
             <form data-manual-access-form class="mt-4 grid gap-4 sm:grid-cols-2">
                 <label class="grid gap-2 font-medium sm:col-span-2">Tên mã
                     <input name="name" required maxlength="50" class="<?= e($field) ?>" placeholder="Ví dụ: Khách đến xem phòng">
@@ -37,8 +45,8 @@ function render_door_codes(): void
                 <p data-manual-access-result role="status" aria-live="polite" class="whitespace-pre-line text-sm sm:col-span-2"></p>
                 <button type="submit" class="min-h-12 rounded-lg bg-[#79543e] px-4 py-3 font-semibold text-white enabled:hover:bg-[#614330] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:opacity-50 sm:col-span-2">Tạo mã TTLock</button>
             </form>
-            <div data-manual-access-list class="mt-5 grid gap-3" aria-live="polite"></div>
-        </section>
+            <button type="button" data-manual-close class="mt-3 min-h-11 w-full rounded-lg border border-stone-300 px-4 py-2 enabled:hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:opacity-50">Đóng</button>
+        </dialog>
         <section class="door-list-panel" aria-labelledby="door-list-title">
             <div class="door-list-heading">
                 <div>

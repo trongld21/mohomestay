@@ -155,6 +155,7 @@
                     ${row.sync_error ? `<p class="mt-2 text-sm text-red-800">${escape(row.sync_error)}</p>` : ''}
                     ${data.ttlockEnabled && data.ttlockConfigured && row.sync_status !== 'REVOKED' ? `<button type="button" data-access-retry="${escape(row.booking_id)}" class="mt-3 min-h-11 rounded-xl border border-stone-300 px-4 py-2 enabled:hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800 disabled:opacity-50">Đối soát / thử lại</button>` : ''}
                 </article>`).join('') : '<p class="text-sm text-stone-600">Chưa có mã riêng theo đơn.</p>';
+            root.querySelector('[data-manual-access-panel]').hidden = !(data.manualCodes || []).length;
             root.querySelector('[data-manual-access-list]').innerHTML = (data.manualCodes || []).map(row => `<article class="rounded-xl border border-stone-200 p-4">
                 <h3 class="font-semibold">${escape(row.name)}</h3>
                 <p class="mt-2 text-sm">${escape(localTime(row.starts_at))} → ${escape(localTime(row.ends_at))}</p>
@@ -371,6 +372,33 @@
     const manualResult = root.querySelector('[data-manual-access-result]');
     let manualRequest = null;
     let manualSaving = false;
+    const manualDialog = root.querySelector('[data-manual-dialog]');
+    const manualOpen = root.querySelector('[data-manual-open]');
+    manualOpen.addEventListener('click', () => {
+        manualDialog.showModal();
+        document.body.classList.add('dialog-open');
+        manualForm.elements.name.focus();
+    });
+    function closeManualDialog() {
+        if (!manualSaving) manualDialog.close();
+    }
+    manualDialog.querySelectorAll('[data-manual-close]').forEach(button => {
+        button.addEventListener('click', closeManualDialog);
+    });
+    manualDialog.addEventListener('cancel', event => {
+        event.preventDefault();
+        closeManualDialog();
+    });
+    manualDialog.addEventListener('click', event => {
+        if (event.target !== manualDialog) return;
+        const bounds = manualDialog.getBoundingClientRect();
+        if (event.clientX < bounds.left || event.clientX > bounds.right
+            || event.clientY < bounds.top || event.clientY > bounds.bottom) closeManualDialog();
+    });
+    manualDialog.addEventListener('close', () => {
+        document.body.classList.remove('dialog-open');
+        manualOpen.focus();
+    });
     manualForm.addEventListener('submit', async event => {
         event.preventDefault();
         if (manualSaving || !manualForm.reportValidity()) return;
@@ -382,8 +410,7 @@
             };
         }
         manualSaving = true;
-        const button = manualForm.querySelector('button[type="submit"]');
-        button.disabled = true;
+        manualDialog.querySelectorAll('input, button').forEach(control => { control.disabled = true; });
         manualResult.textContent = 'Đang tạo hoặc đối soát mã với TTLock…';
         try {
             const data = await request('/api/admin/manual-access', 'POST', manualRequest);
@@ -399,7 +426,7 @@
             if (error.status === 422) manualRequest = null;
         } finally {
             manualSaving = false;
-            button.disabled = false;
+            manualDialog.querySelectorAll('input, button').forEach(control => { control.disabled = false; });
         }
     });
     root.querySelector('[data-manual-access-list]').addEventListener('click', async event => {
@@ -410,7 +437,8 @@
             await request(`/api/admin/manual-access/${encodeURIComponent(button.dataset.manualRetry)}/retry`, 'POST', {});
             await load();
         } catch (error) {
-            manualResult.textContent = error.message;
+            notice.textContent = error.message;
+            notice.hidden = false;
         } finally {
             button.disabled = false;
         }
