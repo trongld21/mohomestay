@@ -183,7 +183,7 @@ Trong tạo/sửa căn, nhập ưu đãi chung 0–99% và ưu đãi riêng mỗ
 Gói để trống kế thừa mức chung; nhập 0% bỏ giảm cho gói đó; nhập phần trăm khác
 ưu tiên hoàn toàn mức riêng, không cộng dồn. Giá gốc được giữ trong database.
 API cung cấp `basePrice`, `discountPercent`, `effectiveDiscountPercent` và `price`
-(giá sau giảm, làm tròn đến đồng), dùng cho danh sách, đặt phòng, admin tạo bill và thanh toán.
+(giá sau giảm, làm tròn đến 1.000đ: phần lẻ dưới 500đ xuống, từ 500đ lên; không giảm giữ giá gốc), dùng cho danh sách, đặt phòng, admin tạo bill và thanh toán.
 Khi sửa căn, ô giá luôn nạp lại giá gốc để không giảm lặp. Các đơn đã tạo giữ tổng tiền/snapshot cũ.
 Chạy migration `007_package_discounts.sql` trước khi dùng; mặc định căn 0%, gói kế thừa.
 Kiểm thử: `php tools/room-discount-test.php`.

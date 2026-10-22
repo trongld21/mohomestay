@@ -439,7 +439,7 @@
             const percent = own === "" ? shared : Number(own);
             const preview = one("[data-package-discount-preview]", row);
             preview.textContent = Number.isFinite(base) && Number.isInteger(percent) && percent >= 0 && percent <= 99
-                ? `Sau ưu đãi: ${cash(Math.round(base * (100 - percent) / 100))}` : "";
+                ? `Sau ưu đãi: ${cash(percent === 0 ? base : Math.round(base * (100 - percent) / 100000) * 1000)}` : "";
         }
     }
     form.addEventListener("input", updateDiscountPreviews);

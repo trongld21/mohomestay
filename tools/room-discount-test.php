@@ -3,7 +3,11 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 function discount_expect(bool $ok, string $message): void { if (!$ok) throw new RuntimeException($message); }
 discount_expect(function_exists('room_discount_price'), 'Missing room discount pricing');
 discount_expect(room_discount_price(300000,10)===270000,'Ten percent reduces actual payable price');
-discount_expect(room_discount_price(100001,15)===85001,'Round to nearest VND');
+discount_expect(room_discount_price(100001,15)===85000,'Round discount to nearest thousand');
+discount_expect(room_discount_price(199000,20)===159000,'Fraction below 500 rounds down');
+discount_expect(room_discount_price(199375,20)===160000,'Exactly 500 rounds up');
+discount_expect(room_discount_price(199500,20)===160000,'Fraction above 500 rounds up');
+discount_expect(room_discount_price(199499,0)===199499,'No discount preserves original price');
 discount_expect(room_discount_price(300000,0)===300000,'Zero preserves base price');
 $input=['id'=>'pkg','name'=>'3 giờ','mode'=>'DURATION','durationMinutes'=>180,'price'=>300000,'discountPercent'=>10];
 discount_expect(validate_packages([$input])[0]['discountPercent']===10,'Package accepts discount');

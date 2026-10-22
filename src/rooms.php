@@ -18,7 +18,8 @@ function normalize_slug(string $value): string
 
 function room_discount_price(int $price, int $percent): int
 {
-    return (int)round($price * (100 - $percent) / 100);
+    if ($percent === 0) return $price;
+    return (int)(round($price * (100 - $percent) / 100000) * 1000);
 }
 
 function package_with_discount(array $package, int $roomPercent = 0): array
