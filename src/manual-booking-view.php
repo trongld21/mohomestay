@@ -81,6 +81,9 @@ function render_manual_booking_dialog(): void
                     <textarea name="guestNote" rows="3" maxlength="1000" placeholder="Yêu cầu của khách hoặc thông tin cần lưu ý"></textarea>
                 </label>
                 <h3 class="manual-section-title sm:col-span-2">Thanh toán</h3>
+                <label class="field sm:col-span-2">Giá chốt với khách (đ) *
+                    <input name="agreedPrice" type="number" min="0" max="1000000000" step="1" required inputmode="numeric" aria-describedby="manual-price-help">
+                </label>
                 <label class="field">Trạng thái thanh toán *
                     <select name="paymentStatus" required data-native-select><option value="UNPAID">Chưa thanh toán</option><option value="PAID">Đã thanh toán đủ</option></select>
                 </label>

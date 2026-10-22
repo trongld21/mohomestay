@@ -57,6 +57,7 @@
             : '<option value="">Phòng chưa có gói đang bật</option>';
         fields.numberOfGuests.max = room?.maxGuests || 50;
         fields.numberOfGuests.value = Math.min(Number(fields.numberOfGuests.value) || 1, room?.maxGuests || 1);
+        fields.agreedPrice.value = selectedPackage()?.price ?? "";
     }
 
     async function updateAvailability() {
@@ -73,7 +74,7 @@
             summary.textContent = "Chọn phòng, gói lưu trú và thời gian nhận phòng.";
             return;
         }
-        const details = `<strong>${escape(room.name)} · ${escape(slot.name)}</strong><br>Nhận: ${dateTime(window.start)} → Trả: ${dateTime(window.end)}<br>Tổng tiền: <strong>${cash(slot.price)}</strong>`;
+        const details = `<strong>${escape(room.name)} · ${escape(slot.name)}</strong><br>Nhận: ${dateTime(window.start)} → Trả: ${dateTime(window.end)}<br>Tổng tiền: <strong data-manual-total>${cash(fields.agreedPrice.value)}</strong>`;
         summary.innerHTML = details + "<br>Đang kiểm tra lịch phòng…";
         try {
             const data = await request("/api/availability?date=" + encodeURIComponent(fields.date.value));
@@ -163,9 +164,12 @@
     form.addEventListener("input", () => {
         dirty = true;
         errorBox.hidden = true;
+        const total = summary.querySelector("[data-manual-total]");
+        if (total) total.textContent = fields.agreedPrice.value === "" ? "Chưa nhập giá" : cash(fields.agreedPrice.value);
     });
     form.addEventListener("change", (event) => {
         if (event.target.name === "roomId") updatePackages();
+        if (event.target.name === "packageId") fields.agreedPrice.value = selectedPackage()?.price ?? "";
         if (["arrivalHour", "arrivalMinute"].includes(event.target.name)) {
             setArrivalTime(`${fields.arrivalHour.value}:${fields.arrivalMinute.value}`);
             updateAvailability();

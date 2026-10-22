@@ -24,6 +24,8 @@ $input = [
     'requestId' => str_repeat('a', 32),
 ];
 $quote = quote_manual_booking($room, $input);
+manual_expect(quote_manual_booking($room, $input + ['agreedPrice' => 175000])['total'] === 175000, 'Admins must be able to set an agreed price.');
+manual_expect(quote_manual_booking($room, $input + ['agreedPrice' => 0])['total'] === 0, 'An explicit zero price must be supported.');
 manual_expect($quote['email'] === '', 'Email must be optional for telephone bookings.');
 manual_expect($quote['paymentStatus'] === 'UNPAID', 'New manual bookings must default to unpaid.');
 manual_expect($quote['total'] === $room['packages'][0]['price'], 'Prices must come from the configured package.');
@@ -39,6 +41,10 @@ foreach ([
     ['packageId' => ''],
     ['date' => ''],
     ['time' => ''],
+    ['agreedPrice' => -1],
+    ['agreedPrice' => 1.5],
+    ['agreedPrice' => 1000000001],
+    ['agreedPrice' => 'invalid'],
     ['numberOfGuests' => ''],
     ['numberOfGuests' => 50],
     ['date' => '2020-01-01'],

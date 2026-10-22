@@ -89,8 +89,11 @@ try {
     manual_db_expect(count($rows) === 1 && (int)$rows[0]['amount'] === 123000 && $rows[0]['status'] === 'PAID', 'Repeated payment confirmation must record money once.');
     $pdo->prepare("UPDATE bookings SET status='CANCELLED' WHERE id=?")->execute([$adjacent['id']]);
     manual_db_conflict(fn() => confirm_manual_payment($pdo, $adjacent['id'], 'cash'), 'Cancelled bookings must reject payment confirmation.');
-    $paid = create_manual_booking($pdo, array_replace($base, ['requestId' => uuid(), 'time' => '13:00', 'paymentStatus' => 'PAID']));
+    $paid = create_manual_booking($pdo, array_replace($base, ['requestId' => uuid(), 'time' => '13:00', 'paymentStatus' => 'PAID', 'agreedPrice' => 99000]));
     manual_db_expect($paid['payment_status'] === 'PAID', 'Paid bookings must be supported at creation.');
+    manual_db_expect((int)$paid['total_price'] === 99000 && (int)$paid['package_price_snapshot'] === 123000, 'Agreed totals must persist without changing the configured package price snapshot.');
+    $payments->execute([$paid['id']]);
+    manual_db_expect((int)$payments->fetch()['amount'] === 99000, 'Payment records must use the agreed price.');
 
     $overnight = create_manual_booking($pdo, array_replace($base, ['requestId' => uuid(), 'packageId' => $room['packages'][1]['id'], 'time' => '01:00']));
     manual_db_expect(strtotime($overnight['check_out']) - strtotime($overnight['check_in']) === 43200, 'Overnight packages must cross midnight using configured times.');

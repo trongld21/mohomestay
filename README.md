@@ -46,8 +46,9 @@ hai mục này hiển thị “Sắp kết nối” và không dẫn tới tài 
 ## Đơn đặt phòng qua điện thoại / Zalo
 
 Trong **Admin → Tổng quan & đặt phòng → Tạo đơn đặt phòng**, chọn phòng, gói lưu trú,
-ngày giờ và nhập tên, số điện thoại khách. Email không bắt buộc. Giá và giờ trả phòng
-lấy từ cấu hình gói; lịch trùng và ngày tạm khóa được kiểm tra trước khi lưu.
+ngày giờ và nhập tên, số điện thoại khách. Email không bắt buộc. Giờ trả phòng lấy
+từ cấu hình gói. Giá chốt mặc định theo giá gói; admin có thể sửa cho riêng đơn này,
+không đổi bảng giá. Lịch trùng và ngày tạm khóa được kiểm tra trước khi lưu.
 Đơn được xác nhận và giữ lịch ngay, mặc định **Chưa thanh toán**. Có thể chọn
 **Đã thanh toán đủ** lúc tạo hoặc **Xác nhận thu tiền** sau đó. Tiền mặt và chuyển
 khoản được ghi nhận thủ công, không tạo giao dịch payOS hay tự gửi tin nhắn/email.

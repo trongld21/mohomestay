@@ -18,8 +18,16 @@ function quote_manual_booking(array $room, array $input): array
     if (!preg_match('/^[a-f0-9]{32}$/', $requestId)) {
         throw new BookingException('Mã yêu cầu tạo đơn không hợp lệ. Vui lòng mở lại form.', 422);
     }
-    return quote_booking_for_room($room, $input, true)
-        + compact('source', 'paymentStatus', 'paymentMethod', 'requestId');
+    $quote = quote_booking_for_room($room, $input, true);
+    if (array_key_exists('agreedPrice', $input)) {
+        $price = filter_var($input['agreedPrice'], FILTER_VALIDATE_INT);
+        if ((!is_int($input['agreedPrice']) && !is_string($input['agreedPrice']))
+            || $price === false || $price < 0 || $price > 1000000000) {
+            throw new BookingException('Giá chốt phải là số nguyên từ 0 đến 1.000.000.000đ.', 422);
+        }
+        $quote['total'] = (int)$price;
+    }
+    return $quote + compact('source', 'paymentStatus', 'paymentMethod', 'requestId');
 }
 
 function create_manual_booking(PDO $pdo, array $input): array
