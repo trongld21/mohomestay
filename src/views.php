@@ -811,6 +811,10 @@ function render_admin(): void
                             <?= admin_icon('plus') ?> Thêm gói
                         </button>
                     </div>
+                    <label class="mb-4 grid max-w-sm gap-2 text-sm font-medium">Ưu đãi chung của căn (%)
+                        <input name="discountPercent" type="number" min="0" max="99" step="1" value="0" required class="min-h-11 rounded-lg border border-stone-300 px-3 py-2 focus-visible:outline-2 focus-visible:outline-amber-800">
+                        <span class="text-xs font-normal text-stone-600">Áp dụng cho gói để trống ưu đãi riêng. Giá sau giảm làm tròn đến đồng.</span>
+                    </label>
                     <div class="package-editor" data-package-list></div>
                     <template data-package-template>
                         <div class="package-row">
@@ -845,7 +849,7 @@ function render_admin(): void
                                 <input data-package-field="checkOutTime" type="time" />
                             </label>
                             <label class="field">
-                                Giá (đ)
+                                Giá gốc (đ)
                                 <input
                                     data-package-field="price"
                                     type="number"
@@ -854,6 +858,12 @@ function render_admin(): void
                                     step="1000"
                                     required
                                 />
+                            </label>
+                            <label class="grid gap-2 text-sm font-medium">
+                                Ưu đãi riêng (%)
+                                <input data-package-field="discountPercent" type="number" min="0" max="99" step="1" placeholder="Dùng mức chung" class="min-h-11 rounded-lg border border-stone-300 px-3 py-2 focus-visible:outline-2 focus-visible:outline-amber-800">
+                                <span class="text-xs font-normal text-stone-600">Để trống: mức chung. Nhập 0: không giảm.</span>
+                                <output data-package-discount-preview class="text-sm font-semibold text-amber-900" aria-live="polite"></output>
                             </label>
                             <label class="field">
                                 Thứ tự

@@ -176,3 +176,14 @@ Mã hết thời hạn được đóng trên web theo thời hạn, không gọi
 nghĩa là cloud TTLock đã trả mã hợp lệ, chưa chứng minh mở cổng thật thành công.
 Timeout tìm lại mã bằng tên định danh đơn và thời hạn trước khi cấp lại, giữ số 0 đầu.
 Không tự sinh mã mới khi chưa xác định được kết quả lần gửi trước.
+
+## Ưu đãi căn và từng gói
+
+Trong tạo/sửa căn, nhập ưu đãi chung 0–99% và ưu đãi riêng mỗi gói.
+Gói để trống kế thừa mức chung; nhập 0% bỏ giảm cho gói đó; nhập phần trăm khác
+ưu tiên hoàn toàn mức riêng, không cộng dồn. Giá gốc được giữ trong database.
+API cung cấp `basePrice`, `discountPercent`, `effectiveDiscountPercent` và `price`
+(giá sau giảm, làm tròn đến đồng), dùng cho danh sách, đặt phòng, admin tạo bill và thanh toán.
+Khi sửa căn, ô giá luôn nạp lại giá gốc để không giảm lặp. Các đơn đã tạo giữ tổng tiền/snapshot cũ.
+Chạy migration `007_package_discounts.sql` trước khi dùng; mặc định căn 0%, gói kế thừa.
+Kiểm thử: `php tools/room-discount-test.php`.

@@ -418,6 +418,7 @@
         one("[data-dirty-indicator]").hidden = !dirty;
     }
     function addPackage(pkg = {}) {
+        pkg = { ...pkg, price: pkg.basePrice ?? pkg.price };
         const row = one("[data-package-template]").content.firstElementChild.cloneNode(true);
         for (const input of all("[data-package-field]", row)) {
             const key = input.dataset.packageField;
@@ -428,7 +429,20 @@
         }
         togglePackageMode(row);
         packageList.append(row);
+        updateDiscountPreviews();
     }
+    function updateDiscountPreviews() {
+        const shared = Number(form.elements.discountPercent.value || 0);
+        for (const row of all(".package-row", packageList)) {
+            const base = Number(one('[data-package-field="price"]', row).value);
+            const own = one('[data-package-field="discountPercent"]', row).value;
+            const percent = own === "" ? shared : Number(own);
+            const preview = one("[data-package-discount-preview]", row);
+            preview.textContent = Number.isFinite(base) && Number.isInteger(percent) && percent >= 0 && percent <= 99
+                ? `Sau ưu đãi: ${cash(Math.round(base * (100 - percent) / 100))}` : "";
+        }
+    }
+    form.addEventListener("input", updateDiscountPreviews);
     function togglePackageMode(row) {
         const fixed = one('[data-package-field="mode"]', row).value === "FIXED_TIME";
         all("[data-fixed-field]", row).forEach((field) => (field.hidden = !fixed));
@@ -503,6 +517,7 @@
             "bedrooms",
             "bathrooms",
             "sortOrder",
+            "discountPercent",
         ])
             if (form.elements[key])
                 form.elements[key].value = room?.[key] ?? form.elements[key].defaultValue;
@@ -555,7 +570,7 @@
         data.status = form.elements.comingSoon.checked
             ? "COMING_SOON"
             : form.elements.visibility.value;
-        for (const key of ["maxGuests", "bedrooms", "bathrooms", "sortOrder"])
+        for (const key of ["maxGuests", "bedrooms", "bathrooms", "sortOrder", "discountPercent"])
             data[key] = Number(data[key]);
         data.tags = tags;
         data.highlights = form.elements.highlights.value
@@ -568,7 +583,7 @@
                 const key = input.dataset.packageField;
                 value[key] = input.type === "checkbox" ? input.checked : input.value;
             }
-            for (const key of ["durationMinutes", "price", "sortOrder"])
+            for (const key of ["durationMinutes", "price", "sortOrder", "discountPercent"])
                 value[key] = value[key] === "" ? null : Number(value[key]);
             return value;
         });

@@ -44,6 +44,7 @@ function sync_booking_access(string $bookingId, ?TTLockClient $client = null, bo
             $pdo->prepare("UPDATE booking_access_codes SET sync_status='REVOKED',sync_error=NULL WHERE booking_id=?")->execute([$bookingId]);
             return null;
         }
+        $row['booking_code'] = (string)$booking['booking_code'];
         $eligible = booking_access_allowed($booking) && $row['ends_at'] > gmdate('Y-m-d H:i:s');
         if ($row['sync_status'] === 'REVOKED') return null;
         if (!$force && in_array($row['sync_status'], ['FAILED', 'UNKNOWN'], true)

@@ -26,9 +26,13 @@ function hydrate_room_rows(array $rooms, array $images, array $tags, array $pack
             'durationMinutes'=>$item['duration_minutes'] === null ? null : (int)$item['duration_minutes'],
             'checkInTime'=>$item['check_in_time'] === null ? null : substr((string)$item['check_in_time'],0,5),
             'checkOutTime'=>$item['check_out_time'] === null ? null : substr((string)$item['check_out_time'],0,5),
+            'discountPercent'=>isset($item['discount_percent']) ? (int)$item['discount_percent'] : null,
             'price'=>(int)$item['price'],'enabled'=>(bool)$item['is_enabled'],'sortOrder'=>(int)$item['sort_order'],
         ], $roomPackages);
+        $roomDiscount = (int)($row['discount_percent'] ?? 0);
+        $mappedPackages = array_map(fn($package) => package_with_discount($package, $roomDiscount), $mappedPackages);
         $result[$id] = [
+            'discountPercent'=>$roomDiscount,
             'id'=>$id,'name'=>$row['name'],'slug'=>$row['slug'],'subtitle'=>$row['subtitle'] ?? '',
             'description'=>$row['description'] ?? '','tag'=>$row['tag'] ?? '','status'=>$row['status'] ?? 'ACTIVE',
             'highlights'=>json_decode($row['highlights'] ?? '[]', true, 512, JSON_THROW_ON_ERROR) ?? [],
@@ -82,6 +86,7 @@ final class RoomRepository
             $minimumPrice = $this->minimumPrice($data['packages']);
             $stmt->execute([$id,$data['name'],$data['slug'],$minimumPrice,$data['maxGuests'],$data['status']==='ACTIVE'?1:0,$data['subtitle'],$data['description'],'',$data['status'],$data['bedrooms'],$data['bathrooms'],$data['sortOrder']]);
             $this->saveHighlights($id, $data['highlights']);
+            $this->pdo->prepare('UPDATE rooms SET discount_percent=? WHERE id=?')->execute([$data['discountPercent'], $id]);
             $this->replaceTags($id,$data['tags']); $this->replacePackages($id,$data['packages']);
             $this->pdo->commit();
         } catch (PDOException $e) {
@@ -102,6 +107,9 @@ final class RoomRepository
             $stmt->execute([$data['name'],$data['slug'],$this->minimumPrice($data['packages']),$data['maxGuests'],$data['status']==='ACTIVE'?1:0,$data['subtitle'],$data['description'],'',$data['status'],$data['bedrooms'],$data['bathrooms'],$data['sortOrder'],$id]);
             if (array_key_exists('highlights', $input)) {
                 $this->saveHighlights($id, $data['highlights']);
+            }
+            if (array_key_exists('discountPercent', $input)) {
+                $this->pdo->prepare('UPDATE rooms SET discount_percent=? WHERE id=?')->execute([$data['discountPercent'], $id]);
             }
             $this->replaceTags($id,$data['tags']);$this->replacePackages($id,$data['packages']);$this->pdo->commit();
         } catch (PDOException $e) {
@@ -167,13 +175,13 @@ final class RoomRepository
 
     private function load(string $where, array $params=[]): array
     {
-        $stmt=$this->pdo->prepare('SELECT id,name,slug,subtitle,description,highlights,tag,status,max_guests,bedrooms,bathrooms,sort_order,created_at,updated_at FROM rooms WHERE '.$where.' ORDER BY sort_order,created_at');$stmt->execute($params);$rows=$stmt->fetchAll();
+        $stmt=$this->pdo->prepare('SELECT id,name,slug,subtitle,description,highlights,discount_percent,tag,status,max_guests,bedrooms,bathrooms,sort_order,created_at,updated_at FROM rooms WHERE '.$where.' ORDER BY sort_order,created_at');$stmt->execute($params);$rows=$stmt->fetchAll();
         if(!$rows)return [];$ids=array_column($rows,'id');$marks=implode(',',array_fill(0,count($ids),'?'));
         $child=function(string $sql)use($ids,$marks){$stmt=$this->pdo->prepare(str_replace(':ids',$marks,$sql));$stmt->execute($ids);return $stmt->fetchAll();};
         return hydrate_room_rows($rows,
             $child('SELECT id,room_id,path,caption,is_cover,sort_order FROM room_images WHERE room_id IN (:ids) ORDER BY sort_order,created_at'),
             $child('SELECT id,room_id,label,sort_order FROM room_tags WHERE room_id IN (:ids) ORDER BY sort_order'),
-            $child('SELECT id,room_id,name,timing_mode,duration_minutes,check_in_time,check_out_time,price,is_enabled,sort_order FROM room_packages WHERE room_id IN (:ids) ORDER BY sort_order,created_at'));
+            $child('SELECT id,room_id,name,timing_mode,duration_minutes,check_in_time,check_out_time,price,discount_percent,is_enabled,sort_order FROM room_packages WHERE room_id IN (:ids) ORDER BY sort_order,created_at'));
     }
 
     private function saveHighlights(string $roomId, array $highlights): void
@@ -191,8 +199,8 @@ final class RoomRepository
     private function replacePackages(string $roomId,array $packages):void
     {
         $existing=$this->pdo->prepare('SELECT id FROM room_packages WHERE room_id=?');$existing->execute([$roomId]);$old=$existing->fetchAll(PDO::FETCH_COLUMN);$kept=[];
-        $stmt=$this->pdo->prepare("INSERT INTO room_packages(id,room_id,name,timing_mode,duration_minutes,check_in_time,check_out_time,price,is_enabled,sort_order) VALUES(?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),timing_mode=VALUES(timing_mode),duration_minutes=VALUES(duration_minutes),check_in_time=VALUES(check_in_time),check_out_time=VALUES(check_out_time),price=VALUES(price),is_enabled=VALUES(is_enabled),sort_order=VALUES(sort_order)");
-        foreach($packages as $package){$id=select_package_id($package['id'],$old);$kept[]=$id;$stmt->execute([$id,$roomId,$package['name'],$package['mode'],$package['durationMinutes'],$package['checkInTime'],$package['checkOutTime'],$package['price'],$package['enabled']?1:0,$package['sortOrder']]);}
+        $stmt=$this->pdo->prepare("INSERT INTO room_packages(id,room_id,name,timing_mode,duration_minutes,check_in_time,check_out_time,price,is_enabled,sort_order,discount_percent) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),timing_mode=VALUES(timing_mode),duration_minutes=VALUES(duration_minutes),check_in_time=VALUES(check_in_time),check_out_time=VALUES(check_out_time),price=VALUES(price),is_enabled=VALUES(is_enabled),sort_order=VALUES(sort_order),discount_percent=VALUES(discount_percent)");
+        foreach($packages as $package){$id=select_package_id($package['id'],$old);$kept[]=$id;$stmt->execute([$id,$roomId,$package['name'],$package['mode'],$package['durationMinutes'],$package['checkInTime'],$package['checkOutTime'],$package['price'],$package['enabled']?1:0,$package['sortOrder'],$package['discountPercent']]);}
         foreach(array_diff($old,$kept) as $id){$used=$this->pdo->prepare('SELECT COUNT(*) FROM bookings WHERE package_id=?');$used->execute([$id]);if((int)$used->fetchColumn()>0)$this->pdo->prepare('UPDATE room_packages SET is_enabled=0 WHERE id=?')->execute([$id]);else $this->pdo->prepare('DELETE FROM room_packages WHERE id=?')->execute([$id]);}
     }
 

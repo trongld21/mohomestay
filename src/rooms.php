@@ -16,6 +16,22 @@ function normalize_slug(string $value): string
     return trim($value, '-');
 }
 
+function room_discount_price(int $price, int $percent): int
+{
+    return (int)round($price * (100 - $percent) / 100);
+}
+
+function package_with_discount(array $package, int $roomPercent = 0): array
+{
+    $base = (int)($package['basePrice'] ?? $package['price']);
+    $percent = $package['discountPercent'] ?? $roomPercent;
+    return array_replace($package, [
+        'basePrice' => $base,
+        'effectiveDiscountPercent' => (int)$percent,
+        'price' => room_discount_price($base, (int)$percent),
+    ]);
+}
+
 function validate_room_input(array $input): array
 {
     $name = trim((string)($input['name'] ?? ''));
@@ -46,6 +62,7 @@ function validate_room_input(array $input): array
         'subtitle'=>limited_text($input['subtitle'] ?? '', 255, 'Mô tả ngắn'),
         'description'=>limited_text($input['description'] ?? '', 5000, 'Mô tả'),
         'status'=>$status,'maxGuests'=>$maxGuests,'bedrooms'=>$bedrooms,'bathrooms'=>$bathrooms,
+        'discountPercent'=>bounded_integer($input['discountPercent'] ?? 0, 0, 99, 'Ưu đãi chung (%)'),
         'sortOrder'=>$sortOrder,'tags'=>$tags,'highlights'=>validate_room_highlights($input['highlights'] ?? []),
         'packages'=>validate_packages((array)($input['packages'] ?? [])),
     ];
@@ -87,6 +104,7 @@ function validate_packages(array $packages): array
         $package = [
             'id'=>preg_match('/^[a-zA-Z0-9_-]{1,64}$/', (string)($raw['id'] ?? '')) ? (string)$raw['id'] : '',
             'name'=>$name,'mode'=>$mode,'durationMinutes'=>null,'checkInTime'=>null,'checkOutTime'=>null,
+            'discountPercent'=>!isset($raw['discountPercent']) || $raw['discountPercent'] === '' ? null : bounded_integer($raw['discountPercent'], 0, 99, 'Ưu đãi gói (%)'),
             'price'=>(int)$price,'enabled'=>filter_var($raw['enabled'] ?? true, FILTER_VALIDATE_BOOL),
             'sortOrder'=>bounded_integer($raw['sortOrder'] ?? ($index + 1) * 10, -100000, 100000, 'Thứ tự gói'),
         ];

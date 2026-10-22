@@ -124,7 +124,7 @@ final class TTLockClient
             }
             foreach ($data['list'] as $remote) {
                 if ((string)($remote['keyboardPwd'] ?? '') !== $row['code']) continue;
-                if (($remote['keyboardPwdName'] ?? '') !== 'MO-' . $row['booking_id']
+                if (!in_array(($remote['keyboardPwdName'] ?? ''), [$this->passcodeName($row), 'MO-' . $row['booking_id']], true)
                     || (int)($remote['startDate'] ?? 0) !== $this->milliseconds($row['starts_at'])
                     || (int)($remote['endDate'] ?? 0) !== $this->milliseconds($row['ends_at'])
                     || (int)($remote['keyboardPwdId'] ?? 0) <= 0
@@ -146,7 +146,7 @@ final class TTLockClient
         if ($beforeCreate !== null) $beforeCreate();
         $data = $this->request('/v3/keyboardPwd/add', [
             'lockId' => (int)$row['lock_id'], 'keyboardPwd' => $row['code'],
-            'keyboardPwdName' => 'MO-' . $row['booking_id'], 'keyboardPwdType' => 3,
+            'keyboardPwdName' => $this->passcodeName($row), 'keyboardPwdType' => 3,
             'startDate' => $this->milliseconds($row['starts_at']),
             'endDate' => $this->milliseconds($row['ends_at']), 'addType' => 2,
         ]);
@@ -165,7 +165,7 @@ final class TTLockClient
             ]);
             if (!isset($data['list']) || !is_array($data['list'])) throw new TTLockException('Không đọc được danh sách mã TTLock.', true);
             foreach ($data['list'] as $remote) {
-                if (($remote['keyboardPwdName'] ?? '') !== 'MO-' . $row['booking_id']) continue;
+                if (!in_array(($remote['keyboardPwdName'] ?? ''), [$this->passcodeName($row), 'MO-' . $row['booking_id']], true)) continue;
                 if ((int)($remote['keyboardPwdType'] ?? 0) !== 3
                     || (int)($remote['startDate'] ?? 0) !== $this->milliseconds($row['starts_at'])
                     || (int)($remote['endDate'] ?? 0) !== $this->milliseconds($row['ends_at'])
@@ -182,7 +182,7 @@ final class TTLockClient
                 if ($beforeCreate !== null) $beforeCreate();
                 return $this->generatedResult($this->request('/v3/keyboardPwd/get', [
                     'lockId' => (int)$row['lock_id'], 'keyboardPwdType' => 3,
-                    'keyboardPwdName' => 'MO-' . $row['booking_id'],
+                    'keyboardPwdName' => $this->passcodeName($row),
                     'startDate' => $this->milliseconds($row['starts_at']),
                     'endDate' => $this->milliseconds($row['ends_at']),
                 ]));
@@ -210,6 +210,12 @@ final class TTLockClient
         if (!array_key_exists('errcode', $data) || (int)$data['errcode'] !== 0) {
             throw new TTLockException('TTLock chưa xác nhận thu hồi mã.', true);
         }
+    }
+
+    private function passcodeName(array $row): string
+    {
+        $name = trim((string)($row['booking_code'] ?? ''));
+        return $name !== '' ? $name : 'MO-' . $row['booking_id'];
     }
 
     private function milliseconds(string $utc): int

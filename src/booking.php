@@ -17,7 +17,7 @@ function resolve_bookable_package(array $room, string $packageId): array
 {
     assert_room_bookable($room);
     foreach ((array)($room['packages'] ?? []) as $package) {
-        if (($package['id'] ?? '') === $packageId && ($package['enabled'] ?? false)) return $package;
+        if (($package['id'] ?? '') === $packageId && ($package['enabled'] ?? false)) return package_with_discount($package, (int)($room['discountPercent'] ?? 0));
     }
     throw new BookingException('Gói giá không hợp lệ hoặc đã tạm tắt.', 409);
 }

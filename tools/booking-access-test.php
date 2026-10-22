@@ -57,6 +57,7 @@ verify_access($testDb->query('SELECT sync_status FROM booking_access_codes')->fe
 verify_access(sync_booking_access($id, $client) === null && $adds === 1, 'Polling must not hammer API after a timeout');
 $timeout = false;
 $access = sync_booking_access($id, $client, true);
+verify_access($remote[1]['keyboardPwdName'] === 'MO-TEST', 'Name on TTLock matches visible order ID');
 verify_access($access['sync_status'] === 'READY' && $adds === 1, 'Retry must recover remote code without second add');
 verify_access($access['starts_at'] === '2099-01-15 06:00:00' && $access['ends_at'] === '2099-01-16 06:00:00', 'Persist buffered dates');
 verify_access(sync_booking_access($id, $client)['code'] === $access['code'] && $adds === 1, 'Repeated payment processing must reuse PIN');
