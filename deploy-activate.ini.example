@@ -1,0 +1,2 @@
+; Cron activation is disabled until hosting prerequisites are verified.
+ENABLED=false

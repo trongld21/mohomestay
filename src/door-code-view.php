@@ -8,13 +8,19 @@ function render_door_codes(): void
         <div class="admin-page-heading door-page-heading">
             <div>
                 <h1>Mã mở cửa</h1>
-                <p class="muted">Quản lý mã dùng chung và thời gian sử dụng tại Mơ.</p>
+                <p class="muted">Quản lý mã cổng theo đơn và mã nhập thủ công tại Mơ.</p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
                 <button type="button" class="button outline" data-door-refresh><?= admin_icon('refresh') ?> Làm mới</button>
                 <button type="button" class="button" data-door-add><?= admin_icon('plus') ?> Thêm mã mở cửa</button>
             </div>
         </div>
+        <section class="mb-6 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="booking-access-title">
+            <h2 id="booking-access-title" class="text-xl font-semibold">Mã cổng theo đơn đặt phòng</h2>
+            <p data-ttlock-status role="status" class="mt-2 text-sm text-stone-600"></p>
+            <p class="mt-2 text-sm text-stone-600">Mã có hiệu lực trước giờ nhận phòng 1 giờ và sau giờ trả phòng 1 giờ. Chỉ gửi email khi TTLock xác nhận tạo mã thành công.</p>
+            <div data-booking-access-list class="mt-4 grid gap-3" aria-live="polite"></div>
+        </section>
         <section class="door-list-panel" aria-labelledby="door-list-title">
             <div class="door-list-heading">
                 <div>
@@ -46,7 +52,8 @@ function render_door_codes(): void
                 </div>
                 <button class="icon-button" type="button" data-door-close aria-label="Đóng biểu mẫu"><?= admin_icon('x') ?></button>
             </header>
-            <form data-door-form>
+            <p class="mb-4 text-sm text-stone-600">Mã nhập thủ công chỉ lưu trên web, không tự ghi vào khóa. Khi bật TTLock, email dùng mã riêng theo đơn.</p>
+                <form data-door-form>
                 <input name="id" type="hidden">
                 <div class="door-dialog-body">
                     <label class="grid gap-2 font-medium sm:col-span-2">Mã mở cửa <span class="sr-only">(bắt buộc)</span>

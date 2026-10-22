@@ -21,6 +21,7 @@ function handle_api(string $path, string $method): never
         ) {
             admin_door_codes_api($method, $matches[1]);
         }
+        if (preg_match('#^/api/admin/booking-access/([a-f0-9]{32})/retry$#', $path, $matches) && $method === 'POST') admin_booking_access_retry($matches[1]);
         if ($path === '/api/admin/rooms' && $method === 'GET') admin_rooms_api();
         if ($path === '/api/admin/rooms' && $method === 'POST') create_room_api();
         if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)/visibility$#', $path, $matches) && $method === 'PATCH') {
@@ -143,8 +144,30 @@ function admin_bookings_api(): never
 }
 function update_booking_api(): never
 {
-    require_admin();require_csrf();$body=json_body();$id=(string)($body['id']??'');$status=(string)($body['status']??'');$pdo=db();$pdo->beginTransaction();
-    try{$s=$pdo->prepare('SELECT * FROM bookings WHERE id=? FOR UPDATE');$s->execute([$id]);$b=$s->fetch();if(!$b)json_response(['error'=>'Không tìm thấy đơn.'],404);$allowed=['PENDING'=>['CANCELLED'],'CONFIRMED'=>['CHECKED_IN','CANCELLED'],'CHECKED_IN'=>['CHECKED_OUT']];if(!in_array($status,$allowed[$b['status']]??[],true))throw new BookingException('Thao tác không hợp lệ.',409);$pdo->prepare('UPDATE bookings SET status=? WHERE id=?')->execute([$status,$id]);$pdo->commit();json_response(['ok'=>true]);}catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+    require_admin();
+    require_csrf();
+    $body = json_body();
+    $id = (string)($body['id'] ?? '');
+    $status = (string)($body['status'] ?? '');
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare('SELECT * FROM bookings WHERE id=? FOR UPDATE');
+        $stmt->execute([$id]);
+        $booking = $stmt->fetch();
+        if (!$booking) throw new BookingException('Không tìm thấy đơn.', 404);
+        $allowed = ['PENDING' => ['CANCELLED'], 'CONFIRMED' => ['CHECKED_IN', 'CANCELLED'], 'CHECKED_IN' => ['CHECKED_OUT']];
+        if (!in_array($status, $allowed[$booking['status']] ?? [], true)) {
+            throw new BookingException('Thao tác không hợp lệ.', 409);
+        }
+        $pdo->prepare('UPDATE bookings SET status=? WHERE id=?')->execute([$status, $id]);
+        $pdo->commit();
+        if ($status === 'CANCELLED') sync_booking_access($id);
+        json_response(['ok' => true]);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
 }
 
 function admin_rooms_api():never

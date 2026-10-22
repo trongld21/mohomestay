@@ -137,6 +137,20 @@
         try {
             pendingLoad = request("/api/admin/door-codes");
             const data = await pendingLoad;
+            const syncLabels = { PENDING: 'Chờ tạo mã', READY: 'Đã đồng bộ khóa', FAILED: 'Đồng bộ thất bại', UNKNOWN: 'Cần đối soát với khóa', REVOKED: 'Đã thu hồi' };
+            const mailLabels = { PENDING: 'Chờ gửi', SENDING: 'Đang gửi', SENT: 'Đã gửi', FAILED: 'Gửi thất bại' };
+            root.querySelector('[data-ttlock-status]').textContent = !data.ttlockEnabled
+                ? 'TTLock chưa bật. Web đang dùng luồng email và mã thủ công hiện tại.'
+                : data.ttlockConfigured ? 'TTLock đã bật và có đủ cấu hình. Cần kiểm tra thực tế trên khóa khi kích hoạt lần đầu.' : 'TTLock đang bật nhưng thiếu cấu hình. Email có mã đang chờ xử lý.';
+            root.querySelector('[data-booking-access-list]').innerHTML = data.bookingCodes.length
+                ? data.bookingCodes.map(row => `<article class="rounded-xl border border-stone-200 p-4">
+                    <h3 class="font-semibold">${escape(row.booking_code)} · ${escape(row.guest_name)}</h3>
+                    <p class="mt-2 text-sm">${escape(syncLabels[row.sync_status] || row.sync_status)} · Email: ${escape(mailLabels[row.email_status] || row.email_status)}</p>
+                    ${row.sync_status === 'READY' ? `<p class="mt-2 break-all font-mono text-xl font-semibold">${escape(row.code)}</p>` : ''}
+                    <p class="mt-2 text-sm">${escape(localTime(row.starts_at))} → ${escape(localTime(row.ends_at))}</p>
+                    ${row.sync_error ? `<p class="mt-2 text-sm text-red-800">${escape(row.sync_error)}</p>` : ''}
+                    ${data.ttlockEnabled && data.ttlockConfigured && row.sync_status !== 'REVOKED' ? `<button type="button" data-access-retry="${escape(row.booking_id)}" class="mt-3 min-h-11 rounded-xl border border-stone-300 px-4 py-2 enabled:hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800 disabled:opacity-50">Đối soát / thử lại</button>` : ''}
+                </article>`).join('') : '<p class="text-sm text-stone-600">Chưa có mã riêng theo đơn.</p>';
             codes = data.codes;
             loaded = true;
             render();
@@ -327,6 +341,21 @@
             event.returnValue = "";
         }
     });
+    root.querySelector('[data-booking-access-list]').addEventListener('click', async event => {
+        const button = event.target.closest('[data-access-retry]');
+        if (!button) return;
+        button.disabled = true;
+        try {
+            await request(`/api/admin/booking-access/${encodeURIComponent(button.dataset.accessRetry)}/retry`, 'POST', {});
+            await load();
+        } catch (error) {
+            notice.textContent = error.message;
+            notice.hidden = false;
+        } finally {
+            button.disabled = false;
+        }
+    });
+    // Update only the status text, preserving keyboard focus on edit controls.
     setInterval(() => {
         const next = codes.map((row) => row.id + ":" + codeStatus(row)).join("|");
         if (next === statusSignature) return;

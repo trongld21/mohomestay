@@ -1,0 +1,5 @@
+; Install as deploy-agent.ini beside .env, outside public_html.
+; Token: ONLY this repository, Actions read + Contents read. Never commit it.
+REPOSITORY=trongld21/mohomestay
+GITHUB_TOKEN=
+ENABLED=false

@@ -1,4 +1,4 @@
-name: Deploy PHP to DirectAdmin
+name: Deploy PHP via DirectAdmin API
 on:
   push:
     branches: [main]
@@ -10,16 +10,27 @@ permissions:
   contents: read
 jobs:
   test-and-deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+      - name: Setup PHP
+        uses: shivammathur/setup-php@2.35.5
+        with:
+          php-version: '8.2'
+          extensions: curl, mbstring, pdo_mysql, zip, pdo_sqlite
+          coverage: none
       - name: Check PHP syntax
         run: find src public tools -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Run unit tests
         run: |
           php tools/test.php
+          php tools/deploy-agent-test.php
+          php tools/directadmin-deploy-test.php
+          php tools/ttlock-test.php
+          php tools/booking-access-test.php
           php tools/room-test.php
           php tools/upload-test.php
           php tools/ui-test.php
@@ -28,6 +39,7 @@ jobs:
           node --check public/assets/ui.js
           node --check public/assets/admin.js
           node --check public/assets/rooms.js
+          node --check public/assets/door-codes.js
       - name: Build DirectAdmin upload package
         run: |
           mkdir -p .deploy/public_html
@@ -41,71 +53,32 @@ jobs:
           test ! -e .deploy/src/styles
           test -s .deploy/public_html/assets/tailwind.css
           php public/deploy-hook.php --check-package .deploy
-      - name: Upload through signed HTTPS hook
+      - name: Package signed release
         env:
-          DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
           DEPLOY_HOOK_KEY: ${{ secrets.DEPLOY_HOOK_KEY }}
-        run: |
-          test -n "$DEPLOY_HOOK_URL"
-          test -n "$DEPLOY_HOOK_KEY"
-          # Check the hook itself; HEAD on a signed endpoint is not a health check.
-          echo "Checking deployment endpoint"
-          curl --fail-with-body --silent --show-error \
-            --connect-timeout 15 --max-time 30 \
-            --retry 3 --retry-connrefused --retry-max-time 120 \
-            --get --data-urlencode 'check=1' "$DEPLOY_HOOK_URL" \
-            | jq -e '.keyConfigured == true' >/dev/null
-          upload_file() {
-            file="$1"
-            path="${file#.deploy/}"
-            digest="$(sha256sum "$file" | cut -d ' ' -f 1)"
-            signature="$(printf '%s\n%s' "$path" "$digest" | openssl dgst -sha256 -hmac "$DEPLOY_HOOK_KEY" -hex | sed 's/^.* //')"
-            echo "Uploading $path"
-            echo "File size: $(wc -c < "$file") bytes"
-            if ! curl --fail-with-body --silent --show-error \
-              --connect-timeout 15 --max-time 120 \
-              --retry 3 --retry-connrefused --retry-max-time 300 \
-              -H "X-Deploy-Signature: $signature" \
-              -H 'Expect:' \
-              --write-out '\nHTTP %{http_code}; remote=%{remote_ip}; connect=%{time_connect}s; TLS=%{time_appconnect}s; first-byte=%{time_starttransfer}s; total=%{time_total}s\n' \
-              --form-string "path=$path" -F "file=@$file" "$DEPLOY_HOOK_URL"; then
-              echo "::error::Upload failed for $path. See the HTTP status and hook response above: network errors require a retry; rejected paths require a package/hook fix."
-              # A read-only probe distinguishes upload rejection from a blocked runner.
-              echo "Checking endpoint reachability after upload failure"
-              curl --silent --show-error --connect-timeout 10 --max-time 20 \
-                --get --data-urlencode 'check=1' \
-                --write-out '\nProbe HTTP %{http_code}; connect=%{time_connect}s; total=%{time_total}s\n' \
-                "$DEPLOY_HOOK_URL" || true
-              return 1
-            fi
-            echo
-            # Avoid a burst of new TLS connections to shared hosting.
-            sleep 3
-          }
-          # The previous hook knows how to replace itself, but not necessarily new assets.
-          upload_file .deploy/public_html/deploy-hook.php
-          ready=false
-          for attempt in $(seq 1 10); do
-            if curl --fail --silent --show-error --connect-timeout 15 --max-time 30 --get --data-urlencode 'check=1' "$DEPLOY_HOOK_URL" \
-              | jq -e '.hook == "https-v3" and .assetSvgAllowed == true' >/dev/null; then
-              ready=true
-              break
-            fi
-            sleep 2
-          done
-          test "$ready" = true
-          find .deploy -type f ! -path '.deploy/public_html/deploy-hook.php' -print0 | while IFS= read -r -d '' file; do
-            upload_file "$file"
-          done
-      - name: Run database migrations
+        run: php scripts/build-directadmin-package.php .deploy/release "$GITHUB_SHA" "$GITHUB_RUN_ID"
+      - name: Upload package through DirectAdmin File Manager
         env:
-          DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
-          DEPLOY_HOOK_KEY: ${{ secrets.DEPLOY_HOOK_KEY }}
+          DA_URL: ${{ vars.DA_URL }}
+          DA_USERNAME: ${{ secrets.DA_USERNAME }}
+          DA_LOGIN_KEY: ${{ secrets.DA_LOGIN_KEY }}
+        run: php scripts/deploy-directadmin.php ".deploy/release/release-$GITHUB_SHA-$GITHUB_RUN_ID.zip" ".deploy/release/ready-$GITHUB_SHA-$GITHUB_RUN_ID.json"
+      - name: Wait for Cron activation
         run: |
-          if [ -z "$DEPLOY_HOOK_URL" ] || [ -z "$DEPLOY_HOOK_KEY" ]; then
-            echo "Deploy hook secrets are not configured; skipping migrations."
-            exit 0
-          fi
-          curl --fail-with-body --silent --show-error --retry 2 \
-            --connect-timeout 15 --max-time 120 --retry-connrefused --retry-max-time 300 \
-            -H "X-Deploy-Key: $DEPLOY_HOOK_KEY" "$DEPLOY_HOOK_URL"
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            status=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 15 "https://mohomestay.vn/deploy-status.json?run=$GITHUB_RUN_ID&attempt=$attempt" || true)
+            if printf '%s' "$status" | jq -e --arg sha "$GITHUB_SHA" --argjson run "$GITHUB_RUN_ID" '.release == $sha and .run_id == $run and .status == "success"' >/dev/null 2>&1; then
+              exit 0
+            fi
+            if printf '%s' "$status" | jq -e --arg sha "$GITHUB_SHA" --argjson run "$GITHUB_RUN_ID" '.release == $sha and .run_id == $run and .status == "failed"' >/dev/null 2>&1; then
+              echo "::error::Cron activation failed. Inspect private hosting deployment backups and database."
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "::error::Timed out waiting for hosting Cron; do not assume the release was activated."
+          exit 1
+      - name: Verify production health
+        run: |
+          curl --fail --silent --show-error --connect-timeout 10 --max-time 20 https://mohomestay.vn/api/health | jq -e '.status == "ok"'

@@ -54,7 +54,7 @@ php tools/asset-test.php
 
 ## Deploy
 
-Xem [DEPLOY_DIRECTADMIN.md](DEPLOY_DIRECTADMIN.md). Push lên nhánh `main` sẽ upload qua deploy hook HTTPS có chữ ký và tự chạy migration.
+Xem [DEPLOY_DIRECTADMIN.md](DEPLOY_DIRECTADMIN.md). Push lên nhánh `main` sẽ kiểm thử và giữ cổng duyệt production, rồi upload một ZIP runtime cùng marker có chữ ký qua API DirectAdmin. Cron trên hosting kiểm tra và hoàn tất cập nhật/migration. Xem hướng dẫn cài `deploy-activate.php` trước khi bật; không cần SSH/SFTP hoặc token GitHub trên hosting.
 
 Mã chính:
 
@@ -81,3 +81,64 @@ Mã chỉ được nhập và quản lý trong website; việc đặt thời h�
 Chạy `php tools/migrate.php` để tạo bảng `door_codes`, rồi `php tools/door-code-test.php`
 để kiểm tra ưu tiên, bật/tắt, hết hạn, múi giờ và nội dung email. Cần cấu hình `MAIL_FROM`
 hợp lệ và mail server để gửi thư thực tế.
+
+## Tự động tạo mã cổng TTLock
+
+Tính năng được chuẩn bị sẵn nhưng mặc định **tắt** (`TTLOCK_ENABLED=false`).
+Khi tắt, email và mã thủ công hoạt động như trước. Chưa cần nhập thông tin thật vào Git.
+
+Khi bật, chỉ đơn `PAID` và `CONFIRMED`/`CHECKED_IN` mới được cấp mã riêng cho khóa cổng chung.
+Thời hạn là nhận phòng trừ 1 giờ đến trả phòng cộng 1 giờ, lưu UTC và hiển thị giờ Việt Nam.
+Mã được giữ nguyên khi webhook lặp lại hoặc email cần gửi lại. Email chỉ được gửi sau khi
+TTLock xác nhận mã; không dùng mã chung làm phương án thay thế khi đồng bộ thất bại.
+
+### Kích hoạt sau khi TTLock duyệt
+
+1. Backup database, deploy mã nguồn rồi chạy migration `005_booking_access_codes.sql` bằng
+   `php tools/migrate.php` ở local hoặc migration của deploy hook trên hosting.
+2. Cấu hình riêng trên máy chủ: `TTLOCK_BASE_URL`, `TTLOCK_CLIENT_ID`, `TTLOCK_CLIENT_SECRET`,
+   `TTLOCK_USERNAME`, `TTLOCK_PASSWORD_MD5`, `TTLOCK_LOCK_ID`. Username và mật khẩu thuộc
+   tài khoản **app TTLock đang quản lý khóa**, không phải tài khoản nhà phát triển.
+   `TTLOCK_PASSWORD_MD5` là MD5 chữ thường 32 ký tự của mật khẩu; giữ kín như mật khẩu.
+   Chọn API host đúng vùng tài khoản/ứng dụng, không đoán vùng từ vị trí homestay.
+3. Kiểm tra `MAIL_FROM`, mail server và quyền quản trị khóa. Khóa phải hỗ trợ thêm/xóa mã
+   tùy chọn trực tiếp qua Wi-Fi hoặc gateway (`addType=2`, `deleteType=2`). Chế độ Wi-Fi
+   tiết kiệm pin chỉ hỗ trợ lệnh bất đồng bộ chưa được triển khai, cần thử đúng mẫu khóa.
+4. Khi đã sẵn sàng thử nghiệm, đặt `TTLOCK_ENABLED=true`. Thử một đơn thanh toán thực tế,
+   kiểm tra mã trong app, mở cổng, giờ bắt đầu/kết thúc và nội dung email. Đồng thời thử
+   hủy đơn, webhook trùng và lỗi kết nối. Không coi kiểm thử giả lập là xác nhận khóa thật.
+5. Trong DirectAdmin, đặt cron mỗi phút: `/duong-dan/php /duong-dan/domain/src/booking-access-worker.php`.
+   Đổi đường dẫn theo hosting. Worker chỉ chạy CLI; không mở endpoint cron công khai.
+   Local có thể chạy `php tools/sync-booking-access.php`.
+
+Trang `/admin/door-codes` hiển thị mã theo đơn, lỗi đồng bộ, trạng thái email và nút
+**Đối soát / thử lại**. Thao tác yêu cầu đăng nhập admin và CSRF. Mã thủ công vẫn chỉ lưu
+trên web và không tự cấu hình khóa vật lý.
+
+Worker xử lý lại đơn đang chờ và xóa mã của đơn hủy/mã hết thời hạn khỏi khóa để giải phóng
+bộ nhớ. Cần cron để tự thử lại và thu dọn; thời hạn đã ghi trên khóa vẫn do khóa thực thi.
+Bản ghi trên web giữ lại để đối soát. Worker có thể xử lý đơn đã xác nhận trước ngày bật
+nếu đơn vẫn còn thời hạn; cần rà soát các đơn đang lưu trú khi kích hoạt.
+
+Nếu gửi lệnh bị gián đoạn, trạng thái **Cần đối soát với khóa** được giữ lại. Hệ thống tìm
+mã cũ trước; nếu không xác định được kết quả, không tự tạo mã khác hoặc gửi email.
+Kiểm tra app TTLock và kết nối khóa rồi bấm đối soát; nếu vẫn chưa khớp cần xử lý thủ công.
+Hủy đơn chỉ hoàn tất thu hồi vật lý khi trạng thái là **Đã thu hồi**; nếu khóa mất mạng,
+worker sẽ thử lại. Việc sửa mã/thời hạn riêng theo đơn và đổi lịch sau thanh toán chưa
+có giao diện; không sửa trực tiếp database để đổi lịch mã đã gửi.
+
+Kiểm thử không gọi API/không gửi thư thật:
+
+```bash
+php tools/ttlock-test.php
+php tools/booking-access-test.php
+```
+
+Kiểm thử tích hợp dùng SQLite tách biệt để kiểm tra trạng thái tạo mã, lỗi mạng,
+chống tạo/gửi lặp, gửi lại email và thu hồi. Cần kiểm tra thêm MySQL locking,
+migration, cron, khóa thật và giao thư thực tế trước khi vận hành.
+
+Tài liệu API: https://euopen.ttlock.com/doc/oauth2,
+https://euopen.ttlock.com/documentPages/htmlPages/cloud/passcode/addEn.html,
+https://euopen.ttlock.com/doc/api/v3/lock/listKeyboardPwd,
+https://euopen.ttlock.com/doc/api/v3/keyboardPwd/delete.

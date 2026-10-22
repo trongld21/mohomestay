@@ -21,3 +21,10 @@ coverage/
 .agents/
 node_modules/
 .npm-cache/
+
+# Private hosting pull-deploy credentials and state
+/deploy-agent.ini
+/.deploy-agent/
+
+/deploy-activate.ini
+/.deploy-incoming/

@@ -22,7 +22,9 @@ function build_booking_confirmation_email(array $booking): array
     $total = number_format((int)$booking['total_price'], 0, ',', '.') . 'đ';
     $doorHtml = '<p>Mơ chưa có mã mở cửa phù hợp cho thời gian nhận phòng của bạn. Vui lòng liên hệ Mơ để được hướng dẫn.</p>';
     if (!empty($booking['door_codes'])) {
-        $doorHtml = '<h2 style="font-size:20px">Mã mở cửa</h2><p>Mã dùng chung tại Mơ, được chọn theo thời gian nhận phòng:</p>';
+        $doorHtml = !empty($booking['private_door_code'])
+            ? '<h2 style="font-size:20px">Mã mở cổng của bạn</h2><p>Mã riêng cho đơn đặt phòng này. Nhập mã rồi nhấn # trên khóa cổng chung:</p>'
+            : '<h2 style="font-size:20px">Mã mở cửa</h2><p>Mã dùng chung tại Mơ, được chọn theo thời gian nhận phòng:</p>';
         foreach ($booking['door_codes'] as $door) {
             $doorHtml .= '<div class="rounded-xl border-2 bg-stone-50 p-5 text-center" '
                 . 'style="margin:16px 0;padding:20px 16px;border:2px solid #d8c3b2;border-radius:12px;background:#faf5ee;text-align:center">'
@@ -74,22 +76,29 @@ function send_booking_confirmation_email(array $booking, ?callable $transport = 
     return (bool)$transport($to,$subject,$message['html'],$headers);
 }
 
-function dispatch_confirmation_email(string $bookingId): bool
+function dispatch_confirmation_email(string $bookingId, ?callable $transport = null): bool
 {
     // Keep the message pending until DirectAdmin has a valid sender configured.
     // This avoids consuming all retry attempts during deployment.
     if (!filter_var(trim((string)config('mail.from', '')), FILTER_VALIDATE_EMAIL)) return false;
 
+    $access = null;
+    if (config('ttlock.enabled')) {
+        $access = sync_booking_access($bookingId);
+        // Never fall back to shared/manual codes while automatic provisioning is enabled.
+        if (!$access) return false;
+    }
     $pdo = db();
-    $claim = $pdo->prepare("UPDATE bookings SET confirmation_email_status='SENDING',confirmation_email_attempts=confirmation_email_attempts+1,confirmation_email_error=NULL WHERE id=? AND status='CONFIRMED' AND guest_email<>'' AND confirmation_email_status IN ('PENDING','FAILED') AND confirmation_email_attempts<3");
+    $claim = $pdo->prepare("UPDATE bookings SET confirmation_email_status='SENDING',confirmation_email_attempts=confirmation_email_attempts+1,confirmation_email_error=NULL WHERE id=? AND status IN ('CONFIRMED','CHECKED_IN') AND payment_status='PAID' AND guest_email<>'' AND confirmation_email_status IN ('PENDING','FAILED') AND confirmation_email_attempts<3");
     $claim->execute([$bookingId]);
     if ($claim->rowCount() !== 1) return false;
     $stmt = $pdo->prepare('SELECT b.*,r.name room_name FROM bookings b JOIN rooms r ON r.id=b.room_id WHERE b.id=? LIMIT 1');
     $stmt->execute([$bookingId]);$booking=$stmt->fetch();
     if (!$booking) return false;
     try {
-        $booking['door_codes'] = booking_door_codes((string)$booking['check_in']);
-        $sent = send_booking_confirmation_email($booking);
+        $booking['door_codes'] = $access ? [$access] : booking_door_codes((string)$booking['check_in']);
+        $booking['private_door_code'] = $access !== null;
+        $sent = send_booking_confirmation_email($booking, $transport);
         $pdo->prepare("UPDATE bookings SET confirmation_email_status=?,confirmation_email_sent_at=IF(?='SENT',UTC_TIMESTAMP(),confirmation_email_sent_at),confirmation_email_error=? WHERE id=?")
             ->execute([$sent?'SENT':'FAILED',$sent?'SENT':'FAILED',$sent?null:'MAIL_FROM chưa cấu hình hoặc máy chủ mail từ chối thư.',$bookingId]);
         return $sent;

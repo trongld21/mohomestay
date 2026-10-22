@@ -41,7 +41,11 @@ function config(string $key, mixed $default = null): mixed
         'mail.from'=>'MAIL_FROM','mail.reply_to'=>'MAIL_REPLY_TO',
         'payos.client_id'=>'PAYOS_CLIENT_ID','payos.api_key'=>'PAYOS_API_KEY',
         'payos.checksum_key'=>'PAYOS_CHECKSUM_KEY',
+        'ttlock.base_url'=>'TTLOCK_BASE_URL','ttlock.client_id'=>'TTLOCK_CLIENT_ID',
+        'ttlock.client_secret'=>'TTLOCK_CLIENT_SECRET','ttlock.username'=>'TTLOCK_USERNAME',
+        'ttlock.password_md5'=>'TTLOCK_PASSWORD_MD5','ttlock.lock_id'=>'TTLOCK_LOCK_ID',
     ];
+    if ($key === 'ttlock.enabled') return filter_var(env_value('TTLOCK_ENABLED', 'false'), FILTER_VALIDATE_BOOL);
     if ($key === 'bookings_enabled') return filter_var(env_value('BOOKINGS_ENABLED','false'), FILTER_VALIDATE_BOOL);
     return isset($map[$key]) ? env_value($map[$key], $default) : $default;
 }
@@ -160,4 +164,6 @@ require_once APP_ROOT . '/src/room-repository.php';
 require_once APP_ROOT . '/src/uploads.php';
 require_once APP_ROOT . '/src/payment.php';
 require_once APP_ROOT . '/src/door-codes.php';
+require_once APP_ROOT . '/src/ttlock.php';
+require_once APP_ROOT . '/src/booking-access.php';
 require_once APP_ROOT . '/src/mail.php';
