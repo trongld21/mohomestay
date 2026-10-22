@@ -65,7 +65,11 @@
         } catch {
             throw new Error("Máy chủ chưa phản hồi đúng. Vui lòng thử lại.");
         }
-        if (!response.ok) throw new Error(data.error || "Không thể kết nối máy chủ.");
+        if (!response.ok) {
+            const error = new Error(data.error || "Không thể kết nối máy chủ.");
+            error.status = response.status;
+            throw error;
+        }
         return data;
     }
     function codeStatus(row) {
@@ -151,6 +155,14 @@
                     ${row.sync_error ? `<p class="mt-2 text-sm text-red-800">${escape(row.sync_error)}</p>` : ''}
                     ${data.ttlockEnabled && data.ttlockConfigured && row.sync_status !== 'REVOKED' ? `<button type="button" data-access-retry="${escape(row.booking_id)}" class="mt-3 min-h-11 rounded-xl border border-stone-300 px-4 py-2 enabled:hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800 disabled:opacity-50">Đối soát / thử lại</button>` : ''}
                 </article>`).join('') : '<p class="text-sm text-stone-600">Chưa có mã riêng theo đơn.</p>';
+            root.querySelector('[data-manual-access-list]').innerHTML = (data.manualCodes || []).map(row => `<article class="rounded-xl border border-stone-200 p-4">
+                <h3 class="font-semibold">${escape(row.name)}</h3>
+                <p class="mt-2 text-sm">${escape(localTime(row.starts_at))} → ${escape(localTime(row.ends_at))}</p>
+                <p class="mt-2 break-all font-mono text-xl font-semibold">${row.sync_status === 'READY' ? escape(row.code) : escape(syncLabels[row.sync_status] || row.sync_status)}</p>
+                ${row.ends_at <= new Date().toISOString().slice(0, 19).replace('T', ' ') ? '<p class="mt-2 text-sm">Đã hết hạn</p>' : ''}
+                ${row.sync_error ? `<p class="mt-2 text-sm text-red-800">${escape(row.sync_error)}</p>` : ''}
+                ${row.sync_status !== 'READY' && data.ttlockEnabled && data.ttlockConfigured ? `<button type="button" data-manual-retry="${escape(row.id)}" class="mt-3 min-h-11 rounded-lg border border-stone-300 px-4 py-2 enabled:hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800 disabled:opacity-50">Đối soát / thử lại</button>` : ''}
+            </article>`).join('');
             codes = data.codes;
             loaded = true;
             render();
@@ -351,6 +363,54 @@
         } catch (error) {
             notice.textContent = error.message;
             notice.hidden = false;
+        } finally {
+            button.disabled = false;
+        }
+    });
+    const manualForm = root.querySelector('[data-manual-access-form]');
+    const manualResult = root.querySelector('[data-manual-access-result]');
+    let manualRequest = null;
+    let manualSaving = false;
+    manualForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (manualSaving || !manualForm.reportValidity()) return;
+        // Keep the same request identity after a lost response, even if the user edits fields.
+        if (!manualRequest) {
+            manualRequest = {
+                ...Object.fromEntries(new FormData(manualForm)),
+                id: crypto.randomUUID().replaceAll('-', ''),
+            };
+        }
+        manualSaving = true;
+        const button = manualForm.querySelector('button[type="submit"]');
+        button.disabled = true;
+        manualResult.textContent = 'Đang tạo hoặc đối soát mã với TTLock…';
+        try {
+            const data = await request('/api/admin/manual-access', 'POST', manualRequest);
+            const row = data.manualCode;
+            manualResult.textContent = row.sync_status === 'READY'
+                ? `Mã: ${row.code}\nHiệu lực: ${localTime(row.starts_at)} → ${localTime(row.ends_at)}`
+                : row.sync_error || 'Yêu cầu đã lưu. Chọn đối soát trong danh sách bên dưới.';
+            manualRequest = null;
+            await load();
+        } catch (error) {
+            manualResult.textContent = error.message + ' Bấm lại để kiểm tra cùng yêu cầu, tránh tạo trùng.';
+            // Validation never created a remote request; allow correcting the form.
+            if (error.status === 422) manualRequest = null;
+        } finally {
+            manualSaving = false;
+            button.disabled = false;
+        }
+    });
+    root.querySelector('[data-manual-access-list]').addEventListener('click', async event => {
+        const button = event.target.closest('[data-manual-retry]');
+        if (!button) return;
+        button.disabled = true;
+        try {
+            await request(`/api/admin/manual-access/${encodeURIComponent(button.dataset.manualRetry)}/retry`, 'POST', {});
+            await load();
+        } catch (error) {
+            manualResult.textContent = error.message;
         } finally {
             button.disabled = false;
         }

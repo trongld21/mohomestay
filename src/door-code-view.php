@@ -12,7 +12,7 @@ function render_door_codes(): void
             </div>
             <div class="flex flex-wrap items-center gap-3">
                 <button type="button" class="button outline" data-door-refresh><?= admin_icon('refresh') ?> Làm mới</button>
-                <button type="button" class="button" data-door-add><?= admin_icon('plus') ?> Thêm mã mở cửa</button>
+                <button type="button" class="button" data-door-add><?= admin_icon('plus') ?> Lưu mã có sẵn</button>
             </div>
         </div>
         <section class="mb-6 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="booking-access-title">
@@ -20,6 +20,24 @@ function render_door_codes(): void
             <p data-ttlock-status role="status" class="mt-2 text-sm text-stone-600"></p>
             <p class="mt-2 text-sm text-stone-600">Mã tự sinh không cần gateway. Đệm ít nhất 1 giờ trước/sau lưu trú, làm tròn ra ngoài theo giờ. Dùng lần đầu trong 24 giờ từ lúc bắt đầu hiệu lực. Hủy đơn cần xóa mã tại khóa nếu không có gateway.</p>
             <div data-booking-access-list class="mt-4 grid gap-3" aria-live="polite"></div>
+        </section>
+        <section class="mb-6 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="manual-access-title">
+            <h2 id="manual-access-title" class="text-xl font-semibold">Tạo mã trực tiếp trên khóa TTLock</h2>
+            <p class="mt-2 text-sm text-stone-600">Không cần đơn đặt phòng. Nhập thời hạn sử dụng theo giờ Việt Nam; hệ thống làm tròn bắt đầu xuống và kết thúc lên theo giờ, không cộng đệm 1 giờ. Dùng mã lần đầu trong 24 giờ từ lúc bắt đầu hiệu lực. Muốn thu hồi sớm cần xóa tại khóa bằng Bluetooth nếu không có gateway.</p>
+            <form data-manual-access-form class="mt-4 grid gap-4 sm:grid-cols-2">
+                <label class="grid gap-2 font-medium sm:col-span-2">Tên mã
+                    <input name="name" required maxlength="50" class="<?= e($field) ?>" placeholder="Ví dụ: Khách đến xem phòng">
+                </label>
+                <label class="grid gap-2 font-medium">Bắt đầu
+                    <input name="startsAt" type="datetime-local" required class="<?= e($field) ?>">
+                </label>
+                <label class="grid gap-2 font-medium">Kết thúc
+                    <input name="endsAt" type="datetime-local" required class="<?= e($field) ?>">
+                </label>
+                <p data-manual-access-result role="status" aria-live="polite" class="whitespace-pre-line text-sm sm:col-span-2"></p>
+                <button type="submit" class="min-h-12 rounded-lg bg-[#79543e] px-4 py-3 font-semibold text-white enabled:hover:bg-[#614330] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:opacity-50 sm:col-span-2">Tạo mã TTLock</button>
+            </form>
+            <div data-manual-access-list class="mt-5 grid gap-3" aria-live="polite"></div>
         </section>
         <section class="door-list-panel" aria-labelledby="door-list-title">
             <div class="door-list-heading">

@@ -168,3 +168,5 @@ require_once APP_ROOT . '/src/door-codes.php';
 require_once APP_ROOT . '/src/ttlock.php';
 require_once APP_ROOT . '/src/booking-access.php';
 require_once APP_ROOT . '/src/mail.php';
+
+require_once APP_ROOT . '/src/manual-access.php';

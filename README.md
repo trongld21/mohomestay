@@ -187,3 +187,19 @@ API cung cấp `basePrice`, `discountPercent`, `effectiveDiscountPercent` và `p
 Khi sửa căn, ô giá luôn nạp lại giá gốc để không giảm lặp. Các đơn đã tạo giữ tổng tiền/snapshot cũ.
 Chạy migration `007_package_discounts.sql` trước khi dùng; mặc định căn 0%, gói kế thừa.
 Kiểm thử: `php tools/room-discount-test.php`.
+
+### Tạo mã TTLock trực tiếp trên web
+
+Trang `/admin/door-codes` có biểu mẫu **Tạo mã trực tiếp trên khóa TTLock**,
+không cần đơn đặt phòng và không tự gửi email. Nhập tên và thời hạn theo giờ Việt Nam;
+web làm tròn bắt đầu xuống, kết thúc lên theo giờ, không cộng đệm của đơn đặt phòng.
+Tên trên TTLock kèm mã nhận dạng WEB để đối soát khi mất kết nối. Yêu cầu chưa rõ
+kết quả được giữ ở UNKNOWN; nút đối soát không tự tạo thêm mã nếu chưa tìm thấy mã cũ.
+Mã READY hiển thị PIN và thời hạn thực tế. Chỉ quản trị viên có CSRF hợp lệ được tạo.
+
+Cần migration `008_manual_access_codes.sql` và cấu hình TTLock đang bật.
+Mã cần được sử dụng lần đầu trong 24 giờ từ lúc bắt đầu hiệu lực.
+Không hỗ trợ sửa/thu hồi sớm mã tự sinh qua web khi khóa không có gateway;
+muốn thu hồi cần dùng app tại khóa qua Bluetooth. **Lưu mã có sẵn** vẫn chỉ lưu
+mã nhập tay trên web, không ghi mã đó vào khóa.
+Kiểm thử độc lập: `php tools/manual-access-test.php` (SQLite và TTLock giả lập).

@@ -31,6 +31,7 @@ jobs:
           php tools/directadmin-deploy-test.php
           php tools/ttlock-test.php
           php tools/booking-access-test.php
+          php tools/manual-access-test.php
           php tools/room-test.php
           php tools/room-discount-test.php
           php tools/upload-test.php
