@@ -31,6 +31,7 @@ function hydrate_room_rows(array $rooms, array $images, array $tags, array $pack
         $result[$id] = [
             'id'=>$id,'name'=>$row['name'],'slug'=>$row['slug'],'subtitle'=>$row['subtitle'] ?? '',
             'description'=>$row['description'] ?? '','tag'=>$row['tag'] ?? '','status'=>$row['status'] ?? 'ACTIVE',
+            'highlights'=>json_decode($row['highlights'] ?? '[]', true, 512, JSON_THROW_ON_ERROR) ?? [],
             'maxGuests'=>(int)$row['max_guests'],'bedrooms'=>(int)($row['bedrooms'] ?? 1),'bathrooms'=>(int)($row['bathrooms'] ?? 1),
             'sortOrder'=>(int)($row['sort_order'] ?? 0),'isActive'=>($row['status'] ?? 'ACTIVE') === 'ACTIVE',
             'image'=>$mappedImages[0]['path'] ?? '/images/white-illustration.jpg','images'=>$mappedImages,
@@ -80,6 +81,7 @@ final class RoomRepository
             $stmt = $this->pdo->prepare("INSERT INTO rooms(id,name,slug,price,max_guests,is_active,subtitle,description,tag,status,bedrooms,bathrooms,sort_order) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $minimumPrice = $this->minimumPrice($data['packages']);
             $stmt->execute([$id,$data['name'],$data['slug'],$minimumPrice,$data['maxGuests'],$data['status']==='ACTIVE'?1:0,$data['subtitle'],$data['description'],'',$data['status'],$data['bedrooms'],$data['bathrooms'],$data['sortOrder']]);
+            $this->saveHighlights($id, $data['highlights']);
             $this->replaceTags($id,$data['tags']); $this->replacePackages($id,$data['packages']);
             $this->pdo->commit();
         } catch (PDOException $e) {
@@ -98,6 +100,9 @@ final class RoomRepository
             if(!$lock->fetch())throw new BookingException('Không tìm thấy phòng.',404);
             $stmt=$this->pdo->prepare('UPDATE rooms SET name=?,slug=?,price=?,max_guests=?,is_active=?,subtitle=?,description=?,tag=?,status=?,bedrooms=?,bathrooms=?,sort_order=? WHERE id=?');
             $stmt->execute([$data['name'],$data['slug'],$this->minimumPrice($data['packages']),$data['maxGuests'],$data['status']==='ACTIVE'?1:0,$data['subtitle'],$data['description'],'',$data['status'],$data['bedrooms'],$data['bathrooms'],$data['sortOrder'],$id]);
+            if (array_key_exists('highlights', $input)) {
+                $this->saveHighlights($id, $data['highlights']);
+            }
             $this->replaceTags($id,$data['tags']);$this->replacePackages($id,$data['packages']);$this->pdo->commit();
         } catch (PDOException $e) {
             if($this->pdo->inTransaction())$this->pdo->rollBack();
@@ -162,13 +167,19 @@ final class RoomRepository
 
     private function load(string $where, array $params=[]): array
     {
-        $stmt=$this->pdo->prepare('SELECT id,name,slug,subtitle,description,tag,status,max_guests,bedrooms,bathrooms,sort_order,created_at,updated_at FROM rooms WHERE '.$where.' ORDER BY sort_order,created_at');$stmt->execute($params);$rows=$stmt->fetchAll();
+        $stmt=$this->pdo->prepare('SELECT id,name,slug,subtitle,description,highlights,tag,status,max_guests,bedrooms,bathrooms,sort_order,created_at,updated_at FROM rooms WHERE '.$where.' ORDER BY sort_order,created_at');$stmt->execute($params);$rows=$stmt->fetchAll();
         if(!$rows)return [];$ids=array_column($rows,'id');$marks=implode(',',array_fill(0,count($ids),'?'));
         $child=function(string $sql)use($ids,$marks){$stmt=$this->pdo->prepare(str_replace(':ids',$marks,$sql));$stmt->execute($ids);return $stmt->fetchAll();};
         return hydrate_room_rows($rows,
             $child('SELECT id,room_id,path,caption,is_cover,sort_order FROM room_images WHERE room_id IN (:ids) ORDER BY sort_order,created_at'),
             $child('SELECT id,room_id,label,sort_order FROM room_tags WHERE room_id IN (:ids) ORDER BY sort_order'),
             $child('SELECT id,room_id,name,timing_mode,duration_minutes,check_in_time,check_out_time,price,is_enabled,sort_order FROM room_packages WHERE room_id IN (:ids) ORDER BY sort_order,created_at'));
+    }
+
+    private function saveHighlights(string $roomId, array $highlights): void
+    {
+        $stmt = $this->pdo->prepare('UPDATE rooms SET highlights=? WHERE id=?');
+        $stmt->execute([json_encode($highlights, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $roomId]);
     }
 
     private function replaceTags(string $roomId,array $tags):void

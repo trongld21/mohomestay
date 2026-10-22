@@ -1,0 +1,2 @@
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS booking_source ENUM('WEBSITE','PHONE','ZALO') NOT NULL DEFAULT 'WEBSITE' AFTER guest_note;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS manual_request_id CHAR(32) NULL UNIQUE AFTER booking_source;

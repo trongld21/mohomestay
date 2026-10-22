@@ -46,8 +46,30 @@ function validate_room_input(array $input): array
         'subtitle'=>limited_text($input['subtitle'] ?? '', 255, 'Mô tả ngắn'),
         'description'=>limited_text($input['description'] ?? '', 5000, 'Mô tả'),
         'status'=>$status,'maxGuests'=>$maxGuests,'bedrooms'=>$bedrooms,'bathrooms'=>$bathrooms,
-        'sortOrder'=>$sortOrder,'tags'=>$tags,'packages'=>validate_packages((array)($input['packages'] ?? [])),
+        'sortOrder'=>$sortOrder,'tags'=>$tags,'highlights'=>validate_room_highlights($input['highlights'] ?? []),
+        'packages'=>validate_packages((array)($input['packages'] ?? [])),
     ];
+}
+
+function validate_room_highlights(mixed $input): array
+{
+    if (!is_array($input) || !array_is_list($input) || count($input) > 12) {
+        throw new BookingException('Điểm đặc biệt phải là danh sách tối đa 12 ý.', 422);
+    }
+    $highlights = [];
+    foreach ($input as $value) {
+        if (!is_string($value)) {
+            throw new BookingException('Mỗi điểm đặc biệt phải là nội dung văn bản.', 422);
+        }
+        $text = trim($value);
+        if (mb_strlen($text) > 300) {
+            throw new BookingException('Mỗi điểm đặc biệt tối đa 300 ký tự.', 422);
+        }
+        if ($text !== '') {
+            $highlights[] = $text;
+        }
+    }
+    return $highlights;
 }
 
 function validate_packages(array $packages): array

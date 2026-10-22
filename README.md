@@ -43,6 +43,23 @@ Nút “Nhắn Mơ” mở danh sách liên hệ ở trang chủ. Zalo và Hotli
 `CONTACT_FACEBOOK_URL` trong `.env` bằng link HTTPS của Mơ; khi chưa cấu hình,
 hai mục này hiển thị “Sắp kết nối” và không dẫn tới tài khoản khác.
 
+## Đơn đặt phòng qua điện thoại / Zalo
+
+Trong **Admin → Tổng quan & đặt phòng → Tạo đơn đặt phòng**, chọn phòng, gói lưu trú,
+ngày giờ và nhập tên, số điện thoại khách. Email không bắt buộc. Giá và giờ trả phòng
+lấy từ cấu hình gói; lịch trùng và ngày tạm khóa được kiểm tra trước khi lưu.
+Đơn được xác nhận và giữ lịch ngay, mặc định **Chưa thanh toán**. Có thể chọn
+**Đã thanh toán đủ** lúc tạo hoặc **Xác nhận thu tiền** sau đó. Tiền mặt và chuyển
+khoản được ghi nhận thủ công, không tạo giao dịch payOS hay tự gửi tin nhắn/email.
+Chạy migration `006_manual_bookings.sql` bằng `php tools/migrate.php` trước khi sử dụng.
+
+Trạng thái lưu trú kết hợp tự động và thủ công: đơn đã xác nhận tự hiển thị trong
+giờ lưu trú khi đến giờ nhận và đã kết thúc khi đến giờ trả, độc lập với thanh toán.
+Trạng thái được tính từ giờ máy chủ khi đọc API; danh sách admin tự tải lại mỗi
+30 giây khi không thao tác. Admin có thể nhận sớm (kiểm tra trùng lịch và cập nhật
+giờ nhận thực tế, giữ giờ trả/giá) hoặc kết thúc sớm. Trạng thái theo giờ không
+xác nhận khách thực sự đã đến. Đơn hủy/chờ thanh toán không tự nhận phòng.
+
 ## Kiểm tra PHP
 
 ```bash

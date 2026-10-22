@@ -55,6 +55,25 @@ function render_admin_icons(): void
             <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
             <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
         </symbol>
+        <symbol id="admin-icon-calendar" viewBox="0 0 24 24">
+            <rect x="3" y="5" width="18" height="16" rx="2" />
+            <path d="M16 3v4M8 3v4M3 11h18M8 15h2m4 0h2m-8 3h2" />
+        </symbol>
+        <symbol id="admin-icon-user" viewBox="0 0 24 24">
+            <circle cx="12" cy="8" r="4" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" />
+        </symbol>
+        <symbol id="admin-icon-phone" viewBox="0 0 24 24">
+            <path d="M5 3h4l2 5-3 2a15 15 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A18 18 0 0 1 3 5a2 2 0 0 1 2-2Z" />
+        </symbol>
+        <symbol id="admin-icon-message-circle" viewBox="0 0 24 24">
+            <path d="M4 19l-1 3 5-2a9 9 0 1 0-4-4l-1 6" /><path d="M8 11h8m-8 4h5" />
+        </symbol>
+        <symbol id="admin-icon-wallet" viewBox="0 0 24 24">
+            <path d="M20 8V5a2 2 0 0 0-2-2H6a3 3 0 0 0 0 6h14v12H6a3 3 0 0 1-3-3V6m17 7h-5v4h5m-3-2h.01" />
+        </symbol>
+        <symbol id="admin-icon-check" viewBox="0 0 24 24">
+            <path d="m5 12 4 4L19 6" />
+        </symbol>
         <symbol id="admin-icon-plus" viewBox="0 0 24 24">
             <path d="M12 5l0 14" />
             <path d="M5 12l14 0" />
@@ -101,6 +120,53 @@ function render_admin_icons(): void
             <path d="M3 3l18 18" />
             <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
             <path d="M9.3 5.3a10.3 10.3 0 0 1 2.7 -.3c4 0 7 2.3 9 7a16.8 16.8 0 0 1 -2.6 3.7m-3 2a9.8 9.8 0 0 1 -3.4 .6c-4 0 -7 -2.3 -9 -6a17 17 0 0 1 4.2 -5.1" />
+        </symbol>
+        <symbol id="admin-icon-cloud-upload" viewBox="0 0 24 24">
+            <path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1" />
+            <path d="M9 15l3 -3l3 3" />
+            <path d="M12 12l0 9" />
+        </symbol>
+        <symbol id="admin-icon-photo" viewBox="0 0 24 24">
+            <path d="M15 8h.01" />
+            <path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" />
+            <path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" />
+            <path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" />
+        </symbol>
+        <symbol id="admin-icon-crown" viewBox="0 0 24 24">
+            <path d="M12 6l4 6l5 -4l-2 10h-14l-2 -10l5 4l4 -6" />
+        </symbol>
+        <symbol id="admin-icon-file-description" viewBox="0 0 24 24">
+            <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+            <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" />
+            <path d="M9 17h6" />
+            <path d="M9 13h6" />
+        </symbol>
+        <symbol id="admin-icon-database" viewBox="0 0 24 24">
+            <path d="M4 6a8 3 0 1 0 16 0a8 3 0 1 0 -16 0" />
+            <path d="M4 6v6a8 3 0 0 0 16 0v-6" />
+            <path d="M4 12v6a8 3 0 0 0 16 0v-6" />
+        </symbol>
+        <symbol id="admin-icon-grip-vertical" viewBox="0 0 24 24">
+            <path d="M8 5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+            <path d="M8 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+            <path d="M8 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+            <path d="M14 5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+            <path d="M14 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+            <path d="M14 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+        </symbol>
+        <symbol id="admin-icon-arrow-left" viewBox="0 0 24 24">
+            <path d="M5 12l14 0" />
+            <path d="M5 12l6 6" />
+            <path d="M5 12l6 -6" />
+        </symbol>
+        <symbol id="admin-icon-arrow-right" viewBox="0 0 24 24">
+            <path d="M5 12l14 0" />
+            <path d="M13 18l6 -6" />
+            <path d="M13 6l6 6" />
+        </symbol>
+        <symbol id="admin-icon-clock" viewBox="0 0 24 24">
+            <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" />
+            <path d="M12 7v5l3 3" />
         </symbol>
     </defs></svg>
     <?php

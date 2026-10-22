@@ -5,44 +5,508 @@
 @source "../*.php";
 @source "../../public/assets/*.js";
 
-.room-detail-page { @apply bg-[#f8f3ed]; background-image:linear-gradient(#f8f3ed55,#f8f3ed55),var(--room-background);background-size:100% 100%; }
-.room-detail-page::before { @apply hidden; }
-.room-detail-page .room-detail-shell { @apply pt-8 pb-16 md:pt-12 md:pb-20; }
-.room-detail-page .room-back-link { @apply mb-4; }
-.room-detail-page .room-detail-layout { @apply grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-6 items-start; }
-.room-detail-page .room-gallery { @apply static min-w-0; }
-.room-detail-page .gallery-main { @apply h-auto aspect-[1.35] rounded-3xl shadow-none; }
-.room-detail-page .gallery-main img { @apply w-full h-full object-cover; }
-.gallery-step { @apply absolute top-1/2 -translate-y-1/2 z-10 size-11 rounded-full bg-[#fff7e9]/95 text-[#825536] text-3xl transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#835536]; }
-.gallery-step-prev { @apply left-5; }.gallery-step-next { @apply right-5; }
-.room-detail-page .gallery-thumbs { @apply gap-3 mt-4; }
-.room-detail-page .gallery-thumbs button { @apply basis-[30%] h-auto aspect-[1.4] shrink-0 rounded-2xl opacity-100; }
-.room-detail-page .gallery-thumbs button span { @apply hidden; }
-.room-detail-page .room-detail-copy { @apply mt-0 rounded-2xl bg-[#fffdf9]/90 p-6 xl:p-8 shadow-none min-w-0; }
-.room-detail-page .room-detail-copy h1 { @apply text-6xl xl:text-7xl mt-2 mb-5 font-semibold; font-family:'Noto Serif',Georgia,serif; }
-.room-detail-page .room-description { @apply text-sm leading-7 text-[#86786d]; }
-.room-detail-page .room-facts { @apply grid grid-cols-3 gap-3 mt-6 mb-5; }
-.room-detail-page .room-facts > div { @apply flex flex-col items-start gap-3 p-4 rounded-xl min-h-28 bg-[#faf5ee]/60 border-[#eee3d7]; }
-.room-detail-page .room-facts svg { @apply size-7 text-[#926144]; }
-.room-detail-page .room-facts span { @apply text-xs text-[#8b7b6d]; }
-.room-detail-page .room-facts b { @apply block mb-1 text-base text-[#63432e]; }
-.room-detail-page .detail-tag-chips { @apply flex-wrap mb-5; }
-.room-detail-page .room-rates { @apply border-t border-[#ecdfd2] pt-5; }
-.room-detail-page .room-rates-heading { @apply items-end gap-3; }
-.room-detail-page .room-rates-heading h2 { @apply text-3xl mb-0 mt-2; font-family:'Noto Serif',Georgia,serif; }
-.room-detail-page .room-rates-heading > small { @apply text-[10px]; }
-.room-detail-page .detail-prices { @apply my-4 overflow-visible; }
-.room-detail-page .detail-prices a { @apply grid grid-cols-[2.5rem_minmax(0,1fr)_auto] gap-3 min-w-0 rounded-xl border border-[#ecdfd2] bg-white/70 py-3 px-3 mb-2 transition-colors hover:bg-[#f3e8d9]; }
-.room-detail-page .rate-index { @apply flex size-10 items-center justify-center rounded-full bg-[#f5ece1] text-xs text-[#8b5939]; }
-.room-detail-page .rate-name > strong { @apply text-base; font-family:'Noto Serif',Georgia,serif; }
-.room-detail-page .rate-name > small { @apply text-xs; }
-.room-detail-page .detail-prices a > .rate-price { @apply flex items-center gap-3; }
-.room-detail-page .rate-price strong { @apply text-sm; }
-.room-detail-page .rate-price svg { @apply rounded-full bg-[#f8f0e5] size-8 p-2; }
-.room-detail-page .room-booking-actions { @apply grid-cols-1 xl:grid-cols-[1fr_auto] gap-3 mt-5; }
-.room-detail-page .room-primary-action { @apply shadow-none rounded-xl text-sm; }
-.room-detail-page .room-contact-action { @apply text-xs; }
-@media(max-width:540px) { .room-detail-page .room-detail-copy { @apply p-5; } .room-detail-page .room-facts > div { @apply px-2 py-3; } .room-detail-page .rate-price svg { @apply hidden; } .room-detail-page .detail-prices a { @apply gap-2 grid-cols-[2rem_minmax(0,1fr)_auto]; } .room-detail-page .rate-index { @apply size-8; } }
+.admin-page input[type=number] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+.admin-page input[type=number]::-webkit-inner-spin-button,
+.admin-page input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Room detail: image-led layout, quiet cream surfaces and a coffee booking panel. */
+.admin-page .ui-toast-region {
+    @apply fixed bottom-auto left-auto z-[140] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-3;
+    top: max(16px, env(safe-area-inset-top));
+    right: max(16px, env(safe-area-inset-right));
+}
+.admin-page .ui-toast {
+    @apply grid grid-cols-[12px_minmax(0,1fr)_36px] items-start gap-2 rounded-xl border border-[#e5ddd2] bg-[#fffdf9] p-3 shadow-[0_8px_24px_rgba(56,40,30,0.14)];
+}
+.admin-page .ui-toast > div {
+    @apply min-w-0 py-1;
+}
+.admin-page .ui-toast strong {
+    @apply block break-words font-sans text-sm font-semibold leading-6 text-[#40342b];
+}
+.admin-page .ui-toast p {
+    @apply mt-0.5 mb-0 break-words text-xs leading-5 text-[#736b61] empty:hidden;
+}
+.admin-page .ui-toast__icon {
+    @apply mt-3;
+}
+.admin-page .ui-toast button {
+    @apply flex size-9 cursor-pointer items-center justify-center rounded-lg text-xl text-[#736b61] hover:bg-[#f2ebe1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e];
+}
+@media (prefers-reduced-motion: reduce) {
+    .admin-page .ui-toast,
+    .admin-page .ui-toast.is-leaving {
+        @apply animate-none transition-none;
+        transform: none;
+    }
+}
+
+.room-detail-page {
+    @apply bg-[#f9f5ef] text-[#45382f];
+    background-image: linear-gradient(#faf6f0a6, #faf6f0c9), var(--room-background);
+    background-size: cover;
+    background-position: center top;
+}
+.room-detail-page::before {
+    @apply hidden;
+}
+.room-detail-page .room-detail-shell {
+    @apply w-[calc(100%-2rem)] max-w-[1240px] pt-6 pb-10 sm:w-[calc(100%-4rem)] lg:w-[calc(100%-7rem)] lg:pt-8 lg:pb-16;
+}
+.room-breadcrumb {
+    @apply mb-6 flex flex-wrap items-center gap-3 text-xs text-[#855d43] sm:text-sm;
+}
+.room-breadcrumb a {
+    @apply inline-flex items-center rounded-sm leading-6 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#79543e];
+}
+.room-breadcrumb svg {
+    @apply block size-4 shrink-0 self-center;
+}
+.room-breadcrumb [aria-current] {
+    @apply min-w-0 break-words leading-6 text-[#49382d];
+}
+.room-detail-page .room-detail-layout {
+    @apply grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] xl:gap-8;
+}
+.room-detail-page .room-gallery {
+    @apply static min-w-0;
+}
+.room-detail-page .gallery-main {
+    @apply relative m-0 h-auto aspect-[1.2] overflow-hidden rounded-2xl bg-[#e5dace] shadow-none sm:aspect-[1.3];
+}
+.room-detail-page .gallery-main > img {
+    @apply h-full w-full object-cover;
+}
+.room-detail-page .gallery-main:hover > img {
+    transform: none;
+}
+.room-detail-page .gallery-main figcaption {
+    @apply absolute bottom-4 left-5 right-20 flex items-end justify-between gap-4 text-xs text-white;
+}
+.room-detail-page .gallery-main figcaption > [data-gallery-caption] {
+    @apply text-right;
+}
+.room-gallery-count {
+    @apply shrink-0 text-xs tracking-wider tabular-nums;
+}
+.room-gallery-count b {
+    @apply text-xl font-medium;
+}
+.room-detail-page .gallery-shade {
+    @apply pointer-events-none absolute inset-x-0 bottom-0 h-24;
+    background: linear-gradient(transparent, #24191080);
+}
+.room-gallery-arrow {
+    @apply absolute top-1/2 z-10 flex size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-[#cdb9a5] bg-[#fffdf9] text-[#61432e] shadow-none transition-colors enabled:hover:bg-[#f0e5d5] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#79543e] sm:size-12;
+}
+.room-gallery-arrow svg {
+    @apply size-5;
+}
+.room-gallery-prev {
+    @apply left-3 sm:left-4;
+}
+.room-gallery-next {
+    @apply right-3 sm:right-4;
+}
+.room-gallery-expand {
+    @apply absolute bottom-3 right-3 z-10 flex size-10 cursor-pointer items-center justify-center rounded-lg border-0 bg-[#38281c]/70 text-white transition-colors enabled:hover:bg-[#38281c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white;
+}
+.room-gallery-expand svg {
+    @apply size-5;
+}
+.room-detail-page .gallery-thumbs {
+    @apply mt-4 flex gap-3 overflow-x-auto px-1 py-1;
+    scrollbar-color: #b7a18d transparent;
+}
+.room-detail-page .gallery-thumbs button {
+    @apply m-0 h-auto aspect-[1.2] basis-[calc((100%-2.25rem)/4)] shrink-0 overflow-hidden rounded-xl border-2 border-transparent bg-[#e5dace] p-0 opacity-100 shadow-none transition-colors;
+}
+.room-detail-page .gallery-thumbs button img {
+    @apply h-full w-full object-cover;
+}
+.room-detail-page .gallery-thumbs button.selected {
+    @apply border-[#79543e] shadow-none;
+}
+.room-detail-page .gallery-thumbs button:hover {
+    @apply border-[#b99a7c];
+    transform: none;
+    translate: none;
+}
+.room-detail-page .gallery-thumbs button:focus-visible {
+    @apply outline-2 outline-offset-2 outline-[#79543e];
+}
+.room-detail-page .room-detail-copy {
+    @apply static m-0 min-w-0 rounded-2xl border border-[#ede1d4] bg-[#fffdf9]/95 p-5 shadow-none sm:p-7 xl:p-8;
+}
+.room-detail-page .room-detail-copy h1 {
+    @apply mt-0 mb-3 break-words text-5xl font-semibold leading-tight sm:text-6xl xl:text-7xl;
+    font-family: "Noto Serif", Georgia, serif;
+    letter-spacing: -0.035em;
+}
+.room-detail-subtitle {
+    @apply mt-0 mb-5 text-sm leading-7 text-[#7c6b5c];
+}
+.room-detail-page .room-description {
+    @apply m-0 break-words text-sm leading-7 text-[#71645a];
+}
+.room-detail-page .room-facts {
+    @apply my-6 grid grid-cols-3 gap-2 sm:gap-3;
+}
+.room-detail-page .room-facts > div {
+    @apply flex min-h-24 min-w-0 flex-col items-start gap-2 rounded-xl border border-[#eee4d8] bg-[#f7f1e8] px-3 py-4 sm:px-4;
+}
+.room-detail-page .room-facts svg {
+    @apply size-6 text-[#835838];
+}
+.room-detail-page .room-facts span {
+    @apply text-xs text-[#7b6d60];
+}
+.room-detail-page .room-facts b {
+    @apply mb-1 block text-base font-semibold text-[#4d3627];
+}
+.room-stay-form {
+    @apply m-0;
+}
+.room-detail-page .room-rates {
+    @apply m-0 min-w-0 border-0 border-t border-[#e8dacb] p-0 pt-5;
+}
+.room-detail-page .room-rates legend {
+    @apply mb-3 w-full px-0 text-xs font-semibold uppercase tracking-[.12em] text-[#79543e];
+}
+.room-detail-page .detail-prices {
+    @apply m-0 grid gap-2 overflow-visible;
+}
+.room-stay-option {
+    @apply grid cursor-pointer grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-[#e8ded2] bg-white px-3 py-3 transition-colors hover:bg-[#faf3e9];
+}
+.room-stay-option:has(input:checked) {
+    @apply border-[#b29173] bg-[#faf4eb];
+}
+.room-stay-option:focus-within {
+    @apply outline-2 outline-offset-2 outline-[#79543e];
+}
+.room-stay-option:focus-visible {
+    @apply outline-2 outline-offset-2 outline-[#79543e];
+}
+.room-stay-option[aria-disabled=true] {
+    @apply cursor-not-allowed opacity-50;
+}
+.room-stay-number {
+    @apply text-[10px] font-medium tabular-nums text-[#98765b];
+}
+.room-stay-option input {
+    @apply m-0 size-4 cursor-pointer accent-[#79543e];
+}
+.room-detail-page .rate-name {
+    @apply grid min-w-0 gap-1;
+}
+.room-detail-page .rate-name > strong {
+    @apply break-words text-sm font-semibold;
+    font-family: "Be Vietnam Pro", sans-serif;
+}
+.room-detail-page .rate-name > small {
+    @apply text-xs leading-5 text-[#7e7064];
+}
+.room-detail-page .rate-price {
+    @apply flex items-center gap-2 whitespace-nowrap text-[#63412b];
+}
+.room-detail-page .rate-price strong {
+    @apply text-sm font-semibold;
+}
+.room-detail-page .rate-price svg {
+    @apply size-7 shrink-0 rounded-full bg-[#f7eee1] p-1.5;
+}
+.room-detail-page .room-rates:disabled .room-stay-option {
+    @apply cursor-not-allowed opacity-60;
+}
+.room-detail-page .room-rates:disabled input {
+    @apply cursor-not-allowed;
+}
+.room-package-empty {
+    @apply rounded-lg bg-[#f7f1e8] p-4 text-sm leading-7 text-[#71645a];
+}
+.room-detail-page .room-booking-actions {
+    @apply mt-5 grid grid-cols-1 gap-4;
+}
+.room-detail-page .room-primary-action {
+    @apply flex min-h-12 w-full items-center justify-center gap-4 rounded-lg border border-[#70442d] bg-[#70442d] px-4 py-3 text-sm text-white shadow-none transition-colors enabled:hover:bg-[#553420] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#79543e];
+}
+.room-detail-page .room-primary-action:hover,
+.room-detail-page .room-primary-action:active {
+    transform: none;
+    translate: none;
+}
+.room-detail-page .room-primary-action svg {
+    @apply size-5;
+}
+.room-booking-note {
+    @apply flex flex-wrap items-start justify-between gap-x-4 gap-y-3 text-[11px] leading-5 text-[#7b6c5f];
+}
+.room-booking-note > span {
+    @apply flex items-start gap-2;
+}
+.room-booking-note svg {
+    @apply mt-0.5 size-4 shrink-0 text-[#946a48];
+}
+.room-booking-note a {
+    @apply text-[#79543e] underline underline-offset-4 hover:text-[#492d1d] focus-visible:outline-2 focus-visible:outline-offset-2;
+}
+.room-story-section {
+    @apply mt-12 lg:mt-16;
+}
+.room-story-intro {
+    @apply mb-8 grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:gap-12;
+}
+.room-detail-page .room-story-intro h2 {
+    @apply mt-0 mb-5 break-words text-3xl font-medium leading-tight sm:text-4xl;
+    font-family: "Noto Serif", Georgia, serif;
+}
+.room-story-intro p {
+    @apply m-0 max-w-[75ch] text-base leading-8 text-[#77695e];
+}
+.room-story-intro .room-story-quote {
+    @apply relative isolate m-0 min-h-56 self-start border-l border-[#ddc7ab] pt-2 pb-6 pl-8 sm:pl-12 lg:mt-4;
+    font-family: "Noto Serif", Georgia, serif;
+}
+.room-story-quote::before {
+    @apply pointer-events-none absolute -top-10 right-0 -z-10 h-72 w-full opacity-60 content-[''];
+    background-image: var(--room-background);
+    background-position: right top;
+    background-repeat: no-repeat;
+    background-size: auto 480px;
+}
+.room-quote-mark {
+    @apply block h-10 text-6xl leading-none text-[#c6af99];
+}
+.room-story-intro .room-quote-text {
+    @apply relative m-0 max-w-[24ch] text-xl italic leading-8 text-[#806d5e] sm:text-[22px] sm:leading-9;
+}
+.room-quote-text::after {
+    @apply mt-5 block h-px w-10 bg-[#d8b58f] content-[''];
+}
+.room-story-layout {
+    @apply grid grid-cols-1 items-center gap-7 md:grid-cols-2 lg:gap-10;
+}
+.room-story-photo {
+    @apply m-0 overflow-hidden rounded-xl;
+}
+.room-story-photo img {
+    @apply block h-auto aspect-[1.55] w-full object-cover;
+}
+.room-detail-page .room-story-amenities h3,
+.room-detail-page .room-information-layout h3 {
+    @apply mt-0 mb-5 break-words text-2xl font-medium leading-snug;
+    font-family: "Noto Serif", Georgia, serif;
+}
+.room-story-amenities > p {
+    @apply mb-5 text-sm leading-7 text-[#77695e];
+}
+.room-amenity-list {
+    @apply m-0 grid list-none gap-4 p-0;
+}
+.room-amenity-list li {
+    @apply flex items-start gap-3 text-sm leading-7 text-[#77695e];
+}
+.room-amenity-list svg {
+    @apply size-7 shrink-0 rounded-full border border-[#ddc7b0] p-1.5 text-[#8f623e];
+}
+.room-story-contact,
+.room-information-note > a {
+    @apply inline-flex min-h-11 items-center gap-3 text-sm text-[#79543e] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2;
+}
+.room-story-contact svg,
+.room-information-note > a svg {
+    @apply size-4;
+}
+.room-information-layout {
+    @apply mt-8 grid grid-cols-1 gap-6 md:grid-cols-2;
+}
+.room-information-note,
+.room-information {
+    @apply min-w-0 rounded-xl border border-[#eaddcd] bg-[#fffdf9]/85 p-5 sm:p-7;
+}
+.room-information-note {
+    @apply flex flex-col justify-center bg-[#f4eadc];
+}
+.room-detail-page .room-amenities-panel {
+    @apply grid grid-cols-[minmax(0,.38fr)_minmax(0,1fr)] overflow-hidden p-0;
+}
+.room-amenities-photo {
+    @apply relative min-h-72 bg-[#e9dfd0];
+}
+.room-amenities-photo img {
+    @apply absolute inset-0 block size-full object-cover object-bottom;
+}
+.room-amenities-content {
+    @apply min-w-0 px-4 py-6 sm:px-6 sm:py-7;
+}
+.room-amenities-content .room-amenity-list {
+    @apply gap-2.5;
+}
+.room-amenities-content .room-amenity-list li {
+    @apply gap-3 leading-6;
+}
+.room-amenities-content .room-amenity-list svg {
+    @apply mt-0.5 size-5 rounded-none border-0 p-0 text-[#98704f];
+}
+.room-amenities-content .room-amenity-list span {
+    @apply min-w-0 break-words;
+}
+.room-amenities-content > p {
+    @apply m-0 mb-4 text-sm leading-7 text-[#77695e];
+}
+.room-information-note p {
+    @apply mt-0 mb-4 text-sm leading-7 text-[#77695e];
+}
+.room-information dl {
+    @apply m-0;
+}
+.room-information dl > div {
+    @apply grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-4 border-b border-[#eee2d6] py-3 text-sm leading-6;
+}
+.room-information dl > div:last-child {
+    @apply border-0;
+}
+.room-information dt {
+    @apply text-[#827163];
+}
+.room-information dd {
+    @apply m-0 break-words text-[#4f3d30];
+}
+.room-image-open {
+    @apply overflow-hidden;
+}
+.room-detail-page .room-lightbox {
+    @apply fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-[1400px] max-h-[calc(100dvh-2rem)] overflow-auto rounded-xl border-0 bg-[#211b17] p-3 text-white shadow-2xl sm:p-5;
+}
+.room-lightbox::backdrop {
+    background: rgb(20 15 11 / 88%);
+}
+.room-lightbox-toolbar {
+    @apply mb-3 flex items-center justify-between gap-4 text-sm;
+}
+.room-lightbox-toolbar > span {
+    @apply min-w-0 break-words;
+}
+.room-lightbox-toolbar button {
+    @apply flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-white/30 bg-transparent text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white;
+}
+.room-lightbox-toolbar svg {
+    @apply size-5;
+}
+.room-lightbox-stage {
+    @apply relative;
+}
+.room-lightbox-stage > img {
+    @apply block max-h-[72dvh] w-full object-contain;
+}
+.room-lightbox > p {
+    @apply mt-3 mb-0 text-center text-xs tabular-nums;
+}
+@media (min-width: 1600px) {
+    .room-detail-page .room-detail-shell,
+    body:has(.room-detail-page) .site-header .container,
+    body:has(.room-detail-page) .site-footer .container {
+        @apply w-[calc(100%-8rem)] max-w-[1480px];
+    }
+    .room-detail-page .room-detail-shell {
+        @apply pt-10 pb-20;
+    }
+    .room-detail-page .room-detail-layout {
+        @apply gap-10;
+    }
+    .room-detail-page .room-detail-copy {
+        @apply p-9;
+    }
+    .room-detail-page .room-detail-copy h1 {
+        @apply text-[80px];
+    }
+    .room-detail-page .room-breadcrumb,
+    .room-detail-page .room-detail-subtitle,
+    .room-detail-page .room-description,
+    .room-detail-page .rate-name > strong,
+    .room-detail-page .rate-price strong,
+    .room-detail-page .room-primary-action,
+    .room-detail-page .room-amenity-list li,
+    .room-detail-page .room-story-amenities > p,
+    .room-detail-page .room-information-note p,
+    .room-detail-page .room-information dl > div {
+        @apply text-base leading-7;
+    }
+    .room-detail-page .room-facts > div {
+        @apply min-h-28 p-5;
+    }
+    .room-detail-page .room-facts span,
+    .room-detail-page .rate-name > small,
+    .room-detail-page .room-rates legend {
+        @apply text-sm;
+    }
+    .room-detail-page .room-facts b {
+        @apply text-lg;
+    }
+    .room-detail-page .room-stay-option {
+        @apply min-h-20 px-4;
+    }
+    .room-detail-page .room-primary-action {
+        @apply min-h-14;
+    }
+    .room-detail-page .room-booking-note {
+        @apply text-xs leading-6;
+    }
+    .room-detail-page .gallery-thumbs {
+        @apply gap-4;
+    }
+    .room-detail-page .gallery-thumbs button {
+        @apply basis-[calc((100%-3rem)/4)];
+    }
+    .room-detail-page .room-story-section {
+        @apply mt-20;
+    }
+    .room-detail-page .room-story-intro h2 {
+        @apply text-5xl;
+    }
+    .room-detail-page .room-story-amenities h3,
+    .room-detail-page .room-information-layout h3 {
+        @apply text-3xl;
+    }
+    .room-detail-page .room-information-note,
+    .room-detail-page .room-information:not(.room-amenities-panel) {
+        @apply p-9;
+    }
+}
+@media (min-width: 2200px) {
+    .room-detail-page .room-detail-shell,
+    body:has(.room-detail-page) .site-header .container,
+    body:has(.room-detail-page) .site-footer .container {
+        @apply max-w-[1680px];
+    }
+    .room-detail-page .room-detail-layout {
+        @apply gap-12;
+    }
+}
+@media (max-width: 380px) {
+    .room-stay-option {
+        @apply gap-2 px-2;
+    }
+    .room-detail-page .rate-price svg {
+        @apply hidden;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .room-detail-page *,
+    .room-detail-page *::before,
+    .room-detail-page *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}
 
 .calendar-page { @apply bg-[#f8f4ee]; background-image:linear-gradient(#f8f4ee66,#f8f4ee66),var(--calendar-background); background-size:100% 100%; background-repeat:no-repeat; }
 .calendar-page > .section { @apply pt-12 pb-16 md:pt-14 md:pb-20; }
@@ -192,11 +656,14 @@
 .room-product-card .room-body > p { @apply mt-3 text-sm leading-6 text-[#82786f]; }
 .room-product-card .room-tag-chips { @apply my-5 flex flex-wrap gap-2; }
 .room-product-card .room-tag-chips > span { @apply inline-flex items-center gap-2 rounded-lg border-0 bg-[#f0edff] px-3 py-2 text-xs font-medium text-[#5141b2]; }
+#khong-gian .room-product-card .room-tag-chips > span:nth-child(n+5) {
+    @apply hidden;
+}
 .room-product-card .room-tag-chips svg { @apply size-4 shrink-0; }
-.room-product-card .room-amenities { @apply mb-6 mt-0 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#625b55]; }
+.room-product-card .room-amenities { @apply mb-6 mt-auto flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#625b55]; }
 .room-product-card .room-amenities > span { @apply inline-flex items-center gap-1.5; }
 .room-product-card .room-amenities svg { @apply size-4 shrink-0; }
-.room-product-card .room-price { @apply mt-auto border-t border-[#eee9e3] pt-5; }
+.room-product-card .room-price { @apply mt-0 border-t border-[#eee9e3] pt-5; }
 .room-product-card .room-price small { @apply mb-1 block text-xs text-[#82786f]; }
 .room-product-card .room-price strong { @apply text-2xl font-bold text-[#70432c]; }
 .room-product-card .room-price > a { @apply flex size-11 shrink-0 items-center justify-center rounded-full border-0 bg-[#596747] p-0 text-2xl text-white; }
@@ -298,10 +765,10 @@
   @apply fixed inset-0 bg-black/60;
 }
 .contact-toggle-label {
-  @apply flex items-center justify-center;
+  @apply absolute inset-0 flex items-center justify-center;
 }
 .contact-chat {
-  @apply block size-14;
+  @apply block size-14 translate-y-[3px];
   filter: brightness(0) invert(1);
 }
 .contact-toggle::-webkit-details-marker {
@@ -509,8 +976,11 @@
   }
 }
 /* Admin workspace: the reference's cream/coffee palette, with readable operational type. */
+html:has(> body.admin-page) {
+    @apply w-full overflow-x-clip;
+}
 .admin-page {
-    @apply m-0 bg-[#f7f6f2] text-[#302d29] text-sm lg:text-[15px] 2xl:text-base;
+    @apply m-0 w-full min-w-0 overflow-x-clip bg-[#f7f6f2] text-[#302d29] text-sm lg:text-[15px] 2xl:text-base;
     background-image: none;
     font-family: "Be Vietnam Pro", sans-serif;
 }
@@ -632,6 +1102,24 @@
 .admin-workspace > main {
     @apply mx-auto w-full max-w-[1920px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 2xl:px-10 2xl:py-10;
 }
+.admin-shell,
+.admin-shell > section,
+.admin-shell #admin-bookings {
+    @apply min-w-0 max-w-full;
+}
+.admin-topbar > div {
+    @apply min-w-0 flex-wrap;
+}
+.admin-page .admin-stats > .panel {
+    @apply min-w-0 break-words;
+}
+@media (max-width: 639px) {
+    .admin-page .admin-filters .admin-search,
+    .admin-page .admin-filters > label:not(.admin-search),
+    .admin-page .admin-filters .mo-select {
+        @apply min-w-0 w-full;
+    }
+}
 .admin-page-heading,
 .admin-panel-heading {
     @apply mb-6 flex flex-wrap items-center justify-between gap-4;
@@ -744,6 +1232,98 @@
 .admin-booking-table tbody tr:hover {
     @apply bg-[#fdfbf7];
 }
+.booking-cell {
+    @apply grid justify-items-start gap-2;
+}
+.booking-photo-cell {
+    @apply w-32;
+}
+.booking-room-photo {
+    @apply block h-[78px] w-[104px] min-w-[104px] rounded-lg bg-[#eee7de] object-cover;
+}
+.booking-code {
+    @apply text-xs font-semibold tracking-wide text-[#79543e];
+}
+.booking-meta {
+    @apply inline-flex min-w-0 items-center gap-2 text-xs leading-5 text-[#736b61] 2xl:text-sm;
+}
+.booking-meta .admin-icon {
+    @apply size-4 shrink-0 text-[#9b826c];
+}
+.booking-guest,
+.booking-room {
+    @apply font-medium text-[#40342b];
+}
+.booking-phone {
+    @apply rounded-sm underline-offset-4 hover:text-[#79543e] hover:underline;
+}
+.booking-contact-row,
+.booking-room-row {
+    @apply flex items-center gap-3 whitespace-nowrap;
+}
+.booking-source {
+    @apply inline-flex items-center gap-1.5 rounded-md bg-[#f3eee6] px-2 py-1 text-[11px] text-[#79543e];
+}
+.booking-source .admin-icon {
+    @apply size-3;
+}
+.booking-stay {
+    @apply grid grid-cols-[2rem_minmax(0,1fr)] items-baseline gap-2 text-xs leading-5 tabular-nums text-[#534a40] 2xl:text-sm;
+}
+.booking-stay-label {
+    @apply text-[11px] text-[#918174];
+}
+.booking-amount {
+    @apply text-base font-semibold tabular-nums text-[#40342b];
+}
+.booking-payment-status {
+    @apply inline-flex items-center gap-1.5 text-xs font-medium text-[#946529];
+}
+.booking-payment-status .admin-icon {
+    @apply size-3.5 shrink-0;
+}
+.booking-payment-status[data-payment=PAID] {
+    @apply text-[#47694b];
+}
+.booking-payment-status[data-payment=FAILED] {
+    @apply text-[#974b3e];
+}
+.admin-page .booking-collect {
+    @apply mt-1 inline-flex min-h-9 items-center gap-2 px-2.5 py-1.5 text-xs;
+}
+.booking-collect .admin-icon {
+    @apply size-4;
+}
+.admin-booking-table td > .booking-status-label {
+    @apply inline-flex items-center gap-2 whitespace-nowrap text-xs font-medium;
+}
+.booking-cell > .booking-status-label {
+    @apply inline-flex items-center gap-2 whitespace-nowrap text-xs font-medium;
+}
+.booking-status-dot {
+    @apply size-1.5 shrink-0 rounded-full bg-current;
+}
+.admin-booking-table .admin-actions button {
+    @apply inline-flex items-center gap-2 whitespace-nowrap;
+}
+.admin-actions button .admin-icon {
+    @apply size-4 shrink-0;
+}
+.admin-page .admin-actions .booking-cancel {
+    @apply border-[#e5c8bd] text-[#974b3e] enabled:hover:bg-[#faece7];
+}
+.booking-ended {
+    @apply text-xs text-[#918174];
+}
+.booking-note {
+    @apply max-w-56 text-xs leading-6 text-[#736b61];
+}
+.booking-note summary {
+    @apply cursor-pointer text-[#79543e] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2;
+}
+.booking-note p {
+    @apply mt-1 break-words;
+}
 .admin-booking-status {
     @apply w-fit rounded-md bg-[#f3ede1] px-2 py-1 text-xs;
 }
@@ -770,17 +1350,17 @@
     @apply grid grid-cols-1 gap-5 min-[700px]:grid-cols-2 min-[1500px]:grid-cols-3 min-[2100px]:grid-cols-4;
 }
 .admin-page .admin-room-card {
-    @apply rounded-xl border border-[#e8e2d9] bg-white;
+    @apply flex min-w-0 flex-col rounded-xl border border-[#e8e2d9] bg-white;
 }
 .admin-page .admin-room-card:hover {
     @apply shadow-none;
     transform: none;
 }
 .admin-page .admin-room-cover {
-    @apply h-52 2xl:h-60;
+    @apply h-52 shrink-0 2xl:h-60;
 }
 .admin-page .admin-room-content {
-    @apply gap-4 p-5;
+    @apply flex min-w-0 flex-1 flex-col gap-4 p-5;
 }
 .admin-page .admin-room-content h3 {
     @apply m-0 text-xl;
@@ -792,7 +1372,7 @@
     @apply mt-2 block break-all text-xs text-[#79543e] hover:underline;
 }
 .admin-page .package-summary {
-    @apply text-sm;
+    @apply mt-auto text-sm;
 }
 .admin-page .chip {
     @apply rounded-md bg-[#f3efe8] px-2 py-1 text-xs text-[#6e5845];
@@ -920,11 +1500,50 @@
 .package-visibility-switch:has(input:disabled) {
     @apply cursor-not-allowed opacity-50;
 }
-.admin-page .tag-editor {
-    @apply rounded-lg border-[#ddd5ca] bg-white;
+.room-amenities-editor {
+    @apply rounded-xl border border-[#e5ddd2] bg-white p-4 sm:p-5;
 }
-.admin-page .tag-editor input {
-    @apply min-h-11 text-sm;
+.room-amenities-entry {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-end;
+}
+.room-amenities-entry .field {
+    @apply min-w-0 flex-1;
+}
+.room-amenities-entry .button {
+    @apply min-h-12 shrink-0;
+}
+.room-amenities-status {
+    @apply my-2 text-sm leading-6 text-[#79543e] empty:hidden;
+}
+.room-amenities-list-heading {
+    @apply mt-5 mb-3 flex items-center justify-between gap-3 border-t border-[#eee7de] pt-4;
+}
+.room-amenities-list-heading h4 {
+    @apply m-0 text-sm font-semibold text-[#302d29];
+}
+.room-amenities-list-heading > span {
+    @apply text-xs tabular-nums text-[#736b61];
+}
+.room-amenities-list {
+    @apply m-0 grid list-none grid-cols-1 gap-2 p-0 lg:grid-cols-2;
+}
+.room-amenity-row {
+    @apply flex min-w-0 items-center gap-3 rounded-lg bg-[#f8f5f0] px-3 py-2;
+}
+.room-amenity-row-icon {
+    @apply flex size-7 shrink-0 items-center justify-center rounded-full bg-[#ede5d9] text-[#79543e];
+}
+.room-amenity-row-icon .admin-icon {
+    @apply size-4;
+}
+.room-amenity-name {
+    @apply min-w-0 flex-1 break-words text-sm leading-6 text-[#40372f];
+}
+.room-amenity-row .icon-button {
+    @apply size-10 shrink-0 bg-white;
+}
+.room-amenities-empty {
+    @apply col-span-full rounded-lg border border-dashed border-[#ddd5ca] p-5 text-center text-sm leading-6 text-[#736b61];
 }
 .admin-page .upload-zone {
     @apply relative min-h-32 rounded-xl border border-dashed border-[#bba48c] bg-white p-6 focus-within:outline-2 focus-within:outline-[#79543e] hover:bg-[#f2eee7];
@@ -1086,6 +1705,279 @@
 .door-dialog::backdrop {
     background: rgb(42 33 26 / 45%);
 }
+.manual-booking-dialog {
+    @apply max-w-[760px];
+    scrollbar-width: thin;
+    scrollbar-color: #b8a695 #fffdf9;
+}
+.manual-booking-dialog :is(select, input[type=date], input[type=time]):not(:disabled) {
+    @apply cursor-pointer;
+}
+.manual-time-field {
+    @apply m-0 min-w-0 border-0 p-0;
+}
+:is(.admin-page, #booking-app) .manual-date-trigger {
+    @apply flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 rounded-lg border border-[#ddd5ca] bg-white px-3 py-3 text-left text-sm tabular-nums text-[#302d29] enabled:hover:border-[#79543e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:cursor-not-allowed disabled:opacity-50;
+}
+.manual-date-trigger .admin-icon {
+    @apply size-5 shrink-0 text-[#79543e];
+}
+#booking-app .booking-primary-fields .mo-select-trigger {
+    @apply min-h-12 rounded-lg border border-[#ddd5ca] bg-[#fffdf9] px-3 py-3 text-sm text-[#40342b] hover:border-[#a98769] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e];
+}
+#booking-app .booking-primary-fields .field {
+    @apply min-w-0 gap-2 text-sm text-[#6b5645];
+}
+#booking-app .booking-primary-fields {
+    @apply grid-cols-1 sm:grid-cols-2;
+}
+#booking-app .booking-primary-fields > .field:first-child {
+    @apply sm:col-span-2;
+}
+#booking-app .booking-duration-time {
+    @apply m-0 w-auto max-w-none;
+}
+#booking-app .booking-duration-time[hidden] {
+    @apply hidden;
+}
+#booking-app .booking-guest-section .field {
+    @apply min-w-0 gap-2 text-sm text-[#6b5645];
+}
+#booking-app .booking-guest-section .field :is(input, select, textarea),
+#booking-app .booking-guest-section .mo-select-trigger {
+    @apply min-h-12 w-full min-w-0 rounded-lg border border-[#ddd5ca] bg-[#fffdf9] px-3 py-3 text-sm leading-6 text-[#40342b] caret-[#79543e] hover:border-[#a98769] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:cursor-not-allowed disabled:opacity-50;
+}
+#booking-app .booking-guest-section textarea {
+    @apply min-h-28 resize-y;
+}
+#booking-app .booking-duration-time > span {
+    @apply block text-sm;
+}
+#booking-app .manual-date-trigger {
+    @apply bg-[#fffdf9];
+}
+#booking-app .manual-date-popover .admin-icon {
+    @apply block size-4 shrink-0;
+}
+#booking-app .manual-date-popover {
+    @apply overflow-hidden;
+}
+:is(.admin-page, #booking-app) .manual-date-trigger[aria-expanded=true] {
+    @apply border-[#79543e] bg-[#faf5ee];
+}
+.manual-date-popover {
+    @apply fixed inset-auto z-[150] m-0 hidden overflow-auto rounded-2xl border border-[#e5ddd2] bg-[#fffdf9] p-4 text-[#45382f] shadow-[0_12px_32px_rgba(56,40,30,0.18)];
+    scrollbar-width: thin;
+    scrollbar-color: #b8a695 transparent;
+}
+.manual-date-popover:popover-open,
+.manual-date-popover.is-open {
+    @apply block;
+}
+.manual-calendar-heading {
+    @apply mb-4 flex items-center justify-between gap-3;
+}
+.manual-calendar-heading strong {
+    @apply font-sans text-sm font-semibold capitalize text-[#534033];
+}
+:is(.admin-page, #booking-app) .manual-calendar-heading button {
+    @apply flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[#e9e0d5] bg-[#f6f1e9] text-[#79543e] enabled:hover:border-[#b59b84] enabled:hover:bg-[#ece0d0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:cursor-not-allowed disabled:opacity-35;
+}
+.manual-calendar-heading .admin-icon {
+    @apply size-4;
+}
+.manual-calendar-weekdays,
+.manual-calendar-days {
+    @apply grid grid-cols-7 gap-1;
+}
+.manual-calendar-weekdays {
+    @apply mb-2 border-b border-[#eee7de] pb-2 text-center text-[11px] font-medium leading-6 text-[#887766];
+}
+:is(.admin-page, #booking-app) .manual-calendar-days button {
+    @apply relative flex min-h-10 cursor-pointer items-center justify-center rounded-lg border border-transparent bg-transparent p-0 text-sm leading-6 tabular-nums text-[#4c4037] enabled:hover:bg-[#f0e6d9] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#79543e] disabled:cursor-not-allowed disabled:text-[#c5bcb2];
+}
+:is(.admin-page, #booking-app) .manual-calendar-days button[data-other-month=true]:not(:disabled) {
+    @apply text-[#9b8b7d];
+}
+:is(.admin-page, #booking-app) .manual-calendar-days button[data-today=true]:not([aria-pressed=true]) {
+    @apply border-[#c3a68b] font-semibold text-[#79543e];
+}
+:is(.admin-page, #booking-app) .manual-calendar-days button[aria-pressed=true] {
+    @apply border-[#79543e] bg-[#79543e] font-semibold text-white enabled:hover:bg-[#65422d];
+}
+.manual-calendar-footer {
+    @apply mt-3 flex items-center justify-between gap-2 border-t border-[#eee7de] pt-3;
+}
+.manual-calendar-footer > span {
+    @apply text-[10px] text-[#887766];
+}
+:is(.admin-page, #booking-app) .manual-calendar-footer button {
+    @apply min-h-9 cursor-pointer rounded-lg border border-[#e9e0d5] bg-[#f6f1e9] px-3 py-1 text-xs font-medium text-[#79543e] enabled:hover:bg-[#ece0d0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:cursor-not-allowed disabled:opacity-35;
+}
+@supports selector(::-webkit-scrollbar) {
+    .manual-date-popover {
+        scrollbar-width: auto;
+        scrollbar-color: auto;
+    }
+    .manual-date-popover::-webkit-scrollbar {
+        width: 4px;
+    }
+    .manual-date-popover::-webkit-scrollbar-thumb {
+        @apply rounded-full bg-[#b8a695];
+    }
+    .manual-date-popover::-webkit-scrollbar-button {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+}
+.manual-time-field legend {
+    @apply mb-2 p-0 text-sm text-[#534a40];
+}
+.manual-time-picker {
+    @apply grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2;
+}
+:is(.admin-page, #booking-app) .manual-time-picker > button {
+    @apply flex min-h-12 w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-[#ddd5ca] bg-white px-3 py-3 text-sm tabular-nums text-[#302d29] enabled:hover:border-[#79543e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:cursor-not-allowed disabled:bg-[#f2eee7] disabled:text-[#736b61];
+}
+.manual-time-picker > button .admin-icon {
+    @apply size-4 shrink-0 text-[#79543e];
+}
+:is(.admin-page, #booking-app) .manual-time-picker > button[aria-expanded=true] {
+    @apply border-[#79543e] bg-[#faf5ee];
+}
+.manual-time-chevron {
+    @apply ml-auto size-2 shrink-0 rotate-45 border-r border-b border-[#79543e];
+}
+.manual-time-picker > span {
+    @apply text-base font-semibold text-[#79543e];
+}
+.manual-time-popover {
+    @apply fixed inset-auto z-[150] m-0 hidden grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-4 overflow-hidden rounded-2xl border border-[#e5ddd2] bg-[#fffdf9] p-3 text-[#45382f] shadow-[0_12px_32px_rgba(56,40,30,0.18)];
+}
+.manual-time-popover:popover-open,
+.manual-time-popover.is-open {
+    @apply grid;
+}
+.manual-time-column {
+    @apply grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] gap-3;
+}
+.manual-minute-column {
+    @apply grid-rows-[auto_minmax(0,1fr)_auto] border-l border-[#eee7de] pl-3;
+}
+:is(.admin-page, #booking-app) .manual-time-column h4 {
+    @apply m-0 flex items-center gap-2 font-sans text-xs font-semibold leading-6 text-[#79543e];
+}
+.manual-time-column h4 .admin-icon {
+    @apply size-4 shrink-0;
+}
+.manual-hour-options {
+    @apply grid min-h-0 grid-flow-col grid-cols-2 grid-rows-[repeat(12,minmax(28px,1fr))] gap-1 overflow-auto;
+}
+.manual-minute-options {
+    @apply grid min-h-0 auto-rows-[minmax(28px,1fr)] gap-1 overflow-auto pr-1;
+}
+.manual-time-popover :is(.manual-hour-options, .manual-minute-options) {
+    scrollbar-width: thin;
+    scrollbar-color: #b8a695 transparent;
+}
+@supports selector(::-webkit-scrollbar) {
+    .manual-time-popover :is(.manual-hour-options, .manual-minute-options) {
+        scrollbar-width: auto;
+        scrollbar-color: auto;
+    }
+    .manual-time-popover :is(.manual-hour-options, .manual-minute-options)::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+    }
+    .manual-time-popover :is(.manual-hour-options, .manual-minute-options)::-webkit-scrollbar-track {
+        @apply bg-transparent;
+    }
+    .manual-time-popover :is(.manual-hour-options, .manual-minute-options)::-webkit-scrollbar-thumb {
+        @apply rounded-full bg-[#b8a695];
+    }
+    .manual-time-popover :is(.manual-hour-options, .manual-minute-options)::-webkit-scrollbar-thumb:hover {
+        @apply bg-[#957b64];
+    }
+    .manual-time-popover :is(.manual-hour-options, .manual-minute-options)::-webkit-scrollbar-button {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+}
+:is(.admin-page, #booking-app) .manual-time-popover [role=option] {
+    @apply flex min-h-7 cursor-pointer items-center justify-center gap-1 rounded-md border border-[#eee7de] bg-[#faf7f2] px-1 py-1 text-xs leading-4 tabular-nums text-[#5c5148] hover:border-[#b59b84] hover:bg-[#efe5d8] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#79543e];
+}
+:is(.admin-page, #booking-app) .manual-time-popover [aria-selected=true] {
+    @apply border-[#79543e] bg-[#79543e] font-semibold text-white;
+}
+.manual-time-check {
+    @apply hidden size-3.5 shrink-0 rounded-full bg-white;
+}
+[aria-selected=true] > .manual-time-check {
+    @apply relative block;
+}
+.manual-time-check::after {
+    @apply absolute top-[3px] left-[5px] h-[7px] w-1 rotate-45 border-r-2 border-b-2 border-[#79543e] content-[''];
+}
+.manual-exact-minute {
+    @apply grid gap-1 text-[10px] text-[#736b61];
+}
+@media (pointer: coarse) {
+    .manual-hour-options {
+        grid-template-rows: repeat(12, minmax(40px, 1fr));
+    }
+    .manual-minute-options {
+        grid-auto-rows: minmax(40px, 1fr);
+    }
+    :is(.admin-page, #booking-app) .manual-time-popover [role=option] {
+        @apply min-h-10;
+    }
+}
+:is(.admin-page, #booking-app) .manual-exact-minute input {
+    @apply min-h-9 w-full min-w-0 rounded-md border border-[#ddd5ca] bg-white px-2 py-1 text-sm tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e];
+}
+@supports selector(::-webkit-scrollbar) {
+    .manual-booking-dialog {
+        scrollbar-width: auto;
+        scrollbar-color: auto;
+    }
+    .manual-booking-dialog::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+    .manual-booking-dialog::-webkit-scrollbar-track {
+        @apply rounded-full bg-[#fffdf9];
+        margin-block: 12px;
+    }
+    .manual-booking-dialog::-webkit-scrollbar-thumb {
+        @apply rounded-full bg-[#b8a695];
+    }
+    .manual-booking-dialog::-webkit-scrollbar-thumb:hover {
+        @apply bg-[#957b64];
+    }
+    .manual-booking-dialog::-webkit-scrollbar-button {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+}
+.admin-page .manual-section-title {
+    @apply mt-0 mb-0 border-b border-[#e8e2d9] pb-3 text-base font-semibold;
+}
+.manual-booking-summary {
+    @apply rounded-xl border border-[#e5ddd2] bg-[#f5f1e9] p-4 text-sm leading-7 text-[#6d604f];
+}
+.manual-booking-summary strong {
+    @apply text-[#40342b];
+}
+.manual-booking-summary[data-state=available] {
+    @apply border-[#d4decc] bg-[#f0f4ec];
+}
+.manual-booking-summary[data-state=booked],
+.manual-booking-summary[data-state=error] {
+    @apply border-[#e5c8bc] bg-[#faece7] text-[#974837];
+}
 .door-dialog-heading {
     @apply sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[#e8e2d9] bg-[#fffdf9] p-5 sm:p-6;
 }
@@ -1225,4 +2117,129 @@
     .admin-page .door-code-table {
         @apply min-w-[760px];
     }
+}
+/* Room image editor: upload guidance and a preview for every selected image. */
+.room-upload-layout {
+    @apply grid grid-cols-1 items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_280px];
+}
+.admin-page .room-upload-layout .upload-zone {
+    @apply relative flex min-h-72 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[#a98769] bg-[#fffdf9] px-5 py-8 text-center;
+}
+.admin-page .room-upload-layout .upload-zone:hover,
+.admin-page .room-upload-layout .upload-zone.is-dragging {
+    @apply border-[#79543e] bg-[#f6eee3];
+}
+.admin-page .room-upload-layout .upload-zone > strong {
+    @apply text-lg leading-7;
+}
+.admin-page .room-upload-layout .room-upload-symbol {
+    @apply mb-1 flex size-16 items-center justify-center rounded-full bg-[#f2ece2] text-[#79543e];
+}
+.room-upload-symbol .admin-icon {
+    @apply size-8;
+}
+.admin-page .room-upload-layout .room-upload-choose {
+    @apply mt-3 inline-flex min-h-12 items-center justify-center gap-3 rounded-lg bg-[#79543e] px-6 py-3 text-sm font-medium text-white;
+}
+.room-upload-info {
+    @apply rounded-xl border border-[#e5d8c7] bg-[#f4efe6] p-4;
+}
+.room-upload-info h4 {
+    @apply mt-0 mb-3 text-base font-semibold;
+}
+.room-upload-info > div {
+    @apply mb-2 flex items-start gap-3 rounded-lg bg-[#fffdf9]/70 p-3 last:mb-0;
+}
+.room-upload-info > div > .admin-icon {
+    @apply size-9 shrink-0 rounded-full border border-white bg-[#f4ede3] p-2 text-[#79543e];
+}
+.room-upload-info p {
+    @apply m-0 min-w-0;
+}
+.room-upload-info strong {
+    @apply block text-sm font-medium text-[#45392e];
+}
+.room-upload-info small {
+    @apply mt-1 block text-xs leading-5 text-[#736b61];
+}
+.room-images-heading {
+    @apply mt-7 mb-4 flex flex-wrap items-center justify-between gap-3;
+}
+.room-images-heading h4 {
+    @apply m-0 text-lg font-semibold;
+}
+.room-images-heading p {
+    @apply mt-2 mb-0 text-xs leading-6 text-[#736b61];
+}
+.room-images-heading > span {
+    @apply flex items-center gap-2 text-xs text-[#736b61];
+}
+.admin-page .image-manager {
+    @apply mt-0 grid grid-cols-1 gap-4 md:grid-cols-2 min-[1400px]:grid-cols-3;
+}
+.room-image-card {
+    @apply min-w-0 rounded-xl border border-[#e5ddd2] bg-white p-3;
+}
+.room-image-card-top {
+    @apply relative grid grid-cols-[minmax(0,.8fr)_minmax(0,1fr)] items-start gap-3 pl-4;
+}
+.room-image-grip {
+    @apply absolute top-1 left-0 cursor-grab text-[#948778] active:cursor-grabbing;
+}
+.room-image-grip .admin-icon {
+    @apply size-4;
+}
+.room-image-preview {
+    @apply relative min-w-0 overflow-hidden rounded-lg bg-[#ede6dc];
+}
+.room-image-preview img {
+    @apply block h-40 w-full object-cover;
+}
+.room-image-cover {
+    @apply absolute top-2 left-2 inline-flex items-center gap-1 rounded-md bg-[#79543e] px-2 py-1 text-[10px] text-white;
+}
+.room-image-cover .admin-icon {
+    @apply size-3;
+}
+.room-image-fields {
+    @apply grid min-w-0 gap-2;
+}
+.room-image-fields label {
+    @apply grid min-w-0 gap-1 text-xs text-[#736b61];
+}
+.admin-page .room-image-fields input {
+    @apply min-h-10 w-full min-w-0 rounded-lg border border-[#ddd5ca] bg-white px-2 py-2 text-sm text-[#302d29];
+}
+.room-image-save-state {
+    @apply flex items-start gap-1 rounded-md bg-[#faf1df] px-2 py-1 text-[10px] leading-5 text-[#87602f];
+}
+.room-image-save-state .admin-icon {
+    @apply mt-0.5 size-3 shrink-0;
+}
+.room-image-card-actions {
+    @apply flex flex-wrap items-center gap-2;
+}
+.admin-page .room-image-card button {
+    @apply inline-flex min-h-10 cursor-pointer items-center justify-center gap-1 rounded-lg border border-[#ddd5ca] bg-white px-2 py-2 text-xs text-[#79543e] enabled:hover:bg-[#f6eee3] disabled:cursor-not-allowed disabled:opacity-45;
+}
+.room-image-card button .admin-icon {
+    @apply size-4;
+}
+.admin-page .room-image-card .room-image-delete {
+    @apply border-[#e7c8bd] text-[#a14736] enabled:hover:bg-[#faece7];
+}
+.room-image-reorder {
+    @apply mt-3 flex items-center justify-between gap-2 border-t border-[#eee7de] pt-2 text-[10px] text-[#736b61];
+}
+.room-image-reorder > div {
+    @apply flex gap-1;
+}
+.admin-page .room-image-reorder button {
+    @apply size-9 min-h-9 p-0;
+}
+.room-images-status {
+    @apply mt-3 mb-0 text-xs leading-6 text-[#79543e];
+}
+.room-images-empty {
+    @apply col-span-full rounded-xl border border-dashed border-[#ddd5ca] bg-[#fffdf9] p-6 text-center text-sm text-[#736b61];
 }

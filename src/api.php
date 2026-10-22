@@ -37,6 +37,19 @@ function handle_api(string $path, string $method): never
         if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)$#',$path,$matches) && $method === 'PATCH') update_room_api($matches[1]);
         if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)$#',$path,$matches) && $method === 'DELETE') delete_room_api($matches[1]);
         if ($path === '/api/admin/bookings' && $method === 'GET') admin_bookings_api();
+        if ($path === '/api/admin/bookings' && $method === 'POST') {
+            require_admin();
+            require_csrf();
+            $booking = create_manual_booking(db(), json_body());
+            json_response(['bookingCode' => $booking['booking_code']], 201);
+        }
+        if ($method === 'POST' && preg_match('#^/api/admin/bookings/([a-f0-9]{32})/payment$#', $path, $matches)) {
+            require_admin();
+            require_csrf();
+            $body = json_body();
+            confirm_manual_payment(db(), $matches[1], (string)($body['paymentMethod'] ?? ''));
+            json_response(['ok' => true]);
+        }
         if ($path === '/api/admin/bookings' && $method === 'PATCH') update_booking_api();
         json_response(['error'=>'Không tìm thấy API.'], 404);
     } catch (BookingException $e) { json_response(['error'=>$e->getMessage()], $e->httpStatus); }
@@ -115,6 +128,7 @@ function lookup_booking_api(): never
         dispatch_confirmation_email((string)$b['id']);
         $email=db()->prepare('SELECT confirmation_email_status FROM bookings WHERE id=?');$email->execute([$b['id']]);$b['confirmation_email_status']=$email->fetchColumn()?:'PENDING';
     }
+    $b = booking_lifecycle($b);
     $expired=$b['status']==='PENDING'&&strtotime($b['hold_expires_at'].' UTC')<=time();
     json_response(['bookingCode'=>$b['booking_code'],'room'=>$b['room_name'],'checkIn'=>gmdate('c',strtotime($b['check_in'].' UTC')),'checkOut'=>gmdate('c',strtotime($b['check_out'].' UTC')),'total'=>(int)$b['total_price'],'status'=>$expired?'EXPIRED':$b['status'],'paymentStatus'=>$b['payment_status'],'emailStatus'=>$b['confirmation_email_status']??'PENDING','expires'=>gmdate('c',strtotime($b['hold_expires_at'].' UTC')),'qrCode'=>$expired?null:$b['qr_code'],'checkoutUrl'=>$expired?null:$b['checkout_url']]);
 }
@@ -140,6 +154,12 @@ function admin_bookings_api(): never
         . 'JOIN rooms r ON r.id=b.room_id LEFT JOIN payments p ON p.booking_id=b.id '
         . 'ORDER BY b.created_at DESC,b.id'
     )->fetchAll();
+    $now = time();
+    $rooms = room_repository()->allRooms();
+    $rows = array_map(function ($booking) use ($now, $rooms) {
+        $booking['room_image'] = $rooms[$booking['room_id']]['image'] ?? '/images/white-illustration.jpg';
+        return booking_lifecycle($booking, $now);
+    }, $rows);
     json_response(['bookings'=>$rows,'csrf'=>csrf_token()]);
 }
 function update_booking_api(): never
@@ -149,25 +169,9 @@ function update_booking_api(): never
     $body = json_body();
     $id = (string)($body['id'] ?? '');
     $status = (string)($body['status'] ?? '');
-    $pdo = db();
-    $pdo->beginTransaction();
-    try {
-        $stmt = $pdo->prepare('SELECT * FROM bookings WHERE id=? FOR UPDATE');
-        $stmt->execute([$id]);
-        $booking = $stmt->fetch();
-        if (!$booking) throw new BookingException('Không tìm thấy đơn.', 404);
-        $allowed = ['PENDING' => ['CANCELLED'], 'CONFIRMED' => ['CHECKED_IN', 'CANCELLED'], 'CHECKED_IN' => ['CHECKED_OUT']];
-        if (!in_array($status, $allowed[$booking['status']] ?? [], true)) {
-            throw new BookingException('Thao tác không hợp lệ.', 409);
-        }
-        $pdo->prepare('UPDATE bookings SET status=? WHERE id=?')->execute([$status, $id]);
-        $pdo->commit();
-        if ($status === 'CANCELLED') sync_booking_access($id);
-        json_response(['ok' => true]);
-    } catch (Throwable $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
-        throw $e;
-    }
+    update_booking_lifecycle(db(), $id, $status);
+    if ($status === 'CANCELLED') sync_booking_access($id);
+    json_response(['ok'=>true]);
 }
 
 function admin_rooms_api():never
