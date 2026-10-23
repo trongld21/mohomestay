@@ -89,6 +89,7 @@
         return `<span class="door-status-badge" data-status="${status}">${labels[status]}</span>`;
     }
     const pagination = MoPagination.create("door-codes", render);
+    const toggling = new Set();
     let deleting = false;
     function render() {
         if (!loaded) return;
@@ -119,20 +120,27 @@
         }
         const view = pagination.slice(filtered);
         list.innerHTML = `<div class="admin-table-scroll" role="region" aria-label="Danh sách mã mở cửa" tabindex="0"><table class="admin-booking-table door-code-table"><thead><tr>
-            <th scope="col">Mã mở cửa / Loại</th><th scope="col">Bắt đầu hiệu lực</th><th scope="col">Kết thúc hiệu lực</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th>
+            <th scope="col">Mã mở cửa / Loại</th><th scope="col">Bắt đầu hiệu lực</th><th scope="col">Kết thúc hiệu lực</th><th scope="col">Trạng thái</th><th scope="col">Bật/Tắt</th><th scope="col">Thao tác</th>
             </tr></thead><tbody>${view.items
                 .map(
                     (row) => `<tr>
                 <td class="door-code-cell"><strong class="door-code-value">${escape(row.code)}</strong><span>Theo ${periods[row.period].toLowerCase()}</span></td>
                 <td class="door-time-cell"><span class="door-mobile-label">Bắt đầu hiệu lực</span><span>${escape(localTime(row.starts_at))}</span></td><td class="door-end-cell"><span class="door-mobile-label">Kết thúc hiệu lực</span><span>${escape(localTime(row.ends_at))}</span></td>
                 <td class="door-status-cell">${statusBadge(row)}</td>
+                <td class="door-toggle-cell">
+                    <span class="door-mobile-label">Sử dụng mã</span>
+                    <button type="button" role="switch" aria-checked="${row.status === "ACTIVE"}" aria-label="Sử dụng mã ${escape(row.code)}" data-door-toggle="${escape(row.id)}" class="door-toggle" ${toggling.has(row.id) ? 'disabled aria-busy="true"' : ""}>
+                        <span class="door-toggle-track" aria-hidden="true"><span></span></span>
+                        <span>${row.status === "ACTIVE" ? "Bật" : "Tắt"}</span>
+                    </button>
+                </td>
                 <td class="door-actions-cell"><div class="door-row-actions"><button type="button" data-door-edit="${escape(row.id)}" class="icon-button" title="Chỉnh sửa" aria-label="Sửa mã ${escape(row.code)}">${icon("pencil")}</button><button type="button" data-door-delete="${escape(row.id)}" class="icon-button door-delete-button" title="Xóa mã" aria-label="Xóa mã ${escape(row.code)}">${icon("trash")}</button></div></td>
             </tr>`,
                 )
                 .join("")}</tbody></table></div>${pagination.render(view, "mã")}`;
     }
     async function load() {
-        if (loading) return;
+        if (loading || toggling.size) return;
         loading = true;
         refresh.disabled = true;
         add.disabled = true;
@@ -182,6 +190,38 @@
             list.setAttribute("aria-busy", "false");
         }
     }
+    async function toggleCode(button) {
+        const id = button.dataset.doorToggle;
+        if (loading || saving || deleting || toggling.has(id)) return;
+        const row = codes.find((item) => item.id === id);
+        if (!row) return;
+        const status = row.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
+        toggling.add(id);
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+        try {
+            await request("/api/admin/door-codes/" + encodeURIComponent(id), "PATCH", { status });
+            row.status = status;
+            toggling.delete(id);
+            render();
+            const replacement = [...list.querySelectorAll("[data-door-toggle]")]
+                .find((item) => item.dataset.doorToggle === id);
+            if (replacement) replacement.focus();
+            else filter.focus();
+            window.LangUI.toast({
+                type: "success",
+                title: status === "ACTIVE" ? "Đã bật sử dụng mã" : "Đã tắt sử dụng mã",
+                message: "Chỉ cập nhật việc cấp mã trên web; không thay đổi mã trên khóa cổng.",
+            });
+        } catch (error) {
+            window.LangUI.toast({ type: "error", title: "Chưa thể đổi trạng thái mã", message: error.message });
+        } finally {
+            toggling.delete(id);
+            button.disabled = false;
+            button.removeAttribute("aria-busy");
+        }
+    }
+
     function validateTimes() {
         const { startsAt, endsAt } = form.elements;
         endsAt.setCustomValidity(
@@ -250,6 +290,8 @@
     root.addEventListener("click", (event) => {
         const trigger = event.target.closest("button");
         if (!trigger) return;
+        if (trigger.hasAttribute("data-door-toggle")) toggleCode(trigger);
+        if (toggling.size) return;
         if (trigger.hasAttribute("data-door-delete")) deleteCode(trigger);
         if (trigger.hasAttribute("data-door-add")) openEditor(trigger);
         if (trigger.hasAttribute("data-door-edit")) {
@@ -445,13 +487,19 @@
     });
     // Update only the status text, preserving keyboard focus on edit controls.
     setInterval(() => {
+        if (toggling.size) return;
         const next = codes.map((row) => row.id + ":" + codeStatus(row)).join("|");
         if (next === statusSignature) return;
         const focusedId = document.activeElement?.dataset.doorEdit;
+        const focusedToggleId = document.activeElement?.dataset.doorToggle;
         render();
         if (focusedId)
             [...list.querySelectorAll("[data-door-edit]")]
                 .find((button) => button.dataset.doorEdit === focusedId)
+                ?.focus();
+        if (focusedToggleId)
+            [...list.querySelectorAll("[data-door-toggle]")]
+                .find((button) => button.dataset.doorToggle === focusedToggleId)
                 ?.focus();
     }, 1000);
     load();

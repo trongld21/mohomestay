@@ -14,6 +14,10 @@ const node = () => ({ innerHTML: "", value: "", textContent: "", addEventListene
 const hours = node();
 const minutes = node();
 const exact = node();
+const exactListeners = {};
+exact.addEventListener = (name, handler, options) => {
+    exactListeners[name] = { handler, options };
+};
 const hourLabel = node();
 const minuteLabel = node();
 const fields = { arrivalHour: node(), arrivalMinute: node(), time: node() };
@@ -38,6 +42,25 @@ assert.equal(fields.time.value, "", "Rendering options must not silently choose 
 instance.set("20:54");
 assert.equal(fields.time.value, "20:54");
 assert.ok(minutes.innerHTML.includes('data-time-minute="54"'));
+let wheelPrevented = false;
+document.activeElement = exact;
+exactListeners.wheel.handler({ preventDefault() { wheelPrevented = true; } });
+assert.equal(wheelPrevented, true, "Wheel must not step the focused exact-minute input.");
+assert.equal(exactListeners.wheel.options.passive, false);
+assert.equal(exact.value, 54);
+wheelPrevented = false;
+document.activeElement = null;
+exactListeners.wheel.handler({ preventDefault() { wheelPrevented = true; } });
+assert.equal(wheelPrevented, false, "An unfocused input must allow normal scrolling.");
+
+const calendarPicker = picker.create({
+    addEventListener() {},
+    querySelector() { throw new Error("Calendar picker must use its supplied fields, not assume a form exists."); },
+}, { root, panel, fields });
+calendarPicker.set("23:59");
+assert.equal(fields.time.value, "23:59", "Calendar can reuse the picker without an admin form.");
+assert.equal(hourLabel.textContent, "23 giờ");
+assert.equal(minuteLabel.textContent, "59 phút");
 delete global.document;
 delete global.window;
 console.log("24-hour time picker tests: OK");

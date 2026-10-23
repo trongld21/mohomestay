@@ -113,7 +113,7 @@
             }
             bookings = data.bookings;
             const paid = bookings
-                .filter((item) => item.payment_status === "PAID")
+                .filter((item) => item.payment_status === "PAID" && !Number(item.is_test))
                 .reduce((sum, item) => sum + Number(item.total_price), 0);
             const stats = [
                 ["Đã thu", cash(paid), "Tổng tiền các đơn đã thanh toán"],
@@ -188,7 +188,7 @@
         );
         const view = bookingPagination.slice(filtered);
         one("[data-booking-results]").innerHTML = filtered.length
-            ? `<div class="admin-table-scroll" tabindex="0" role="region" aria-label="Bảng đặt phòng, cuộn ngang để xem thêm"><table class="admin-booking-table"><thead><tr><th scope="col">Ảnh phòng</th><th scope="col">Mã / Khách hàng</th><th scope="col">Phòng / Thời gian</th><th scope="col">Thanh toán</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th></tr></thead><tbody>${view.items
+            ? `<div class="admin-table-scroll" tabindex="0" role="region" aria-label="Danh sách đặt phòng"><table class="admin-booking-table"><thead><tr><th scope="col">Ảnh phòng</th><th scope="col">Mã / Khách hàng</th><th scope="col">Phòng / Thời gian</th><th scope="col">Thanh toán</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th></tr></thead><tbody>${view.items
                   .map(
                       (booking) => renderBookingRow(booking),
                   )
@@ -213,8 +213,9 @@
         if (booking.status === "CHECKED_IN") actions = action("CHECKED_OUT", "Kết thúc sớm", "logout");
         return `<tr>
             <td class="booking-photo-cell"><img class="booking-room-photo" src="${esc(booking.room_image || '/images/white-illustration.jpg')}" alt="Phòng ${esc(booking.room_name)}" width="104" height="78" loading="lazy"></td>
-            <td><div class="booking-cell">
+            <td class="booking-guest-cell"><div class="booking-cell">
                 <strong class="booking-code">${esc(booking.booking_code)}</strong>
+                ${Number(booking.is_test) ? '<span class="booking-source">ĐƠN THỬ · Không có giao dịch thật</span>' : ""}
                 <span class="booking-meta booking-guest">${icon("user")} ${esc(booking.guest_name)}</span>
                 <div class="booking-contact-row">
                     <a class="booking-meta booking-phone" href="tel:${esc(booking.guest_phone)}">${icon("phone")} ${esc(booking.guest_phone)}</a>
@@ -222,7 +223,7 @@
                 </div>
                 ${booking.guest_note ? `<details class="booking-note"><summary>Ghi chú khách</summary><p>${esc(booking.guest_note)}</p></details>` : ""}
             </div></td>
-            <td><div class="booking-cell">
+            <td class="booking-stay-cell"><div class="booking-cell">
                 <div class="booking-room-row">
                     <strong class="booking-meta booking-room">${icon("bed")} ${esc(booking.room_name)}</strong>
                     ${booking.package_name_snapshot ? `<span class="booking-meta">${icon("clock")} ${esc(booking.package_name_snapshot)}</span>` : ""}
@@ -230,15 +231,15 @@
                 <div class="booking-stay"><span class="booking-stay-label">Nhận</span><time>${bookingDate(booking.check_in)}</time></div>
                 <div class="booking-stay"><span class="booking-stay-label">Trả</span><time>${bookingDate(booking.check_out)}</time></div>
             </div></td>
-            <td><div class="booking-cell">
+            <td class="booking-payment-cell"><div class="booking-cell">
                 <strong class="booking-amount">${cash(booking.total_price)}</strong>
                 <span class="booking-payment-status" data-payment="${esc(booking.payment_status)}">${icon(booking.payment_status === "PAID" ? "check" : "clock")} ${payment}</span>
                 ${method ? `<span class="booking-meta">${icon("wallet")} ${method}</span>` : ""}
                 ${canCollect ? `<button type="button" class="button outline small booking-collect" data-booking-payment="${esc(booking.id)}">${icon("wallet")} Xác nhận thu tiền</button>` : ""}
                 ${booking.failure_reason ? `<span class="admin-reconcile">${esc(booking.failure_reason)}</span>` : ""}
             </div></td>
-            <td><div class="booking-cell"><span class="admin-booking-status booking-status-label" data-status="${esc(booking.status)}"><span class="booking-status-dot" aria-hidden="true"></span>${esc(statusNames[booking.status] || booking.status)}</span><span class="booking-meta">${icon(booking.statusSource === "MANUAL" ? "user" : "clock")}${booking.statusSource === "MANUAL" ? "Admin cập nhật" : "Tự động theo giờ"}</span></div></td>
-            <td><div class="admin-actions">${actions || '<span class="booking-ended">Đã kết thúc</span>'}</div></td>
+            <td class="booking-status-cell"><div class="booking-cell"><span class="admin-booking-status booking-status-label" data-status="${esc(booking.status)}"><span class="booking-status-dot" aria-hidden="true"></span>${esc(statusNames[booking.status] || booking.status)}</span><span class="booking-meta">${icon(booking.statusSource === "MANUAL" ? "user" : "clock")}${booking.statusSource === "MANUAL" ? "Admin cập nhật" : "Tự động theo giờ"}</span></div></td>
+            <td class="booking-actions-cell"><div class="admin-actions">${actions || '<span class="booking-ended">Đã kết thúc</span>'}</div></td>
         </tr>`;
     }
     async function bookingAction(event) {
@@ -341,21 +342,27 @@
             ? view.items
                   .map(
                       (room) =>
-                          `<article class="admin-room-card"><div class="admin-room-cover"><img src="${esc(room.image)}" alt=""><span class="badge status-${room.status.toLowerCase()}">${room.status === "COMING_SOON" ? "Sắp ra mắt" : room.status === "HIDDEN" ? "Đang ẩn" : "Đang hoạt động"}</span></div><div class="admin-room-content"><div><h3>${esc(room.name)}</h3><p>${esc(room.subtitle)}</p><span class="admin-room-path">/rooms/${esc(room.slug)}</span></div><div class="chip-row">${room.tags.map((tag) => `<span class="chip">${esc(tag)}</span>`).join("")}</div><div class="grid gap-2 text-sm">${room.packages.map((pkg) => {
+                          `<article class="admin-room-card"><div class="admin-room-cover"><img src="${esc(room.image)}" alt=""><span class="badge status-${room.status.toLowerCase()}">${room.status === "COMING_SOON" ? "Sắp ra mắt" : room.status === "HIDDEN" ? "Đang ẩn" : "Đang hoạt động"}</span></div><div class="admin-room-content"><div>
+                              <div class="admin-room-heading">
+                                  <h3>${esc(room.name)}</h3>
+                                  <span class="admin-room-path">/rooms/${esc(room.slug)}</span>
+                              </div>
+                              <p class="admin-room-description">${esc(room.subtitle)}</p>
+                          </div><div class="chip-row">${room.tags.map((tag) => `<span class="chip">${esc(tag)}</span>`).join("")}</div><ul class="admin-package-list mt-auto" aria-label="Gói lưu trú">${room.packages.map((pkg) => {
                               const base = Number(pkg.basePrice ?? pkg.price);
                               const percent = Number(pkg.effectiveDiscountPercent || 0);
                               const sale = percent > 0 && base > Number(pkg.price);
-                              return `<div class="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-stone-200 pb-2">
-                                  <span>${esc(pkg.name)}</span>
-                                  <div class="flex flex-col items-end gap-1">
-                                      ${sale ? `<span class="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Giảm ${esc(percent)}%</span>` : ''}
-                                      <div class="flex flex-wrap items-baseline justify-end gap-2">
-                                          ${sale ? `<del class="text-sm text-stone-500"><span class="sr-only">Giá gốc </span>${cash(base)}</del>` : ''}
-                                          <strong><span class="sr-only">Giá hiện tại </span>${cash(pkg.price)}</strong>
-                                      </div>
+                              return `<li class="admin-package-row">
+                                  <div class="admin-package-label">
+                                      <span class="admin-package-name">${esc(pkg.name)}</span>
+                                      ${sale ? `<span class="admin-package-discount">Giảm ${esc(percent)}%</span>` : ''}
                                   </div>
-                              </div>`;
-                          }).join("") || "<span>Chưa có gói giá</span>"}</div><div class="admin-card-actions"><button class="button outline small" type="button" data-room-visibility="${esc(room.id)}" aria-label="${room.status === "HIDDEN" ? "Hiển thị" : "Ẩn"} phòng ${esc(room.name)}" title="${room.status === "HIDDEN" ? "Hiển thị với khách" : "Ẩn khỏi website"}">${icon(room.status === "HIDDEN" ? "eye" : "eye-off")} ${room.status === "HIDDEN" ? "Hiển thị" : "Ẩn phòng"}</button><a class="button outline small" href="/admin/rooms/${encodeURIComponent(room.id)}/preview" target="_blank" rel="noopener">${icon("external-link")} Xem trước</a><button class="button outline small" data-edit-room="${esc(room.id)}">${icon("pencil")} Sửa</button><button class="icon-button danger-text" data-delete-room="${esc(room.id)}" aria-label="Xóa phòng">${icon("trash")}</button></div></div></article>`,
+                                  <div class="admin-package-price">
+                                      ${sale ? `<del><span class="sr-only">Giá gốc </span>${cash(base)}</del>` : ''}
+                                      <strong><span class="sr-only">Giá hiện tại </span>${cash(pkg.price)}</strong>
+                                  </div>
+                              </li>`;
+                          }).join("") || '<li class="admin-package-row text-sm text-[#736b61]">Chưa có gói giá</li>'}</ul><div class="admin-card-actions"><button class="button outline small" type="button" data-room-visibility="${esc(room.id)}" aria-label="${room.status === "HIDDEN" ? "Hiển thị" : "Ẩn"} phòng ${esc(room.name)}" title="${room.status === "HIDDEN" ? "Hiển thị với khách" : "Ẩn khỏi website"}">${icon(room.status === "HIDDEN" ? "eye" : "eye-off")} ${room.status === "HIDDEN" ? "Hiển thị" : "Ẩn phòng"}</button><a class="button outline small" href="/admin/rooms/${encodeURIComponent(room.id)}/preview" target="_blank" rel="noopener">${icon("external-link")} Xem trước</a><button class="button outline small" data-edit-room="${esc(room.id)}">${icon("pencil")} Sửa</button><button class="icon-button danger-text" data-delete-room="${esc(room.id)}" aria-label="Xóa phòng">${icon("trash")}<span class="admin-delete-label">Xóa</span></button></div></div></article>`,
                   )
                   .join("")
             : '<div class="empty-state"><h3>Không có phòng phù hợp</h3><p>Thử đổi bộ lọc hoặc thêm không gian mới.</p></div>';
@@ -464,6 +471,7 @@
     form.addEventListener("input", updateDiscountPreviews);
     function togglePackageMode(row) {
         const fixed = one('[data-package-field="mode"]', row).value === "FIXED_TIME";
+        row.classList.toggle("package-fixed-time", fixed);
         all("[data-fixed-field]", row).forEach((field) => (field.hidden = !fixed));
         one("[data-duration-field]", row).hidden = fixed;
     }
@@ -531,6 +539,7 @@
             "name",
             "slug",
             "subtitle",
+            "tag",
             "description",
             "maxGuests",
             "bedrooms",

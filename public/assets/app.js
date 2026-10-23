@@ -2,7 +2,23 @@ const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelect
 const money=n=>new Intl.NumberFormat('vi-VN').format(Number(n))+'đ';
 const html=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const statuses={PENDING:'Đang giữ phòng, chờ thanh toán',CONFIRMED:'Đã xác nhận',CHECKED_IN:'Đã nhận phòng',CHECKED_OUT:'Đã trả phòng',CANCELLED:'Đã hủy',EXPIRED:'Hết thời gian giữ phòng'};
-async function api(url,options={}){const r=await fetch(url,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.error||'Không thể kết nối máy chủ.');return d}
+async function api(url, options = {}) {
+    const response = await fetch(url, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    });
+    let data = {};
+    try { data = await response.json(); } catch {}
+    if (!response.ok) throw new Error(data.error || 'Không thể kết nối máy chủ.');
+    if (url === '/api/bookings/lookup' && document.querySelector('#payment-app')
+        && ['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT'].includes(data.status)) {
+        const credentials = JSON.parse(options.body || '{}');
+        if (/^[a-f0-9]{64}$/.test(credentials.token || '')) {
+            location.replace('/booking-success/' + encodeURIComponent(data.bookingCode) + '#' + credentials.token);
+        }
+    }
+    return data;
+}
 const menu=$('[data-menu]');if(menu)menu.onclick=()=>$('#nav').classList.toggle('open');
 
 $$('[data-package-tabs]').forEach(tabs=>tabs.onclick=e=>{const b=e.target.closest('[data-package]');if(!b)return;$$('[data-package]',tabs).forEach(x=>x.classList.toggle('selected',x===b));$$('[data-price-package]').forEach(x=>x.hidden=x.dataset.pricePackage!==b.dataset.package);$$('[data-book-room]').forEach(x=>x.href=`/bookings?room=${x.dataset.bookRoom}&package=${b.dataset.package}`)});
@@ -22,8 +38,111 @@ function initBooking(){const root=$('#booking-app');if(!root)return;const form=$
  async function check(){try{availability=await api('/api/availability?date='+form.date.value);terms.hidden=!availability.terms;terms.textContent=availability.terms?'Điều kiện đặt phòng: '+availability.terms:'';update()}catch(e){message.innerHTML=`<p class="notice error">${e.message}</p>`}}
  form.onchange=e=>{if(e.target.name==='date')check();else update()};form.onsubmit=async e=>{e.preventDefault();message.innerHTML='';let data=Object.fromEntries(new FormData(form));data.numberOfGuests=Number(data.numberOfGuests);data.acceptTerms=!!data.acceptTerms;try{let result=await api('/api/bookings',{method:'POST',body:JSON.stringify(data)});location.href='/payment?code='+encodeURIComponent(result.bookingCode)+'#'+result.token}catch(err){message.innerHTML=`<p class="notice error">${err.message}</p>`}};update();check()}
 
-function renderLookup(b){return `<div class="notice"><strong>${html(b.bookingCode)} · ${html(b.room)}</strong><p>${html(statuses[b.status]||b.status)} · ${money(b.total)}</p><p>${localDate(b.checkIn)} → ${localDate(b.checkOut)}</p><p>${b.paymentStatus==='PAID'?'Đã thanh toán':'Chưa thanh toán'}</p>${b.checkoutUrl?`<a class="text-link" href="${html(b.checkoutUrl)}">Tiếp tục thanh toán ↗</a>`:''}</div>`}
+function renderLookup(booking) {
+    const paymentLink = booking.status === 'PENDING' && booking.checkoutUrl
+        ? `<a class="text-link" href="${html(booking.checkoutUrl)}">Tiếp tục thanh toán ↗</a>`
+        : '';
+    return `<div class="notice">
+        <strong>${html(booking.bookingCode)} · ${html(booking.room)}</strong>
+        <p>${html(statuses[booking.status] || booking.status)} · ${money(booking.total)}</p>
+        <p>${localDate(booking.checkIn)} → ${localDate(booking.checkOut)}</p>
+        <p>${booking.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}</p>
+        ${paymentLink}${paymentRetryNotice(booking)}
+    </div>`;
+}
 function initLookup(){$$('[data-lookup-form]').forEach(form=>form.onsubmit=async e=>{e.preventDefault();let out=$('[data-lookup-result]',form.parentElement);out.innerHTML='<p class="notice">Đang tra cứu…</p>';try{let d=Object.fromEntries(new FormData(form));d.code=d.code.trim().toUpperCase();out.innerHTML=renderLookup(await api('/api/bookings/lookup',{method:'POST',body:JSON.stringify(d)}))}catch(err){out.innerHTML=`<p class="notice error">${err.message}</p>`}})}
-function initPayment(){const root=$('#payment-app');if(!root)return;const out=$('[data-payment-result]',root),params=parseParams(),orderCode=String(params.orderCode||''),stored=(()=>{try{return JSON.parse(sessionStorage.getItem('mo-payment-'+orderCode)||'null')}catch{return null}})(),code=root.dataset.code||stored?.code||'',token=location.hash.slice(1)||root.dataset.token||stored?.token||'';if(!token||(!code&&!orderCode)){out.innerHTML='<p class="notice error">Chưa khôi phục được đơn sau khi thanh toán. Vui lòng tra cứu bằng mã đặt phòng và số điện thoại; giao dịch của bạn vẫn được webhook xử lý an toàn.</p><p><a class="button" href="/bookings#tra-cuu">Tra cứu đơn đặt phòng</a></p>';return}let timer;async function poll(){try{let b=await api('/api/bookings/lookup',{method:'POST',body:JSON.stringify({code,token,orderCode})}),remaining=Math.max(0,Math.floor((new Date(b.expires)-Date.now())/1000)),emailNote=b.status==='CONFIRMED'?(b.emailStatus==='SENT'?'Email xác nhận đã được gửi tới bạn.':b.emailStatus==='FAILED'?'Email chưa gửi được; thông tin đặt phòng của bạn vẫn đã được xác nhận.':'Email xác nhận đang được hệ thống gửi tới bạn.'):'',waiting=params.status==='PAID'&&b.status==='PENDING'?'<p class="notice">Đã nhận kết quả thanh toán từ payOS. Hệ thống đang xác nhận giao dịch, vui lòng chờ trong giây lát…</p>':'';out.innerHTML=`<p class="muted">${b.bookingCode} · ${b.room}</p><h2>${money(b.total)}</h2><p class="notice ${b.status==='CONFIRMED'?'success':''}">${statuses[b.status]||b.status}</p>${waiting}${b.status==='PENDING'&&remaining>0&&!waiting?`<p>Mở trang payOS để quét mã QR hoặc chọn ngân hàng thanh toán.</p><p class="muted">Giữ phòng còn ${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}</p>${b.checkoutUrl?`<a class="button" href="${b.checkoutUrl}">Mở trang thanh toán payOS ↗</a>`:''}`:''}${b.status==='CONFIRMED'?`<p class="notice success">Hẹn gặp bạn! Mơ sẽ liên hệ riêng để hướng dẫn nhận phòng.<br>${emailNote}</p>`:''}<p><a class="text-link" href="/bookings#tra-cuu">Tra cứu đơn</a></p>`;if(['CONFIRMED','CANCELLED','CHECKED_IN','CHECKED_OUT'].includes(b.status)){clearInterval(timer);if(orderCode)try{sessionStorage.removeItem('mo-payment-'+orderCode)}catch{}}}catch(e){out.innerHTML=`<p class="notice error">${html(e.message)}</p>`}}timer=setInterval(poll,3000);poll()}
+function paymentRetryNotice(booking) {
+    if (!['CANCELLED', 'EXPIRED'].includes(booking.status)) return '';
+    const message = booking.paymentStatus === 'PAID'
+        ? 'Đơn đã ghi nhận thanh toán. Vui lòng liên hệ Mơ để được kiểm tra trước khi đặt lại.'
+        : 'Link thanh toán cũ không còn sử dụng được. Vui lòng chọn lại phòng và khung giờ để tạo đơn mới.';
+    return `<p class="notice">${message}</p>${booking.paymentStatus === 'PAID' ? '' : '<p><a class="button" href="/bookings">Đặt lại phòng</a></p>'}`;
+}
+function initPayment() {
+    const root = $('#payment-app');
+    if (!root) return;
+    const out = $('[data-payment-result]', root);
+    const params = parseParams();
+    const orderCode = String(params.orderCode || '');
+    let stored = null;
+    try { stored = JSON.parse(sessionStorage.getItem('mo-payment-' + orderCode) || 'null'); } catch {}
+    const code = root.dataset.code || stored?.code || '';
+    const token = location.hash.slice(1) || root.dataset.token || stored?.token || '';
+    if (!token || (!code && !orderCode)) {
+        out.innerHTML = '<p class="notice error">Chưa khôi phục được đơn sau khi thanh toán. Vui lòng tra cứu bằng mã đặt phòng và số điện thoại; giao dịch của bạn vẫn được webhook xử lý an toàn.</p><p><a class="button" href="/bookings#tra-cuu">Tra cứu đơn đặt phòng</a></p>';
+        return;
+    }
+    let timer;
+    let loading = false;
+    let mockPayment = null;
+    let simulating = false;
+    out.onclick = async (event) => {
+        const button = event.target.closest('[data-simulate-payment]');
+        if (!button || !mockPayment || simulating) return;
+        simulating = true;
+        button.disabled = true;
+        try {
+            await api('/api/dev/payments/callback', {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': LANG_HOME.csrf },
+                body: JSON.stringify(mockPayment),
+            });
+            await poll();
+        } catch (error) {
+            const message = document.createElement('p');
+            message.className = 'notice error';
+            message.textContent = error.message;
+            out.append(message);
+        } finally {
+            simulating = false;
+            button.disabled = false;
+        }
+    };
+    async function poll() {
+        if (loading) return;
+        loading = true;
+        try {
+            const booking = await api('/api/bookings/lookup', {
+                method: 'POST', body: JSON.stringify({ code, token, orderCode }),
+            });
+            mockPayment = booking.status === 'PENDING' ? booking.mockPayment : null;
+            const remaining = Math.max(0, Math.floor((new Date(booking.expires) - Date.now()) / 1000));
+            const waiting = params.status === 'PAID' && booking.status === 'PENDING';
+            const emailNote = booking.emailStatus === 'SENT'
+                ? 'Email xác nhận đã được gửi tới bạn.'
+                : booking.emailStatus === 'FAILED'
+                    ? 'Email chưa gửi được; thông tin đặt phòng của bạn vẫn đã được xác nhận.'
+                    : 'Email xác nhận đang được hệ thống gửi tới bạn.';
+            out.innerHTML = `<p class="muted">${html(booking.bookingCode)} · ${html(booking.room)}</p>
+                <h2>${money(booking.total)}</h2>
+                <p class="notice ${booking.status === 'CONFIRMED' ? 'success' : ''}">${html(statuses[booking.status] || booking.status)}</p>
+                ${mockPayment ? `<div class="my-5 rounded-xl border border-[#dccbb7] bg-[#f3ece1] p-4 text-sm leading-6 text-[#654831]">
+                    <strong class="block">ĐƠN THỬ · Không chuyển tiền</strong>
+                    <p>Giả lập thanh toán để kiểm tra trang đặt phòng thành công. Không gửi email hoặc mã cửa.</p>
+                    <button class="button mt-3 cursor-pointer rounded-lg px-4 py-3 hover:bg-[#553b2c] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:cursor-wait disabled:opacity-60" type="button" data-simulate-payment ${simulating ? 'disabled' : ''}>Giả lập thanh toán thành công</button>
+                </div>` : ''}
+                ${waiting ? '<p class="notice">Đã nhận kết quả thanh toán từ payOS. Hệ thống đang xác nhận giao dịch, vui lòng chờ trong giây lát…</p>' : ''}
+                ${booking.status === 'PENDING' && remaining > 0 && !waiting && !mockPayment ? `
+                    <p>Mở trang payOS để quét mã QR hoặc chọn ngân hàng thanh toán.</p>
+                    <p class="muted">Giữ phòng còn ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}</p>
+                    ${booking.checkoutUrl ? `<a class="button" href="${html(booking.checkoutUrl)}">Mở trang thanh toán payOS ↗</a>` : ''}` : ''}
+                ${booking.status === 'CONFIRMED' ? `<p class="notice success">Hẹn gặp bạn! Mơ sẽ liên hệ riêng để hướng dẫn nhận phòng.<br>${emailNote}</p>` : ''}
+                ${paymentRetryNotice(booking)}
+                <p><a class="text-link" href="/bookings#tra-cuu">Tra cứu đơn</a></p>`;
+            if (['CONFIRMED', 'CANCELLED', 'EXPIRED', 'CHECKED_IN', 'CHECKED_OUT'].includes(booking.status)) {
+                clearInterval(timer);
+                if (orderCode) {
+                    try { sessionStorage.removeItem('mo-payment-' + orderCode); } catch {}
+                }
+            }
+        } catch (error) {
+            out.innerHTML = `<p class="notice error">${html(error.message)}</p>`;
+        } finally {
+            loading = false;
+        }
+    }
+    timer = setInterval(poll, 3000);
+    poll();
+}
 function initAdmin(){const root=$('#admin-app');if(!root)return;async function load(){try{let d=await api('/api/admin/bookings'),paid=d.bookings.filter(x=>x.payment_status==='PAID').reduce((s,x)=>s+Number(x.total_price),0),confirmed=d.bookings.filter(x=>x.status==='CONFIRMED').length,reconcile=d.bookings.filter(x=>x.payment_status==='PAID'&&x.status==='CANCELLED').length;root.innerHTML=`<div class="admin-stats"><div class="panel"><p>Đã thu</p><h2>${money(paid)}</h2></div><div class="panel"><p>Đơn đã xác nhận</p><h2>${confirmed}</h2></div><div class="panel"><p>Cần đối soát</p><h2>${reconcile}</h2></div></div><div class="table-scroll"><table><thead><tr><th>Đơn / khách</th><th>Phòng / lịch</th><th>Thanh toán</th><th>Trạng thái</th></tr></thead><tbody>${d.bookings.map(b=>`<tr><td><strong>${html(b.booking_code)}</strong><p>${html(b.guest_name)}</p><a href="tel:${html(b.guest_phone)}">${html(b.guest_phone)}</a></td><td>${html(b.room_name)}<p>${localDate(b.check_in+'Z')}</p><p>${localDate(b.check_out+'Z')}</p></td><td>${money(b.total_price)}<p>${b.payment_status==='PAID'?'Đã thanh toán':'Chưa thanh toán'}</p>${b.failure_reason?`<p class="notice error">${html(b.failure_reason)}</p>`:''}</td><td><p>${html(statuses[b.status]||b.status)}</p><div class="admin-actions">${b.status==='PENDING'?`<button data-action="CANCELLED" data-id="${html(b.id)}">Hủy</button>`:''}${b.status==='CONFIRMED'?`<button data-action="CHECKED_IN" data-id="${html(b.id)}">Nhận phòng</button><button data-action="CANCELLED" data-id="${html(b.id)}">Hủy</button>`:''}${b.status==='CHECKED_IN'?`<button data-action="CHECKED_OUT" data-id="${html(b.id)}">Trả phòng</button>`:''}</div></td></tr>`).join('')}</tbody></table></div>`}catch(e){root.innerHTML=`<p class="notice error">${html(e.message)}</p>`}}root.onclick=async e=>{let b=e.target.closest('[data-action]');if(!b)return;if(!await LangUI['confirm']({title:'Cập nhật trạng thái đơn?',message:'Thao tác này sẽ thay đổi trạng thái phục vụ của đơn đặt phòng.',confirmLabel:'Xác nhận',tone:b.dataset.action==='CANCELLED'?'danger':'info'}))return;try{await api('/api/admin/bookings',{method:'PATCH',headers:{'X-CSRF-Token':LANG_HOME.csrf},body:JSON.stringify({id:b.dataset.id,status:b.dataset.action})});LangUI.toast({type:'success',title:'Đã cập nhật',message:'Trạng thái đơn đã được lưu.'});load()}catch(err){LangUI.toast({type:'error',title:'Chưa thể cập nhật',message:err.message})}};load()}
 initLookup();initPayment();initAdmin();

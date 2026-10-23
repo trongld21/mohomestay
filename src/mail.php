@@ -81,6 +81,9 @@ function send_booking_confirmation_email(array $booking, ?callable $transport = 
 
 function dispatch_confirmation_email(string $bookingId, ?callable $transport = null): bool
 {
+    $test = db()->prepare('SELECT * FROM bookings WHERE id=?');
+    $test->execute([$bookingId]);
+    if (!empty(($test->fetch() ?: [])['is_test'])) return false;
     // Keep the message pending until DirectAdmin has a valid sender configured.
     // This avoids consuming all retry attempts during deployment.
     if (!filter_var(trim((string)config('mail.from', '')), FILTER_VALIDATE_EMAIL)) return false;

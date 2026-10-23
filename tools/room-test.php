@@ -31,6 +31,8 @@ $input = validate_room_input([
     ],
 ]);
 room_check($input['name'] === 'Phòng Mây', 'Ten phong phai trim');
+room_check(validate_room_input(['name' => 'Phòng Mây', 'tag' => ' Tinh giản & thư thái '])['tag'] === 'Tinh giản & thư thái', 'Nhan tren anh phai trim va duoc luu');
+room_throws(fn() => validate_room_input(['name' => 'Phòng Mây', 'tag' => str_repeat('a', 101)]), 'Nhãn trên ảnh', 'Nhan tren anh phai gioi han 100 ky tu');
 room_check($input['slug'] === 'phong-may', 'Slug trong phai sinh tu ten');
 room_check($input['tags'] === ['Netflix','Máy chiếu'], 'Tag phai trim va loai trung khong phan biet hoa thuong');
 room_check(count($input['packages']) === 2, 'Phai chap nhan danh sach goi linh hoat');

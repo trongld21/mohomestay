@@ -61,6 +61,7 @@ function validate_room_input(array $input): array
     return [
         'name'=>$name,'slug'=>$slug,
         'subtitle'=>limited_text($input['subtitle'] ?? '', 255, 'Mô tả ngắn'),
+        'tag'=>array_key_exists('tag', $input) ? limited_text($input['tag'], 100, 'Nhãn trên ảnh') : null,
         'description'=>limited_text($input['description'] ?? '', 5000, 'Mô tả'),
         'status'=>$status,'maxGuests'=>$maxGuests,'bedrooms'=>$bedrooms,'bathrooms'=>$bathrooms,
         'discountPercent'=>bounded_integer($input['discountPercent'] ?? 0, 0, 99, 'Ưu đãi chung (%)'),

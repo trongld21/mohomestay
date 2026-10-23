@@ -43,6 +43,36 @@ Nút “Nhắn Mơ” mở danh sách liên hệ ở trang chủ. Zalo và Hotli
 `CONTACT_FACEBOOK_URL` trong `.env` bằng link HTTPS của Mơ; khi chưa cấu hình,
 hai mục này hiển thị “Sắp kết nối” và không dẫn tới tài khoản khác.
 
+## Bản đồ OpenStreetMap ở trang chủ
+
+Phần “Đường đến Mơ” sử dụng Leaflet 1.9.4 với bản đồ OpenStreetMap,
+không cần tài khoản hoặc API key. SDK chỉ tải khi section vị trí vào màn hình.
+Đường dẫn CDN được cố định phiên bản và kiểm tra SRI.
+
+Mặc định ghim Mơ Home tại tọa độ **10.024753, 105.7551832**, lấy từ điểm đến
+trong link Maps chủ nhà xác nhận: https://maps.app.goo.gl/NipUCnPJHmJeBgxA6.
+Dùng tọa độ điểm đến, không dùng tọa độ tâm màn hình hay điểm xuất phát của đường đi.
+Ghim có nhãn “Mơ Home” luôn hiển thị. Nút chỉ đường mở Google Maps với cùng tọa độ
+điểm đến, không đính kèm vị trí xuất phát của người đã chia sẻ link.
+Không gọi geocoding mỗi lượt xem.
+
+Nếu cần cập nhật vị trí sau này, có thể ghi đè tọa độ trong `.env`:
+
+```ini
+HOME_MAP_LATITUDE=
+HOME_MAP_LONGITUDE=
+```
+
+Giữ attribution © OpenStreetMap contributors luôn nhìn thấy; không tải hàng loạt,
+không prefetch vùng bản đồ, không bypass cache. Tile được tải trực tiếp từ
+`https://tile.openstreetmap.org/{z}/{x}/{y}.png`, dùng Referer hợp lệ và cache mặc định
+của trình duyệt. Giới hạn zoom 19, không bật retina tải thêm tile. Dịch vụ cộng đồng
+không có SLA; khi lưu lượng tăng cần cân nhắc nhà cung cấp tile phù hợp.
+Nếu SDK hoặc tile lỗi, phần địa chỉ và chỉ đường vẫn hoạt động, có nút thử lại.
+
+Tài liệu: https://leafletjs.com/examples/quick-start/ và
+https://operations.osmfoundation.org/policies/tiles/.
+
 ## Đơn đặt phòng qua điện thoại / Zalo
 
 Trong **Admin → Tổng quan & đặt phòng → Tạo đơn đặt phòng**, chọn phòng, gói lưu trú,
@@ -62,6 +92,52 @@ giờ nhận thực tế, giữ giờ trả/giá) hoặc kết thúc sớm. Tr�
 xác nhận khách thực sự đã đến. Đơn hủy/chờ thanh toán không tự nhận phòng.
 
 ## Kiểm tra PHP
+
+Trang Lịch phòng tự kiểm tra lại mỗi 15 giây và khi quay về tab. Chấm màu theo
+phòng, gói và giờ nhận đang chọn; không biểu thị tình trạng chung của mọi phòng.
+API `/api/availability` mặc định lấy 31 ngày, nhận `days` từ 1 đến 62 để kiểm tra
+trọn tháng cùng các gói kéo dài tối đa 30 ngày. Giờ quá hạn dùng đồng hồ máy chủ;
+trạng thái còn trống độc lập với việc có mở thanh toán trực tuyến hay không.
+
+Danh sách phòng trên Trang chủ tự kiểm tra `/api/rooms/available-now` mỗi 15 giây
+và khi khách quay lại tab. Chỉ hiện phòng đang hoạt động, không có đơn chiếm giờ
+hiện tại hoặc khóa lịch trong ngày. Đơn chờ thanh toán còn hạn giữ chỗ được tính
+là bận; đơn tương lai, đã hủy hoặc hết hạn giữ chỗ không chặn phòng hiện tại.
+Trang Phòng & giá vẫn hiển thị đầy đủ. Khi mất kết nối, Trang chủ ẩn danh sách
+chưa xác minh và tự thử lại.
+
+Trang đặt phòng thành công hiển thị ảnh phòng, thông tin lưu trú và hướng dẫn
+nhận phòng. Có thể điền `CHECKIN_GUIDE_URL`, `HOUSE_RULES_URL` (HTTPS), `WIFI_NAME`
+và `WIFI_PASSWORD` trong `.env`. Khi chưa cấu hình, trang hướng khách liên hệ Mơ;
+nội quy dùng `BOOKING_TERMS` hiện có. Không đưa mật khẩu Wi-Fi vào source code.
+Mã cổng hiện khi đơn đã thanh toán và còn trong thời gian lưu trú. Admin test
+trên local có thể xem mã đã lưu, đang Bật và phù hợp thời gian nhận phòng của
+đơn thử đã xác nhận; khách và production không nhận mã thật từ đơn thử.
+Wi-Fi đã cấu hình hiển thị cả trên đơn thử đã xác nhận để kiểm tra giao diện.
+Khi bật TTLock, chỉ đọc mã đã đồng bộ thành công cho đúng đơn; test không tự
+sinh mã mới trên khóa.
+
+### Callback thanh toán giả (local)
+
+Đăng nhập admin rồi mở `/dev/payments`. Chọn phòng/gói và thời gian còn trống,
+tạo đơn thử, mở màn thanh toán ở tab mới, sau đó bấm gửi callback thành công.
+Tab thanh toán tự chuyển tới trang thành công sau khi API xác nhận đơn.
+
+Hoặc dùng ngay form khách hàng ở `/bookings`: đăng nhập admin trên local, tích
+**Test thanh toán tại local**, điền thông tin và tạo đơn. Trang `/payment` của
+đơn thử có nút **Giả lập thanh toán thành công**, không mở payOS. Bỏ tích để
+dùng luồng thanh toán thật. Lựa chọn test không hiển thị trên production hoặc
+cho khách chưa đăng nhập admin.
+
+- `POST /api/dev/payments/create`: các trường như tạo đơn thủ công, gồm `requestId`
+  (32 ký tự hex); trả `bookingCode`, `orderCode`, `amount`, `paymentUrl`.
+- `POST /api/dev/payments/callback`: JSON `{ "orderCode": "...", "amount": 200000 }`.
+- Cả hai yêu cầu phiên admin, header `X-CSRF-Token`, kết nối loopback và PHP local
+  hoặc `APP_ENV=development`. Production trả 404. Không đổi hoặc bỏ xác thực webhook thật.
+- Chỉ áp dụng đơn có `is_test=1`, không gửi email/mã cửa hay giao dịch ngân hàng.
+  Đơn thử giữ lịch 15 phút, callback thành công giữ lịch như đơn đã xác nhận;
+  hãy hủy đơn thử trong admin sau khi test. Doanh thu không tính đơn thử.
+- Chạy `php tools/migrate.php` trước khi dùng (`007_test_bookings.sql`).
 
 ```bash
 php tools/check.php

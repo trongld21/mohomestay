@@ -30,7 +30,7 @@ function quote_manual_booking(array $room, array $input): array
     return $quote + compact('source', 'paymentStatus', 'paymentMethod', 'requestId');
 }
 
-function create_manual_booking(PDO $pdo, array $input): array
+function create_manual_booking(PDO $pdo, array $input, bool $test = false): array
 {
     $requestId = (string)($input['requestId'] ?? '');
     if (!preg_match('/^[a-f0-9]{32}$/', $requestId)) {
@@ -94,10 +94,18 @@ function create_manual_booking(PDO $pdo, array $input): array
             'payment_status' => $quote['paymentStatus'],
             'payment_method' => $quote['paymentMethod'],
         ];
+        if ($test) {
+            $values['is_test'] = 1;
+            $values['status'] = 'PENDING';
+            $values['payment_status'] = 'PENDING';
+            $values['payment_method'] = 'mock';
+            $values['order_code'] = (int)(floor(microtime(true) * 1000) * 1000 + random_int(0, 999));
+            $values['hold_expires_at'] = gmdate('Y-m-d H:i:s', time() + 900);
+        }
         $columns = implode(',', array_keys($values));
         $marks = implode(',', array_fill(0, count($values), '?'));
         $pdo->prepare('INSERT INTO bookings (' . $columns . ') VALUES (' . $marks . ')')->execute(array_values($values));
-        if ($quote['paymentStatus'] === 'PAID') {
+        if (!$test && $quote['paymentStatus'] === 'PAID') {
             record_manual_payment($pdo, $values['id'], $quote['total'], $quote['paymentMethod']);
         }
         $pdo->commit();

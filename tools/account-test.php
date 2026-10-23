@@ -93,6 +93,11 @@ function e(mixed $value): string
 {
     return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
+function asset_url(string $path): string
+{
+    return $path;
+}
+
 function csrf_token(): string
 {
     return 'test-csrf';
