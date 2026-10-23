@@ -77,7 +77,7 @@ function render_google_analytics(string $path, string $host): void
             {
                 $fullTitle = e($title) . ' | Mơ Home';
                 $adminPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-                $adminLayout = in_array($adminPath, ['/admin', '/admin/door-codes', '/admin/accounts', '/admin/permissions', '/admin/no-access'], true);
+                $adminLayout = in_array($adminPath, ['/admin', '/admin/availability', '/admin/door-codes', '/admin/accounts', '/admin/permissions', '/admin/no-access'], true);
                 if ($adminLayout) require_once APP_ROOT . '/src/admin-layout.php';
                 $robots = ($options['robots'] ?? true) ? 'index,follow' : 'noindex,nofollow';
                 ?>
@@ -501,6 +501,30 @@ function render_room(array $r): void
                         <div><?= room_detail_icon('bed') ?><span><b><?= e($r['bedrooms']) ?></b> phòng ngủ</span></div>
                         <div><?= room_detail_icon('bath') ?><span><b><?= e($r['bathrooms']) ?></b> phòng tắm</span></div>
                     </div>
+                    <?php if (can_use('availability.hold') && !$coming && !$hidden): ?>
+                        <section class="my-4 rounded-xl border border-sky-200 bg-sky-50 p-4" data-room-quote-hold data-room-id="<?= e($r['id']) ?>">
+                            <h2 class="font-sans text-base font-semibold">Giữ căn để báo giá</h2>
+                            <p class="mt-1 text-sm text-stone-600">Khóa khung giờ đã chọn trong 1 giờ để tư vấn khách. Tự mở khi hết hạn hoặc nhân viên mở lại.</p>
+                            <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                                <label class="grid gap-1 text-sm">Gói
+                                    <select class="timeline-input" data-hold-package>
+                                        <?php foreach ($packages as $holdPackage): ?>
+                                            <option value="<?= e($holdPackage['id']) ?>"><?= e($holdPackage['name']) ?></option>
+                                        <?php endforeach ?>
+                                    </select>
+                                </label>
+                                <label class="grid gap-1 text-sm">Ngày nhận
+                                    <input class="timeline-input" type="date" data-hold-date value="<?= e(date('Y-m-d')) ?>" min="<?= e(date('Y-m-d')) ?>">
+                                </label>
+                                <label class="grid gap-1 text-sm" data-hold-time-label>Giờ nhận
+                                    <input class="timeline-input" type="time" data-hold-time step="60">
+                                </label>
+                            </div>
+                            <button class="timeline-button mt-3" type="button" data-hold-create>Khóa căn khẩn cấp · Giữ 1 giờ</button>
+                            <p class="mt-2 text-sm text-stone-700" data-hold-status role="status"></p>
+                        </section>
+                        <script defer src="<?= e(asset_url('/assets/room-quote-hold.js')) ?>"></script>
+                    <?php endif ?>
                     <form action="/calendar" method="get" class="room-stay-form">
                         <input type="hidden" name="room" value="<?= e($r['id']) ?>">
                         <fieldset class="room-rates" <?= $coming || $hidden ? 'disabled' : '' ?>>
@@ -533,6 +557,10 @@ function render_room(array $r): void
                     </form>
                 </article>
             </div>
+            <?php
+            require_once APP_ROOT . '/src/room-timeline-view.php';
+            render_room_timeline($r);
+            ?>
             <section class="room-story-section" aria-labelledby="room-story-title">
                 <div class="room-story-intro">
                     <div><h2 id="room-story-title">Không gian của <?= e($r['name']) ?></h2><p><?= nl2br(e($r['description'] ?: $r['subtitle'])) ?></p></div>

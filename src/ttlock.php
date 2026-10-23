@@ -17,7 +17,7 @@ function ttlock_window(array $booking): array
     $end = new DateTimeImmutable($booking['check_out'], $zone);
     if ($end <= $start) throw new TTLockException('Thời gian lưu trú không hợp lệ.');
     return [
-        'starts_at' => $start->modify('-1 hour')->format('Y-m-d H:i:s'),
+        'starts_at' => $start->format('Y-m-d H:i:s'),
         'ends_at' => $end->modify('+1 hour')->format('Y-m-d H:i:s'),
     ];
 }
@@ -28,7 +28,7 @@ function ttlock_generated_window(array $booking): array
     $start = strtotime($window['starts_at'] . ' UTC');
     $end = strtotime($window['ends_at'] . ' UTC');
     return [
-        'starts_at' => gmdate('Y-m-d H:i:s', (int)(floor($start / 3600) * 3600)),
+        'starts_at' => gmdate('Y-m-d H:i:s', (int)(ceil($start / 3600) * 3600)),
         'ends_at' => gmdate('Y-m-d H:i:s', (int)(ceil($end / 3600) * 3600)),
     ];
 }

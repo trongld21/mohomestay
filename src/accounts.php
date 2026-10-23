@@ -6,6 +6,7 @@ function account_permissions(): array
 {
     return [
         'bookings' => 'Tổng quan & đặt phòng',
+        'availability' => 'Tìm phòng trống',
         'rooms' => 'Quản lý phòng',
         'door-codes' => 'Quản lý mã mở cửa',
     ];
@@ -84,7 +85,7 @@ function account_home(): string
 {
     foreach (account_permissions() as $key => $label) {
         if (can_use($key)) {
-            return $key === 'door-codes' ? '/admin/door-codes' : '/admin#' . $key;
+            return in_array($key, ['door-codes', 'availability'], true) ? '/admin/' . $key : '/admin#' . $key;
         }
     }
     return can_use('accounts') ? '/admin/accounts' : '/admin/no-access';
@@ -163,6 +164,12 @@ function account_permission_groups(): array
             'bookings.update' => 'Nhận phòng, kết thúc sớm và hủy đơn',
             'bookings.payment' => 'Xác nhận thu tiền',
         ],
+        'availability' => [
+            'availability.view' => 'Xem ma trận và tìm phòng trống',
+            'availability.lock' => 'Khóa khẩn cấp phòng khách ở quá giờ',
+            'availability.hold' => 'Giữ khung giờ báo giá trong 1 giờ và mở lại',
+            'availability.checkout' => 'Xác nhận trả phòng và tạo QR phụ thu',
+        ],
         'rooms' => [
             'rooms.view' => 'Xem danh sách và xem trước phòng',
             'rooms.create' => 'Tạo phòng mới',
@@ -203,12 +210,19 @@ function admin_api_permission(string $path, string $method, array $body = []): s
 {
     $feature = explode('/', substr($path, strlen('/api/admin/')))[0];
     return match ($feature) {
+        'room-operations' => match (true) {
+            $method === 'GET' => 'availability.view',
+            str_ends_with($path, '/lock') => 'availability.lock',
+            str_ends_with($path, '/hold'), str_ends_with($path, '/release') => 'availability.hold',
+            str_ends_with($path, '/checkout'), str_ends_with($path, '/payment') => 'availability.checkout',
+            default => 'accounts',
+        },
         'booking-overview' => 'bookings.overview',
         'booking-rooms' => 'bookings.create',
         'bookings' => match ($method) {
             'GET' => str_contains($path, '/identity/') ? 'bookings.identity' : 'bookings.view',
             'POST' => str_ends_with($path, '/payment') ? 'bookings.payment' : 'bookings.create',
-            'PATCH' => 'bookings.update',
+            'PATCH' => ($body['status'] ?? '') === 'CHECKED_OUT' ? 'availability.checkout' : 'bookings.update',
             default => 'accounts',
         },
         'rooms' => match (true) {

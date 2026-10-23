@@ -1,6 +1,6 @@
 (() => {
     const shell = document.querySelector(".admin-shell");
-    if (!shell) return;
+    if (!shell || !document.querySelector("[data-admin-rooms]")) return;
     const one = (s, r = document) => r.querySelector(s),
         all = (s, r = document) => [...r.querySelectorAll(s)];
     const esc = (value) =>
@@ -83,7 +83,7 @@
     const statusNames = {
         PENDING: "Chờ thanh toán",
         CONFIRMED: "Đã xác nhận",
-        CHECKED_IN: "Trong giờ lưu trú",
+        CHECKED_IN: "Đang lưu trú",
         CHECKED_OUT: "Đã kết thúc",
         CANCELLED: "Đã hủy",
         EXPIRED: "Hết hạn",
@@ -294,7 +294,9 @@
         let actions = "";
         if (booking.status === "PENDING") actions = action("CANCELLED", "Hủy đơn", "x", true);
         if (booking.status === "CONFIRMED") actions = action("CHECKED_IN", "Nhận sớm", "key") + action("CANCELLED", "Hủy", "x", true);
-        if (booking.status === "CHECKED_IN") actions = action("CHECKED_OUT", "Kết thúc sớm", "logout");
+        if (booking.status === "CHECKED_IN" && LANG_HOME.abilities.includes("availability.checkout")) {
+            actions = '<a class="timeline-button" href="/admin/availability">Trả phòng & phụ thu</a>';
+        }
         const identity = Number(booking.identity_image_count) === 2
             ? (LANG_HOME.abilities.includes('bookings.identity')
                 ? `<button type="button" data-view-identity="${esc(booking.id)}" class="min-h-10 rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Xem CCCD</button>`
@@ -328,8 +330,8 @@
                 ${canCollect ? `<button type="button" class="button outline small booking-collect" data-booking-payment="${esc(booking.id)}">${icon("wallet")} Xác nhận thu tiền</button>` : ""}
                 ${booking.failure_reason ? `<span class="admin-reconcile">${esc(booking.failure_reason)}</span>` : ""}
             </div></td>
-            <td class="booking-status-cell"><div class="booking-cell"><span class="admin-booking-status booking-status-label" data-status="${esc(booking.status)}"><span class="booking-status-dot" aria-hidden="true"></span>${esc(statusNames[booking.status] || booking.status)}</span>${MoBookingFilters.needsAttention(booking) ? '<strong class="text-sm text-red-800">Cần đối soát thanh toán</strong>' : ''}<span class="booking-meta">${icon(booking.statusSource === "MANUAL" ? "user" : "clock")}${booking.statusSource === "MANUAL" ? "Admin cập nhật" : "Tự động theo giờ"}</span></div></td>
-            <td class="booking-actions-cell"><div class="admin-actions">${actions || '<span class="booking-ended">Đã kết thúc</span>'}</div></td>
+            <td class="booking-status-cell"><div class="booking-cell"><span class="admin-booking-status booking-status-label" data-status="${esc(booking.status)}"><span class="booking-status-dot" aria-hidden="true"></span>${esc(booking.isOverdue ? "Quá giờ · Chưa trả phòng" : statusNames[booking.status] || booking.status)}</span>${MoBookingFilters.needsAttention(booking) ? '<strong class="text-sm text-red-800">Cần đối soát thanh toán</strong>' : ''}<span class="booking-meta">${icon(booking.statusSource === "MANUAL" ? "user" : "clock")}${booking.statusSource === "MANUAL" ? "Admin cập nhật" : "Tự động theo giờ"}</span></div></td>
+            <td class="booking-actions-cell"><div class="admin-actions">${actions || '<span class="booking-ended">—</span>'}</div></td>
         </tr>`;
     }
     async function bookingAction(event) {

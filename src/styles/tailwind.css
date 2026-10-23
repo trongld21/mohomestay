@@ -219,34 +219,34 @@
 }
 
 .booking-success-page {
-    @apply bg-[#f9f5ef] px-4 py-12 text-[#45382f] sm:px-6 sm:py-16;
+    @apply bg-[#f9f5ef] px-4 py-4 text-[#45382f] sm:px-6 sm:py-16;
 }
 .booking-success-shell {
     @apply mx-auto w-full max-w-[800px];
 }
 .booking-success-heading {
-    @apply mb-8 text-center;
+    @apply mb-3 text-center;
 }
 .booking-success-mark {
-    @apply mx-auto mb-5 flex size-16 items-center justify-center rounded-full bg-[#e9efdf] text-[#596747];
+    @apply mx-auto mb-2 flex size-10 items-center justify-center rounded-full bg-[#e9efdf] text-[#596747];
 }
 .booking-success-mark svg {
-    @apply size-8;
+    @apply size-6;
 }
 .booking-success-mark[hidden] {
     @apply hidden;
 }
 .booking-success-heading h1 {
-    @apply mb-3 font-sans text-3xl font-semibold leading-tight sm:text-4xl;
+    @apply mb-1 whitespace-nowrap font-sans text-xl font-semibold leading-tight sm:text-4xl;
 }
 .booking-success-heading p {
-    @apply mx-auto max-w-xl text-sm leading-7 text-[#736b61] sm:text-base;
+    @apply mx-auto max-w-xl text-sm leading-5 text-[#736b61] sm:text-base;
 }
 .booking-success-ticket {
     @apply overflow-hidden rounded-2xl border border-[#e6dccf] bg-[#fffdf9];
 }
 .booking-success-ticket > header {
-    @apply flex flex-wrap items-center justify-between gap-4 border-b border-dashed border-[#dccbb7] bg-[#f3ece1] p-5 sm:px-8 sm:py-6;
+    @apply flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-[#dccbb7] bg-[#f3ece1] p-3 sm:px-8 sm:py-6;
 }
 .booking-success-ticket header strong {
     @apply mt-1 block select-all text-lg font-semibold tracking-wide text-[#79543e];
@@ -255,25 +255,25 @@
     @apply min-h-10 cursor-pointer rounded-lg border border-[#d2bda7] bg-[#fffdf9] px-3 py-2 text-xs text-[#79543e] hover:bg-[#ebe0d1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e];
 }
 .booking-success-details {
-    @apply grid grid-cols-1 gap-5 p-5 sm:grid-cols-2 sm:p-8;
+    @apply grid grid-cols-2 gap-3 p-3 sm:grid-cols-2 sm:p-8;
 }
 .booking-success-room {
-    @apply mx-5 mt-5 flex flex-col gap-4 border-b border-[#e8ded0] pb-5 sm:mx-8 sm:mt-8 sm:flex-row sm:items-center sm:gap-6;
+    @apply mx-3 mt-3 flex flex-row items-center gap-3 border-b border-[#e8ded0] pb-3 sm:mx-8 sm:mt-8 sm:flex-row sm:items-center sm:gap-6;
 }
 .booking-success-room img {
-    @apply aspect-[4/3] h-auto w-full shrink-0 rounded-lg object-cover sm:w-44;
+    @apply aspect-[4/3] h-16 w-20 shrink-0 rounded-lg object-cover sm:w-44;
 }
 .booking-success-room img[hidden] {
     @apply hidden;
 }
 .booking-success-room h2 {
-    @apply my-2 break-words font-sans text-2xl font-semibold text-[#45382f];
+    @apply my-1 break-words font-sans text-lg font-semibold text-[#45382f];
 }
 .booking-success-room p {
     @apply text-sm text-[#736b61];
 }
 .booking-success-details > div {
-    @apply grid gap-2;
+    @apply grid gap-1;
 }
 .booking-success-details span {
     @apply text-xs text-[#736b61];
@@ -282,10 +282,19 @@
     @apply break-words text-sm font-medium leading-6 sm:text-base;
 }
 .booking-success-details .booking-success-total {
-    @apply border-t border-[#e8ded0] pt-4 sm:col-span-2 sm:flex sm:items-center sm:justify-between;
+    @apply border-t border-[#e8ded0] pt-2 col-span-2 sm:flex sm:items-center sm:justify-between;
 }
 .booking-success-total strong {
     @apply text-2xl font-semibold text-[#79543e];
+}
+.booking-success-credentials {
+    @apply mx-3 mb-3 rounded-xl border border-[#d8c3b2] bg-[#faf5ee] p-3 sm:mx-8 sm:mb-8;
+}
+.booking-success-credentials .booking-gate-password {
+    @apply mt-1 select-all break-all text-center text-xl font-extrabold leading-8 text-[#70432c];
+}
+.booking-success-credentials .booking-arrival-wifi > div {
+    @apply grid-cols-[5rem_minmax(0,1fr)] gap-2;
 }
 .booking-success-next {
     @apply my-6 rounded-xl border border-[#e6dccf] bg-[#fffdf9] p-5 sm:p-8;
@@ -3029,4 +3038,66 @@ html:has(> body.admin-page) {
     .admin-page .booking-work-table tr[data-booking-tone] {
         @apply border-l-4;
     }
+}
+
+/* Shared room timeline and staff availability tools. */
+.timeline-button {
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-[#d2bda7] bg-[#fffdf9] px-3 py-2 text-sm font-medium text-[#70432c] enabled:hover:bg-[#eee4d6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:cursor-wait disabled:opacity-50;
+}
+a.timeline-button:hover {
+    @apply bg-[#eee4d6];
+}
+.timeline-primary {
+    @apply bg-[#70432c] text-white enabled:hover:bg-[#55321f];
+}
+.timeline-input {
+    @apply min-h-11 min-w-0 rounded-lg border border-[#d2bda7] bg-white px-3 py-2 text-sm text-[#45382f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e];
+}
+.timeline-table {
+    @apply w-max min-w-full border-separate border-spacing-0 text-xs;
+}
+.timeline-table th {
+    @apply sticky top-0 z-10 border-b border-r border-[#e5dacb] bg-[#f5eee4] px-2 py-3 text-center font-semibold;
+}
+.timeline-table .timeline-row-heading {
+    @apply sticky left-0 z-10 min-w-28 max-w-40 whitespace-normal border-b border-r border-[#e5dacb] bg-[#fffdf9] px-3 py-2 text-left;
+}
+.timeline-table thead .timeline-row-heading {
+    @apply z-20 bg-[#f5eee4];
+}
+.timeline-table td {
+    @apply border-b border-r border-[#e5dacb] p-0;
+}
+.timeline-cell {
+    @apply flex min-h-11 w-12 cursor-pointer items-center justify-center p-1 text-[10px] font-medium focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#79543e];
+}
+.timeline-cell[data-state="free"] {
+    @apply bg-emerald-50 text-emerald-800 enabled:hover:bg-emerald-100;
+}
+.timeline-cell[data-state="booked"] {
+    @apply bg-amber-100 text-amber-900 enabled:hover:bg-amber-200;
+}
+.timeline-cell[data-state="blocked"] {
+    @apply bg-red-100 text-red-900 enabled:hover:bg-red-200;
+}
+.timeline-cell[data-state="past"],
+.timeline-cell[data-state="inactive"] {
+    @apply bg-stone-100 text-stone-500 enabled:hover:bg-stone-200;
+}
+.timeline-dialog {
+    @apply m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-auto rounded-2xl border border-[#d2bda7] bg-[#fffdf9] p-0 text-[#45382f] shadow-xl;
+}
+.timeline-dialog::backdrop {
+    @apply bg-stone-950/50;
+}
+
+.timeline-cell[data-state="cleaning"] {
+    @apply bg-violet-100 text-violet-900 enabled:hover:bg-violet-200;
+}
+.timeline-cell[data-state="held"] {
+    @apply bg-sky-100 text-sky-900 enabled:hover:bg-sky-200;
+}
+
+a.timeline-primary:hover {
+    @apply bg-[#55321f] text-white;
 }

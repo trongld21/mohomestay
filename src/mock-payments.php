@@ -57,9 +57,11 @@ function apply_payment_callback(PDO $pdo, array $data, bool $test = false): ?arr
         if ((bool)$booking['is_test'] !== $test) throw new BookingException('Callback không phù hợp với loại đơn.', 403);
         if ((int)$data['amount'] !== (int)$booking['total_price']) throw new BookingException('Số tiền không khớp đơn đặt phòng.', 422);
         if ($booking['payment_status'] !== 'PAID') {
-            $conflict = $pdo->prepare("SELECT id FROM bookings WHERE id<>? AND room_id=? AND check_in<? AND check_out>? AND (status IN ('CONFIRMED','CHECKED_IN') OR (status='PENDING' AND hold_expires_at>UTC_TIMESTAMP())) LIMIT 1");
-            $conflict->execute([$booking['id'], $roomId, $booking['check_out'], $booking['check_in']]);
-            $valid = $booking['status'] === 'PENDING' && strtotime($booking['hold_expires_at'] . ' UTC') > time() && !$conflict->fetch();
+            $valid = $booking['status'] === 'PENDING'
+                && strtotime($booking['hold_expires_at'] . ' UTC') > time()
+                && !room_booking_conflict($pdo, (string)$roomId, $booking['check_in'], $booking['check_out'], $booking['id'])
+                && !room_has_emergency_lock($pdo, (string)$roomId, $booking['check_in'], $booking['check_out'])
+                && !room_quote_hold_conflict($pdo, (string)$roomId, $booking['check_in'], $booking['check_out']);
             $status = $valid ? 'CONFIRMED' : 'CANCELLED';
             $reason = $valid ? null : 'Đã nhận tiền sau thời hạn hoặc đơn đã hủy. Cần đối soát/hoàn tiền.';
             $pdo->prepare("UPDATE bookings SET payment_status='PAID',status=?,transaction_id=? WHERE id=?")->execute([$status, $data['reference'], $booking['id']]);

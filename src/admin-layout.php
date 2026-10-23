@@ -29,17 +29,18 @@ function render_admin_navigation(string $path): void
                 $shortLabel = match ($key) {
                     'bookings' => 'Đặt phòng',
                     'rooms' => 'Phòng',
+                    'availability' => 'Phòng trống',
                     default => 'Mã mở cửa',
                 };
                 ?>
-                <?php if ($path === '/admin' && $key !== 'door-codes'): ?>
+                <?php if ($path === '/admin' && !in_array($key, ['door-codes', 'availability'], true)): ?>
                     <button class="<?= $link ?>" type="button" data-admin-tab="<?= e($key) ?>">
                         <?= admin_icon($key === 'rooms' ? 'bed' : 'layout-dashboard') ?>
                         <span class="admin-nav-label-long"><?= e($label) ?></span>
                         <span class="admin-nav-label-short"><?= e($shortLabel) ?></span>
                     </button>
                 <?php else: ?>
-                    <?php $href = $key === 'door-codes' ? '/admin/door-codes' : '/admin#' . $key; ?>
+                    <?php $href = in_array($key, ['door-codes', 'availability'], true) ? '/admin/' . $key : '/admin#' . $key; ?>
                     <a class="<?= $link ?>" href="<?= e($href) ?>" <?= $path === $href ? 'aria-current="page"' : '' ?>>
                         <?= admin_icon($key === 'rooms' ? 'bed' : ($key === 'bookings' ? 'layout-dashboard' : 'key')) ?>
                         <span class="admin-nav-label-long"><?= e($label) ?></span>
@@ -78,6 +79,7 @@ function render_admin_topbar(): void
     $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
     $title = match ($path) {
         '/admin/door-codes' => 'Mã mở cửa',
+        '/admin/availability' => 'Tìm phòng trống',
         '/admin/accounts' => 'Quản lý tài khoản',
         '/admin/permissions' => 'Phân quyền tài khoản',
         default => 'Không gian quản lý',

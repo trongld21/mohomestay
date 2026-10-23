@@ -59,7 +59,7 @@ $timeout = false;
 $access = sync_booking_access($id, $client, true);
 verify_access($remote[1]['keyboardPwdName'] === 'MO-TEST', 'Name on TTLock matches visible order ID');
 verify_access($access['sync_status'] === 'READY' && $adds === 1, 'Retry must recover remote code without second add');
-verify_access($access['starts_at'] === '2099-01-15 06:00:00' && $access['ends_at'] === '2099-01-16 06:00:00', 'Persist buffered dates');
+verify_access($access['starts_at'] === '2099-01-15 07:00:00' && $access['ends_at'] === '2099-01-16 06:00:00', 'Persist activation at check-in');
 verify_access(sync_booking_access($id, $client)['code'] === $access['code'] && $adds === 1, 'Repeated payment processing must reuse PIN');
 $sent = [];
 $transport = function(string $to, string $subject, string $html, array $headers) use (&$sent): bool { $sent[] = $html; return true; };
@@ -85,4 +85,28 @@ $listTimeout = new TTLockClient(ttlock_options(), static function (string $url, 
 verify_access(sync_booking_access($id, $listTimeout) === null, 'Read failure must withhold email');
 verify_access($testDb->query('SELECT sync_status FROM booking_access_codes')->fetchColumn() === 'FAILED', 'Failure before add must remain retryable');
 verify_access(sync_booking_access($id, $client, true)['sync_status'] === 'READY' && $adds === 2, 'Recover read timeout by creating exactly once');
-echo "Booking access integration tests: OK (SQLite; MySQL locking not exercised)\n";
+// Gateway/custom mode writes the exact minute, without rounding offline codes earlier.
+$settings['ttlock.code_mode'] = 'CUSTOM';
+$customBooking = array_replace($booking, [
+    'id' => str_repeat('c', 32), 'booking_code' => 'MO-CUSTOM',
+    'check_in' => '2099-01-15 07:30:00',
+]);
+$testDb->prepare('INSERT INTO bookings (' . implode(',', array_keys($customBooking)) . ') VALUES ('
+    . implode(',', array_fill(0, count($customBooking), '?')) . ')')->execute(array_values($customBooking));
+$customStart = null;
+$customClient = new TTLockClient(ttlock_options(), static function (string $url, array $params) use (&$customStart): array {
+    if (str_ends_with($url, '/oauth2/token')) return ['access_token' => 'test-token'];
+    if (str_ends_with($url, '/listKeyboardPwd')) return ['list' => [], 'pages' => 1];
+    if (str_ends_with($url, '/keyboardPwd/add')) {
+        $customStart = $params['startDate'];
+        verify_access($params['addType'] === 2, 'Custom PIN must physically write through gateway.');
+        return ['keyboardPwdId' => 99];
+    }
+    throw new RuntimeException('Unexpected custom API path.');
+});
+$customAccess = sync_booking_access($customBooking['id'], $customClient);
+verify_access($customAccess['code_mode'] === 'CUSTOM' && $customAccess['starts_at'] === '2099-01-15 07:30:00', 'Custom mode must preserve exact check-in.');
+verify_access($customStart === strtotime('2099-01-15 07:30:00 UTC') * 1000, 'Gateway must receive exact activation milliseconds.');
+
+echo "Booking access integration tests: OK (SQLite; MySQL locking not exercised)
+";

@@ -35,7 +35,7 @@ const source = fs.readFileSync("public/assets/booking-success.js", "utf8");
         vm.runInContext(source, context);
         await new Promise((resolve) => setImmediate(resolve));
         const confirmed = ["CONFIRMED", "CHECKED_IN", "CHECKED_OUT"].includes(status);
-        assert.equal(elements.title.textContent === "Đặt phòng thành công!", confirmed);
+        assert.equal(elements.title.textContent === "Hẹn gặp bạn tại Mơ!", confirmed);
         if (confirmed) {
             assert.ok(elements.content.innerHTML.includes("&lt;script&gt;"));
             assert.ok(!elements.content.innerHTML.includes("<script>bad()"));

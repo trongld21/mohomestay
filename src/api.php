@@ -5,7 +5,7 @@ function handle_api(string $path, string $method): never
     try {
         if (str_starts_with($path, '/api/admin/')) {
             require_admin();
-            $body = $method === 'PATCH' && str_contains($path, '/door-codes/') ? json_body() : [];
+            $body = $method === 'PATCH' && (str_contains($path, '/door-codes/') || $path === '/api/admin/bookings') ? json_body() : [];
             $permission = admin_api_permission($path, $method, $body);
             require_permission($permission);
         }
@@ -19,6 +19,10 @@ function handle_api(string $path, string $method): never
             $room = room_repository()->findPublicBySlug($matches[1]);
             if (!$room) json_response(['error'=>'Không tìm thấy phòng.'], 404);
             json_response(['room'=>$room]);
+        }
+        if (str_starts_with($path, '/api/admin/room-operations')) {
+            require_once APP_ROOT . '/src/room-operations-api.php';
+            room_operations_api($path, $method);
         }
         if ($path === '/api/availability' && $method === 'GET') availability_api();
         if ($path === '/api/bookings' && $method === 'POST') create_booking_api();
@@ -113,9 +117,7 @@ function create_booking_api(): never
         $q['package']=$freshPackageDto;$q['start']=$freshStart;$q['end']=$freshEnd;$q['total']=(int)$freshPackageDto['price'];
         $q=array_replace($q,booking_package_snapshot($freshPackageDto));
         if (!$room || !$room['is_active']) throw new BookingException('Phòng đang tạm ngưng nhận khách.', 409);
-        $conflict = $pdo->prepare("SELECT id FROM bookings WHERE room_id=? AND check_in<? AND check_out>? AND (status IN ('CONFIRMED','CHECKED_IN') OR (status='PENDING' AND hold_expires_at>UTC_TIMESTAMP())) LIMIT 1");
-        $conflict->execute([$q['room']['id'],mysql_datetime($q['end']),mysql_datetime($q['start'])]);
-        if ($conflict->fetch()) throw new BookingException('Phòng vừa được đặt trong khung giờ này. Bạn chọn giờ khác nhé.', 409);
+        assert_room_inventory($pdo, $q['room']['id'], mysql_datetime($q['start']), mysql_datetime($q['end']));
         $blocked = $pdo->prepare('SELECT id FROM room_availability WHERE room_id=? AND available=0 AND `date` BETWEEN ? AND ? LIMIT 1');
         $blocked->execute([$q['room']['id'],$q['start']->format('Y-m-d'),$q['end']->modify('-1 second')->format('Y-m-d')]);
         if ($blocked->fetch()) throw new BookingException('Phòng tạm khóa trong khoảng thời gian này.', 409);
@@ -188,6 +190,7 @@ function payment_webhook_api(): never
     if(!is_array($data)||!payos_verify($data,$signature))json_response(['error'=>'Invalid signature'],401);
     if(($data['code']??'')!=='00'||($data['currency']??'')!=='VND')json_response(['ok'=>true]);
     if(!isset($data['orderCode'],$data['amount'],$data['reference'])||!is_numeric($data['orderCode'])||!is_numeric($data['amount'])||!is_string($data['reference'])||$data['reference']==='')json_response(['error'=>'Invalid payment data'],400);
+    if (apply_checkout_payment_callback(db(), $data)) json_response(['ok' => true]);
     $booking = apply_payment_callback(db(), $data);
     if ($booking) dispatch_confirmation_email((string)$booking['id']);
     json_response(['ok'=>true]);
@@ -216,6 +219,11 @@ function update_booking_api(): never
     $body = json_body();
     $id = (string)($body['id'] ?? '');
     $status = (string)($body['status'] ?? '');
+    if ($status === 'CHECKED_OUT') {
+        require_permission('availability.checkout');
+        $charge = confirm_room_checkout(db(), $id, (string)current_account()['id']);
+        json_response(['ok' => true, 'charge' => checkout_charge_dto($charge)]);
+    }
     update_booking_lifecycle(db(), $id, $status);
     if ($status === 'CANCELLED') sync_booking_access($id);
     json_response(['ok'=>true]);

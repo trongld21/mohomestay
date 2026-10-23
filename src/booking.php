@@ -132,19 +132,24 @@ function booking_lifecycle(array $booking, ?int $now = null): array
     $status = (string)$booking['status'];
     $source = in_array($status, ['CHECKED_IN', 'CHECKED_OUT', 'CANCELLED'], true) ? 'MANUAL' : 'AUTO';
     if (in_array($status, ['CONFIRMED', 'CHECKED_IN'], true)) {
-        if ($now >= strtotime($booking['check_out'] . ' UTC')) {
-            $status = 'CHECKED_OUT';
-            $source = 'AUTO';
-        } elseif ($status === 'CONFIRMED' && $now >= strtotime($booking['check_in'] . ' UTC')) {
+        if ($status === 'CONFIRMED' && $now >= strtotime($booking['check_in'] . ' UTC')) {
             $status = 'CHECKED_IN';
             $source = 'AUTO';
         }
     }
-    return array_replace($booking, ['status' => $status, 'statusSource' => $source]);
+    return array_replace($booking, [
+        'status' => $status,
+        'statusSource' => $source,
+        'isOverdue' => $status === 'CHECKED_IN' && $now >= strtotime($booking['check_out'] . ' UTC'),
+    ]);
 }
 
 function update_booking_lifecycle(PDO $pdo, string $id, string $status): void
 {
+    if ($status === 'CHECKED_OUT') {
+        confirm_room_checkout($pdo, $id, (string)(current_account()['id'] ?? 'admin'));
+        return;
+    }
     $pdo->beginTransaction();
     try {
         $find = $pdo->prepare('SELECT room_id FROM bookings WHERE id=?');
@@ -169,9 +174,7 @@ function update_booking_lifecycle(PDO $pdo, string $id, string $status): void
         $start = $booking['check_in'];
         if ($status === 'CHECKED_IN' && strtotime($start . ' UTC') > time()) {
             $start = gmdate('Y-m-d H:i:s');
-            $conflict = $pdo->prepare("SELECT id FROM bookings WHERE room_id=? AND id<>? AND check_in<? AND check_out>? AND (status IN ('CONFIRMED','CHECKED_IN') OR (status='PENDING' AND hold_expires_at>UTC_TIMESTAMP())) LIMIT 1");
-            $conflict->execute([$roomId, $id, $booking['check_out'], $start]);
-            if ($conflict->fetch()) throw new BookingException('Không thể nhận phòng sớm vì trùng lịch đơn khác.', 409);
+            assert_room_inventory($pdo, (string)$roomId, $start, $booking['check_out'], $id);
             $blocked = $pdo->prepare('SELECT id FROM room_availability WHERE room_id=? AND available=0 AND `date` BETWEEN ? AND ? LIMIT 1');
             $local = (new DateTimeImmutable($start, new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'));
             $end = (new DateTimeImmutable($booking['check_out'], new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'));

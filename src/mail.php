@@ -15,7 +15,6 @@ function build_booking_confirmation_email(array $booking): array
     $code = (string)$booking['booking_code'];
     $name = (string)$booking['guest_name'];
     $room = (string)$booking['room_name'];
-    $package = (string)($booking['package_name_snapshot'] ?: $booking['stay_package']);
     $checkIn = booking_mail_local_time((string)$booking['check_in']);
     $checkOut = booking_mail_local_time((string)$booking['check_out']);
     $guests = (int)$booking['number_of_guests'];
@@ -23,42 +22,37 @@ function build_booking_confirmation_email(array $booking): array
     $doorHtml = '<p>Mơ chưa có mã mở cửa phù hợp cho thời gian nhận phòng của bạn. Vui lòng liên hệ Mơ để được hướng dẫn.</p>';
     if (!empty($booking['door_codes'])) {
         $doorHtml = !empty($booking['private_door_code'])
-            ? '<h2 style="font-size:20px">Mã mở cổng của bạn</h2><p>Mã riêng cho đơn đặt phòng này. Nhập mã rồi nhấn # trên khóa cổng chung:</p>'
-            : '<h2 style="font-size:20px">Mã mở cửa</h2><p>Mã dùng chung tại Mơ, được chọn theo thời gian nhận phòng:</p>';
+            ? '<h2 class="text-base font-semibold" style="margin:12px 0 8px;font-size:16px">Mã mở cổng của bạn</h2>'
+            : '<h2 class="text-base font-semibold" style="margin:12px 0 8px;font-size:16px">Mã mở cửa</h2>';
         foreach ($booking['door_codes'] as $door) {
-            $doorHtml .= '<div class="rounded-xl border-2 bg-stone-50 p-5 text-center" '
-                . 'style="margin:16px 0;padding:20px 16px;border:2px solid #d8c3b2;border-radius:12px;background:#faf5ee;text-align:center">'
+            $doorHtml .= '<div class="rounded-xl border-2 bg-stone-50 p-3 text-center" '
+                . 'style="margin:8px 0;padding:12px;border:2px solid #d8c3b2;border-radius:12px;background:#faf5ee;text-align:center">'
                 . '<strong class="block break-all text-4xl font-extrabold tracking-widest" '
                 . 'style="display:block;font-family:Arial,sans-serif;font-size:36px;font-weight:800;line-height:1.3;letter-spacing:3px;color:#70432c;word-break:break-all">'
                 . $escape($door['code']) . '</strong>'
-                . '<p class="mt-3 text-sm leading-relaxed" style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#6b5a4e">Từ '
-                . $escape(booking_mail_local_time($door['starts_at'])) . ' đến '
-                . $escape(booking_mail_local_time($door['ends_at'])) . ' (giờ Việt Nam)</p></div>';
+                . '</div>';
         }
-        if (!empty($booking['generated_door_code'])) {
-            $doorHtml .= '<p>Mã cần được sử dụng lần đầu trong vòng 24 giờ kể từ thời điểm bắt đầu hiệu lực. Nhập mã rồi nhấn #.</p>';
-        }
-        $doorHtml .= '<p>Vui lòng giữ riêng mã mở cửa và chỉ sử dụng trong thời gian lưu trú đã đặt.</p>';
+
     }
     $subject = 'Mơ Home xác nhận đặt phòng ' . $code;
     $html = '<!doctype html><html lang="vi"><body style="margin:0;background:#f7f3ed;color:#3e322b;font-family:Arial,sans-serif">'
-        .'<div style="max-width:620px;margin:0 auto;padding:32px 20px"><div style="background:#fff;border:1px solid #e7e0d7;border-radius:14px;padding:32px">'
+        .'<div style="max-width:620px;margin:0 auto;padding:12px"><div style="background:#fff;border:1px solid #e7e0d7;border-radius:14px;padding:16px">'
         .'<p style="margin:0 0 8px;color:#70432c;font-size:12px;letter-spacing:1.5px">MƠ HOME · ĐẶT PHÒNG THÀNH CÔNG</p>'
-        .'<h1 style="margin:0 0 16px;font-size:28px">Hẹn gặp bạn tại Mơ!</h1>'
-        .'<p>Chào '.$escape($name).', thanh toán của bạn đã được xác nhận. Dưới đây là thông tin đặt phòng:</p>'
-        .'<table role="presentation" style="width:100%;border-collapse:collapse;margin:22px 0">'
-        .'<tr><td style="padding:10px 0;border-bottom:1px solid #eee">Mã đặt phòng</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right"><strong>'.$escape($code).'</strong></td></tr>'
-        .'<tr><td style="padding:10px 0;border-bottom:1px solid #eee">Phòng</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right"><strong>'.$escape($room).'</strong></td></tr>'
-        .'<tr><td style="padding:10px 0;border-bottom:1px solid #eee">Gói</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right">'.$escape($package).'</td></tr>'
-        .'<tr><td style="padding:10px 0;border-bottom:1px solid #eee">Nhận phòng</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right">'.$escape($checkIn).'</td></tr>'
-        .'<tr><td style="padding:10px 0;border-bottom:1px solid #eee">Trả phòng</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right">'.$escape($checkOut).'</td></tr>'
-        .'<tr><td style="padding:10px 0;border-bottom:1px solid #eee">Số khách</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right">'.$guests.'</td></tr>'
-        .'<tr><td style="padding:10px 0">Đã thanh toán</td><td style="padding:10px 0;text-align:right"><strong>'.$escape($total).'</strong></td></tr>'
+        .'<h1 class="whitespace-nowrap text-xl" style="margin:0 0 8px;font-size:20px;white-space:nowrap">Hẹn gặp bạn tại Mơ!</h1>'
+        .'<p>Chào '.$escape($name).', Mơ đã xác nhận thanh toán.</p>'
+        .'<table role="presentation" style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px">'
+        .'<tr><td style="padding:6px 0;border-bottom:1px solid #eee">Mã đặt phòng</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right"><strong>'.$escape($code).'</strong></td></tr>'
+        .'<tr><td style="padding:6px 0;border-bottom:1px solid #eee">Phòng</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right"><strong>'.$escape($room).'</strong></td></tr>'
+        .'<tr><td style="padding:6px 0;border-bottom:1px solid #eee">Nhận phòng</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">'.$escape($checkIn).'</td></tr>'
+        .'<tr><td style="padding:6px 0;border-bottom:1px solid #eee">Trả phòng</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">'.$escape($checkOut).'</td></tr>'
+        .'<tr><td style="padding:6px 0;border-bottom:1px solid #eee">Số khách</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">'.$guests.'</td></tr>'
+        .'<tr><td style="padding:6px 0">Đã thanh toán</td><td style="padding:6px 0;text-align:right"><strong>'.$escape($total).'</strong></td></tr>'
         .'</table>'.$doorHtml
-        .'<h2 style="margin:24px 0 12px;font-size:20px">Wi-Fi tại Mơ</h2>'
+        .'<h2 style="margin:10px 0 6px;font-size:16px">Wi-Fi tại Mơ</h2>'
         .'<p style="margin:6px 0">Tên Wi-Fi: <strong>Mơ Home</strong></p>'
-        .'<p style="margin:6px 0 20px">Mật khẩu: <strong style="font-family:Arial,sans-serif;letter-spacing:1px">82828282</strong></p>'
-        .'<p style="padding:14px;background:#edf4e9;border-radius:8px">Mơ sẽ liên hệ riêng để hướng dẫn nhận phòng. Cần hỗ trợ, gọi <a href="tel:0357907153" style="color:#70432c">0357 907 153</a>.</p>'
+        .'<p style="margin:6px 0 10px">Mật khẩu: <strong style="font-family:Arial,sans-serif;letter-spacing:1px">82828282</strong></p>'
+        .(!empty($booking['generated_door_code']) ? '<p style="margin:8px 0;font-size:12px">Dùng mã lần đầu trong 24 giờ từ lúc nhận phòng. Nhập mã rồi nhấn #.</p>' : '<p style="margin:8px 0;font-size:12px">Nhập mã rồi nhấn #. Giữ riêng mã cổng trong thời gian lưu trú.</p>')
+        .'<p style="margin:10px 0 0;padding:10px;font-size:13px;line-height:1.5;background:#edf4e9;border-radius:8px">Mơ sẽ liên hệ riêng để hướng dẫn nhận phòng. Cần hỗ trợ, gọi <a href="tel:0357907153" style="color:#70432c">0357 907 153</a>.</p>'
         .'</div></div></body></html>';
     return ['subject'=>$subject,'html'=>$html];
 }

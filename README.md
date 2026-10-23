@@ -362,3 +362,14 @@ Kiểm tra trùng đơn và khóa phòng áp dụng từ giờ nhận thực t�
 Gói DURATION vẫn yêu cầu giờ nhận trong tương lai để giữ đủ thời lượng.
 Ngày gốc của gói qua đêm được giữ khi máy chủ kiểm tra lại giá và lịch trong
 transaction; nhận sau nửa đêm không tự đẩy giờ trả sang thêm một ngày.
+
+## Lịch theo giờ, giữ căn và trả phòng
+
+- Màn nhân viên: `/admin/availability`. Cấp quyền **Tìm phòng trống** và từng quyền khóa khách quá giờ, giữ khung giờ báo giá, xác nhận trả phòng/QR trong trang phân quyền.
+- Chi tiết phòng có ma trận 30 phút; bấm ô xem khoảng bận chính xác. Dữ liệu công khai không chứa mã đơn, tên khách hay ghi chú nhân viên.
+- Giữ báo giá khóa đúng khung giờ được chọn trong 1 giờ kể từ lúc thao tác, tự hết hạn mà không cần cron; nhân viên có quyền được mở sớm.
+- Dọn phòng: chặn 1 giờ sau giờ checkout dự kiến; khi nhân viên xác nhận trả phòng, dùng giờ trả thực tế. Đặt mới, tạo đơn thủ công, nhận sớm và callback thanh toán đều kiểm tra lại trên server.
+- Đến giờ checkout chỉ đánh dấu quá giờ, không coi khách đã rời phòng. Nhân viên kiểm tra, khóa khẩn cấp nếu khách còn ở, và xác nhận trả khi khách rời.
+- Phụ thu: miễn 15 phút, phần còn lại làm tròn giờ lên × 50.000đ. Chốt giờ và số tiền một lần, tạo link QR payOS riêng và nhận webhook để đánh dấu đã thu. Lỗi payOS vẫn giữ khoản phải thu để thử lại.
+- Chạy migration `011_room_operations` và `012_room_quote_holds` trước khi dùng. Không reset dữ liệu. Kiểm tra mới: `php tools/room-operations-test.php`, `php tools/room-operations-db-test.php`, `node tools/room-timeline-test.cjs`.
+- Mã cổng mới không còn vào sớm 1 giờ. Mã TTLock tự sinh offline chỉ chính xác giờ tròn: giờ nhận lẻ được làm tròn lên để không vào sớm (10:30 → 11:00). Có gateway hoạt động thì đặt `TTLOCK_CODE_MODE=CUSTOM` để mã mới kích hoạt đúng phút; chế độ GENERATED dùng khi không có gateway; mã đã cấp trước thay đổi vẫn giữ thời hạn vật lý cũ.

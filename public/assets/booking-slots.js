@@ -1,39 +1,41 @@
 ((scope) => {
-  'use strict';
+    'use strict';
 
-  function configuredSlots(room) {
-    return (room?.packages || []).filter(slot => slot.enabled && ['FIXED_TIME', 'DURATION'].includes(slot.mode));
-  }
-
-  function slotWindow(slot, date, time = '', now = new Date()) {
-    if (!slot || !date) return null;
-    const startTime = slot.mode === 'FIXED_TIME' ? slot.checkInTime : time;
-    if (!startTime) return null;
-    const start = new Date(`${date}T${startTime}:00+07:00`);
-    let end;
-    if (slot.mode === 'FIXED_TIME' && slot.checkOutTime) {
-      end = new Date(`${date}T${slot.checkOutTime}:00+07:00`);
-    } else if (slot.mode === 'DURATION' && Number(slot.durationMinutes) >= 30) {
-      end = new Date(start.getTime() + Number(slot.durationMinutes) * 60000);
-    } else {
-      return null;
+    function configuredSlots(room) {
+        return (room?.packages || []).filter(slot => slot.enabled && ['FIXED_TIME', 'DURATION'].includes(slot.mode));
     }
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-    if (end <= start) end.setTime(end.getTime() + 86400000);
-    const fixed = slot.mode === 'FIXED_TIME';
-    if (fixed && start <= now && end > now) start.setTime(Math.ceil(now.getTime() / 60000) * 60000);
-    return { start, end, fixed };
-  }
 
-  function overlaps(window, interval) {
-    return window.start < new Date(interval.end) && window.end > new Date(interval.start);
-  }
+    function slotWindow(slot, date, time = '', now = new Date()) {
+        if (!slot || !date) return null;
+        const startTime = slot.mode === 'FIXED_TIME' ? slot.checkInTime : time;
+        if (!startTime) return null;
+        const start = new Date(`${date}T${startTime}:00+07:00`);
+        let end;
+        if (slot.mode === 'FIXED_TIME' && slot.checkOutTime) {
+            end = new Date(`${date}T${slot.checkOutTime}:00+07:00`);
+        } else if (slot.mode === 'DURATION' && Number(slot.durationMinutes) >= 30) {
+            end = new Date(start.getTime() + Number(slot.durationMinutes) * 60000);
+        } else {
+            return null;
+        }
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+        if (end <= start) end.setTime(end.getTime() + 86400000);
+        const fixed = slot.mode === 'FIXED_TIME';
+        if (fixed && start <= now && end > now) start.setTime(Math.ceil(now.getTime() / 60000) * 60000);
+        return { start, end, fixed };
+    }
 
-  function slotState(window, intervals = [], now = new Date()) {
-    if (!window || window.end <= now || window.end <= window.start || (!window.fixed && window.start <= now)) return 'past';
-    const remaining = {start: window.fixed && window.start < now ? now : window.start, end: window.end};
-    return intervals.some(interval => overlaps(remaining, interval)) ? 'booked' : 'available';
-  }
+    function overlaps(window, interval) {
+        const needsCleaning = ['CONFIRMED', 'CHECKED_IN', 'PENDING'].includes(interval.status);
+        const occupiedEnd = new Date(window.end.getTime() + (needsCleaning ? 3600000 : 0));
+        return window.start < new Date(interval.end) && occupiedEnd > new Date(interval.start);
+    }
 
-  scope.MoBookingSlots = { configuredSlots, slotWindow, slotState };
+    function slotState(window, intervals = [], now = new Date()) {
+        if (!window || window.end <= now || window.end <= window.start || (!window.fixed && window.start <= now)) return 'past';
+        const remaining = {start: window.fixed && window.start < now ? now : window.start, end: window.end};
+        return intervals.some(interval => overlaps(remaining, interval)) ? 'booked' : 'available';
+    }
+
+    scope.MoBookingSlots = { configuredSlots, slotWindow, slotState };
 })(typeof window === 'undefined' ? globalThis : window);

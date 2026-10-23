@@ -11,7 +11,7 @@ function tt_expect(bool $condition, string $message): void
 }
 tt_expect(function_exists('ttlock_window'), 'Missing TTLock booking window');
 $window = ttlock_window(['check_in' => '2027-01-15 07:00:00', 'check_out' => '2027-01-16 05:00:00']);
-tt_expect($window === ['starts_at' => '2027-01-15 06:00:00', 'ends_at' => '2027-01-16 06:00:00'], 'One-hour buffer must apply on both sides');
+tt_expect($window === ['starts_at' => '2027-01-15 07:00:00', 'ends_at' => '2027-01-16 06:00:00'], 'Passcode must not activate one hour early');
 $options = ['base_url' => 'https://api.sciener.com', 'client_id' => 'test', 'client_secret' => 'secret', 'username' => 'owner', 'password_md5' => str_repeat('a', 32), 'lock_id' => 7];
 $row = ['code' => '12345678', 'booking_id' => str_repeat('b', 32), 'lock_id' => 7] + $window;
 $calls = [];
@@ -26,7 +26,7 @@ $client = new TTLockClient($options, $transport);
 tt_expect($client->ensurePasscode($row) === 42, 'Successful creation returns remote ID');
 $payload = $calls[2][1];
 tt_expect($payload['addType'] === 2 && $payload['keyboardPwdType'] === 3, 'Must write a timed code remotely');
-tt_expect($payload['startDate'] === 1799992800000 && $payload['endDate'] === 1800079200000, 'API dates must be UTC milliseconds');
+tt_expect($payload['startDate'] === 1799996400000 && $payload['endDate'] === 1800079200000, 'API dates must be UTC milliseconds');
 tt_expect($payload['keyboardPwd'] === '12345678', 'PIN sent without transformation');
 $client->deletePasscode($row + ['remote_id' => 42]);
 tt_expect(end($calls)[1]['deleteType'] === 2, 'Deletion must reach physical lock');
@@ -62,7 +62,7 @@ foreach ([['status' => 'PENDING', 'payment_status' => 'PAID'], ['status' => 'CAN
     tt_expect(!booking_access_allowed($booking), 'Unpaid or cancelled booking must not receive code');
 }
 $rounded = ttlock_generated_window(['check_in'=>'2026-10-23 04:30:00','check_out'=>'2026-10-23 05:00:00']);
-tt_expect($rounded === ['starts_at'=>'2026-10-23 03:00:00','ends_at'=>'2026-10-23 06:00:00'], 'Generated code rounds outward to hours after one-hour buffer');
+tt_expect($rounded === ['starts_at'=>'2026-10-23 05:00:00','ends_at'=>'2026-10-23 06:00:00'], 'Generated code rounds activation up and never grants early entry');
 $generatedRow = array_replace($row, ['code'=>'', 'code_mode'=>'GENERATED', 'booking_code'=>'MO-A0E6E83D76']);
 $generated = new TTLockClient($options, static function(string $url,array $params): array {
     if (str_ends_with($url,'/oauth2/token')) return ['access_token'=>'token'];
@@ -95,3 +95,6 @@ foreach ([[], ['keyboardPwd'=>'123','keyboardPwdId'=>12], ['keyboardPwd'=>'05634
     } catch (TTLockException $e) { tt_expect($e->uncertain,'Malformed result must require reconciliation'); }
 }
 echo "TTLock tests: OK\n";
+
+$minuteWindow = ttlock_generated_window(['check_in' => '2027-01-15 07:30:00', 'check_out' => '2027-01-15 10:30:00']);
+tt_expect($minuteWindow['starts_at'] === '2027-01-15 08:00:00', 'Offline code must never activate before fractional-hour check-in');

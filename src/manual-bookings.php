@@ -54,14 +54,7 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false): arra
         $quote = quote_manual_booking($room, $input);
         $start = mysql_datetime($quote['start']);
         $end = mysql_datetime($quote['end']);
-        $conflict = $pdo->prepare(
-            "SELECT id FROM bookings WHERE room_id=? AND check_in<? AND check_out>? "
-            . "AND (status IN ('CONFIRMED','CHECKED_IN') OR (status='PENDING' AND hold_expires_at>UTC_TIMESTAMP())) LIMIT 1"
-        );
-        $conflict->execute([$room['id'], $end, $start]);
-        if ($conflict->fetch()) {
-            throw new BookingException('Phòng đã có đơn trong khung giờ này. Vui lòng chọn giờ khác.', 409);
-        }
+        assert_room_inventory($pdo, $room['id'], $start, $end);
         $blocked = $pdo->prepare('SELECT id FROM room_availability WHERE room_id=? AND available=0 AND `date` BETWEEN ? AND ? LIMIT 1');
         $blocked->execute([$room['id'], $quote['start']->format('Y-m-d'), $quote['end']->modify('-1 second')->format('Y-m-d')]);
         if ($blocked->fetch()) {

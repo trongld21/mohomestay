@@ -18,7 +18,7 @@
     })[char]);
     const cash = (value) => new Intl.NumberFormat("vi-VN").format(value) + "đ";
     const date = (value) => new Intl.DateTimeFormat("vi-VN", {
-        timeZone: "Asia/Ho_Chi_Minh", dateStyle: "long", timeStyle: "short",
+        timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short",
     }).format(new Date(value));
     const safeUrl = (value, local = false) => {
         const url = String(value || "").trim();
@@ -35,7 +35,6 @@
         const info = arrival || {};
         const guideUrl = safeUrl(info.guideUrl);
         const rulesUrl = safeUrl(info.rulesUrl);
-        const doorCodes = info.doorCodes || [];
         return `
             <section class="booking-success-next" aria-labelledby="arrival-heading">
                 <span class="text-xs font-semibold tracking-widest text-[#79543e]">CHUẨN BỊ CHO CUỘC HẸN</span>
@@ -53,13 +52,7 @@
                         <div><h3>Nhận phòng & mã mở cổng</h3>
                             <p>Đến đúng khung giờ đã đặt. Chuẩn bị mã đặt phòng và nhắn Mơ qua Zalo để được hướng dẫn vào phòng.</p>
                             ${guideUrl ? `<a href="${guideUrl}" target="_blank" rel="noopener noreferrer">Xem hướng dẫn nhận phòng ↗</a>` : ""}
-                            ${doorCodes.length ? doorCodes.map((door) => {
-                                const code = String(door.code ?? "").trim();
-                                return `<p class="booking-gate-password">Mật khẩu cổng: ${escape(code)}${code.endsWith("#") ? "" : "#"}</p>`;
-                            }).join("")
-                                : `<p class="mt-2 font-medium text-[#79543e]">${info.isTest
-                                    ? "Chưa có mã cổng phù hợp. Kiểm tra mã đang Bật và thời gian hiệu lực trong trang quản trị."
-                                    : "Mã mở cổng chưa sẵn sàng. Vui lòng liên hệ Mơ trước khi đến."}</p>`}
+
                         </div>
                     </li>
                     <li>
@@ -70,15 +63,7 @@
                             ${rulesUrl ? `<a href="${rulesUrl}" target="_blank" rel="noopener noreferrer">Xem nội quy đầy đủ ↗</a>` : ""}
                         </div>
                     </li>
-                    <li>
-                        <span class="booking-arrival-number" aria-hidden="true">4</span>
-                        <div><h3>Wi-Fi tại Mơ</h3>
-                            ${info.wifiName ? `<dl class="booking-arrival-wifi">
-                                <div><dt>Tên mạng</dt><dd>${escape(info.wifiName)}</dd></div>
-                                <div><dt>Mật khẩu</dt><dd>${info.wifiPassword ? escape(info.wifiPassword) : "Liên hệ Mơ để nhận mật khẩu."}</dd></div>
-                            </dl>` : "<p>Nhắn Mơ để nhận tên mạng và mật khẩu Wi-Fi khi nhận phòng.</p>"}
-                        </div>
-                    </li>
+
                 </ol>
                 <div class="mt-6 border-t border-[#e8ded0] pt-4">
                     <p>Cần hỗ trợ hoặc thay đổi lịch? Mơ luôn sẵn sàng giúp bạn.</p>
@@ -86,6 +71,28 @@
                     <a href="tel:0357907153">Gọi 0357 907 153</a>
                 </div>
             </section>`;
+    }
+
+    function arrivalCredentials(arrival) {
+        const info = arrival || {};
+        const doorCodes = info.doorCodes || [];
+        return `<section class="booking-success-credentials" aria-label="Mã cổng và Wi-Fi">
+            <h3 class="text-sm font-semibold">Mã mở cổng của bạn</h3>
+            ${doorCodes.length ? doorCodes.map((door) => {
+                const code = String(door.code ?? "").trim();
+                return `<p class="booking-gate-password">Mật khẩu cổng: ${escape(code)}${code.endsWith("#") ? "" : "#"}</p>`;
+            }).join("")
+                : `<p class="mt-2 font-medium text-[#79543e]">${info.isTest
+                    ? "Chưa có mã cổng phù hợp. Kiểm tra mã đang Bật và thời gian hiệu lực trong trang quản trị."
+                    : "Mã mở cổng chưa sẵn sàng. Vui lòng liên hệ Mơ trước khi đến."}</p>`}
+            <div class="mt-3 border-t border-[#e8ded0] pt-2">
+                <h3 class="mb-1 text-sm font-semibold">Wi-Fi tại Mơ</h3>
+            ${info.wifiName ? `<dl class="booking-arrival-wifi">
+                <div><dt>Tên mạng</dt><dd>${escape(info.wifiName)}</dd></div>
+                <div><dt>Mật khẩu</dt><dd>${info.wifiPassword ? escape(info.wifiPassword) : "Liên hệ Mơ để nhận mật khẩu."}</dd></div>
+            </dl>` : "<p>Nhắn Mơ để nhận tên mạng và mật khẩu Wi-Fi khi nhận phòng.</p>"}
+            </div>
+        </section>`;
     }
 
     async function load() {
@@ -103,9 +110,9 @@
                 out.innerHTML = `<div class="booking-success-actions"><a class="button" href="/payment?code=${encodeURIComponent(code)}#${encodeURIComponent(token)}">Xem trạng thái đơn</a><a class="button outline" href="/bookings#tra-cuu">Tra cứu đặt phòng</a></div>`;
                 return;
             }
-            title.textContent = "Đặt phòng thành công!";
+            title.textContent = "Hẹn gặp bạn tại Mơ!";
             root.querySelector("[data-success-mark]").hidden = false;
-            intro.textContent = "Cảm ơn bạn đã chọn Mơ. Thông tin cuộc hẹn của bạn được lưu ở bên dưới.";
+            intro.textContent = "Mơ đã xác nhận thông tin đặt phòng của bạn.";
             const image = safeUrl(booking.roomImage, true);
             out.innerHTML = `
                 <article class="booking-success-ticket">
@@ -116,7 +123,7 @@
                             ${booking.arrival?.isTest ? '<span class="mb-2 inline-block text-xs font-semibold tracking-widest text-[#946529]">ĐƠN THỬ</span>' : ""}
                             <span class="block text-xs text-[#736b61]">Không gian của bạn</span>
                             <h2>${escape(booking.room)}</h2>
-                            <p>${escape(booking.packageName || "")}${booking.guests ? ` · ${escape(booking.guests)} khách` : ""}</p>
+                            <p>${booking.guests ? `${escape(booking.guests)} khách` : ""}</p>
                         </div>
                     </div>
                     <div class="booking-success-details">
@@ -125,6 +132,7 @@
                         <div><span>Thanh toán</span><strong class="${booking.paymentStatus === "PAID" ? "text-[#47694b]" : "text-[#946529]"}">${booking.paymentStatus === "PAID" ? "Đã thanh toán" : "Chưa thanh toán"}</strong></div>
                         <div class="booking-success-total"><span>Tổng tiền</span><strong>${cash(booking.total)}</strong></div>
                     </div>
+                    ${arrivalCredentials(booking.arrival)}
                 </article>
                 ${arrivalGuide(booking.arrival)}
                 <p data-success-copy-status class="text-center text-sm text-[#79543e]" role="status"></p>

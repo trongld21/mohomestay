@@ -155,7 +155,7 @@ foreach ([
     }
 }
 unset($_SESSION['account_id'], $_SESSION['account_version']);
-save_account(['id' => $id, 'permissions' => ['rooms.view', 'bookings.view', 'door-codes.view']], true);
+save_account(['id' => $id, 'permissions' => ['rooms.view', 'bookings.view', 'door-codes.view', 'availability.view']], true);
 $_SESSION['account_id'] = $id;
 $_SESSION['account_version'] = 2;
 foreach (array_keys(account_permission_labels()) as $permission) {

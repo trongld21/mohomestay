@@ -9,7 +9,7 @@ const vm = require("node:vm");
         const submit = node();
         const fields = { roomId: { ...node(), value: "pink" } };
         const form = {
-            elements: fields, date: node(), time: node(), packageId: node(), numberOfGuests: node(),
+            reportValidity: () => true, elements: fields, date: node(), time: node(), packageId: node(), numberOfGuests: node(),
             querySelector: (selector) => selector === "[data-test-payment]" ? checkbox : submit,
         };
         const slot = { id: "3h", name: "Gói 3 giờ", mode: "DURATION", durationMinutes: 180, price: 200000 };
@@ -41,7 +41,9 @@ const vm = require("node:vm");
             URLSearchParams, Event, CSS: { escape: (value) => value },
             crypto: { randomUUID: () => "12345678-1234-1234-1234-123456789012" },
             sessionStorage: { setItem() {} }, LangUI: { toast() {} },
+            File: class {},
             FormData: class {
+                set() {}
                 *[Symbol.iterator]() {
                     yield* Object.entries({
                         roomId: "pink", packageId: "3h", date: "2099-01-01", time: "14:00",
@@ -67,8 +69,8 @@ const vm = require("node:vm");
         await form.onsubmit({ preventDefault() {} });
         const request = submissions[0];
         assert.equal(request.url, testing ? "/api/dev/payments/create" : "/api/bookings");
-        assert.equal(request.options.headers["Content-Type"], "application/json");
-        const body = JSON.parse(request.options.body);
+        assert.equal(request.options.headers["Content-Type"], testing ? "application/json" : undefined);
+        const body = testing ? JSON.parse(request.options.body) : Object.fromEntries(request.options.body);
         if (testing) {
             assert.equal(request.options.headers["X-CSRF-Token"], "csrf-test");
             assert.match(body.requestId, /^[a-f0-9]{32}$/);

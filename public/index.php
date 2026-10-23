@@ -96,6 +96,14 @@ elseif (preg_match('#^/admin/rooms/([a-zA-Z0-9_-]+)/preview$#', $path, $m)) {
 } elseif (preg_match('#^/rooms/([a-z0-9-]+)$#', $path, $m) && ($room = find_room($m[1]))) render_page($room['name'], fn() => render_room($room));
 elseif ($path === '/calendar') render_page('Lịch phòng', fn() => render_calendar());
 elseif ($path === '/bookings') render_page('Đặt phòng', fn() => render_bookings());
+elseif ($path === '/checkout-payment') {
+    render_page('Thanh toán phụ thu', fn() => print(
+        '<section class="mx-auto my-12 max-w-lg rounded-2xl border border-stone-200 bg-[#fffdf9] p-6 text-[#45382f]">'
+        . '<h1 class="text-2xl font-semibold">Thanh toán phụ thu</h1>'
+        . '<p class="mt-3">Mơ sẽ kiểm tra giao dịch và xác nhận khoản phụ thu. Bạn có thể nhờ nhân viên kiểm tra trạng thái thanh toán.</p>'
+        . '<a class="timeline-button mt-5" href="tel:0357907153">Liên hệ Mơ · 0357 907 153</a></section>'
+    ), ['robots' => false]);
+}
 elseif ($path === '/payment') render_page('Thanh toán', fn() => render_payment());
 elseif (preg_match('#^/booking-success/((?:MO|LANG)-[A-F0-9]{10})$#', $path, $matches)) {
     require_once APP_ROOT . '/src/booking-success-view.php';
@@ -104,6 +112,13 @@ elseif (preg_match('#^/booking-success/((?:MO|LANG)-[A-F0-9]{10})$#', $path, $ma
     render_page('Thông tin đặt phòng', fn() => render_booking_success($matches[1]), ['robots' => false]);
 }
 elseif ($path === '/auth/login') render_page('Đăng nhập quản lý', fn() => render_login($loginError ?? ''), ['robots' => false]);
+elseif ($path === '/admin/availability') {
+    if (!is_admin()) redirect('/auth/login');
+    require_permission('availability.view');
+    header('Cache-Control: no-store');
+    require_once APP_ROOT . '/src/room-timeline-view.php';
+    render_page('Tìm phòng trống', fn() => render_room_timeline(), ['robots' => false]);
+}
 elseif ($path === '/admin/door-codes') {
     if (!is_admin()) redirect('/auth/login');
     require_permission('door-codes');

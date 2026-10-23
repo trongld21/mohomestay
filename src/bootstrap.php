@@ -44,6 +44,7 @@ function config(string $key, mixed $default = null): mixed
         'ttlock.base_url'=>'TTLOCK_BASE_URL','ttlock.client_id'=>'TTLOCK_CLIENT_ID',
         'ttlock.client_secret'=>'TTLOCK_CLIENT_SECRET','ttlock.username'=>'TTLOCK_USERNAME',
         'ttlock.password_md5'=>'TTLOCK_PASSWORD_MD5','ttlock.lock_id'=>'TTLOCK_LOCK_ID',
+        'ttlock.code_mode'=>'TTLOCK_CODE_MODE',
     ];
     if ($key === 'ttlock.enabled') return filter_var(env_value('TTLOCK_ENABLED', 'false'), FILTER_VALIDATE_BOOL);
     if ($key === 'bookings_enabled') return filter_var(env_value('BOOKINGS_ENABLED','false'), FILTER_VALIDATE_BOOL);
@@ -134,9 +135,12 @@ function json_response(array $data, int $status = 200): never
 }
 function json_body(): array
 {
+    static $parsed;
+    if (is_array($parsed)) return $parsed;
     if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 262144) json_response(['error'=>'Dữ liệu quá lớn.'], 413);
     $body = json_decode((string)file_get_contents('php://input'), true);
     if (!is_array($body)) json_response(['error'=>'Dữ liệu không hợp lệ.'], 400);
+    $parsed = $body;
     return $body;
 }
 function redirect(string $url): never { header('Location: ' . $url); exit; }
@@ -176,3 +180,7 @@ require_once APP_ROOT . '/src/manual-access.php';
 require_once APP_ROOT . '/src/accounts.php';
 
 require_once APP_ROOT . '/src/booking-identity.php';
+
+require_once APP_ROOT . '/src/room-operations.php';
+
+require_once APP_ROOT . '/src/room-inventory.php';

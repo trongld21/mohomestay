@@ -29,7 +29,7 @@ $email = build_booking_confirmation_email([
     'check_out'=>'2027-01-15 10:30:00','number_of_guests'=>2,'total_price'=>200000,
 ]);
 check(str_contains($email['subject'],'MO-ABCDEF1234'), 'Tieu de email phai co ma dat phong');
-check(str_contains($email['html'],'Pink') && str_contains($email['html'],'Gói 3 giờ') && str_contains($email['html'],'200.000đ'), 'Email phai co thong tin phong goi va tong tien');
+check(str_contains($email['html'],'Pink') && !str_contains($email['html'],'Gói 3 giờ') && str_contains($email['html'],'200.000đ'), 'Email phai co phong va tong tien, khong hien goi');
 
 if ($failures) { fwrite(STDERR, implode(PHP_EOL, $failures).PHP_EOL); exit(1); }
 echo "Unit tests: OK\n";

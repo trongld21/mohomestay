@@ -26,12 +26,16 @@ function sync_booking_access(string $bookingId, ?TTLockClient $client = null, bo
         $bookingQuery->execute([$bookingId]);
         $booking = $bookingQuery->fetch();
         if (!$booking) return null;
-        $window = ttlock_generated_window($booking);
+        $mode = $row['code_mode'] ?? strtoupper((string)config('ttlock.code_mode', 'GENERATED'));
+        if (!in_array($mode, ['GENERATED', 'CUSTOM'], true)) {
+            throw new TTLockException('TTLOCK_CODE_MODE phải là GENERATED hoặc CUSTOM.');
+        }
+        $window = $mode === 'CUSTOM' ? ttlock_window($booking) : ttlock_generated_window($booking);
         if (!$row) {
             if (!booking_access_allowed($booking) || $window['ends_at'] <= gmdate('Y-m-d H:i:s')) return null;
-            $pin = null;
-            $pdo->prepare("INSERT INTO booking_access_codes(booking_id,lock_id,code,starts_at,ends_at,code_mode) VALUES(?,?,?,?,?,'GENERATED')")
-                ->execute([$bookingId, (int)config('ttlock.lock_id'), $pin, $window['starts_at'], $window['ends_at']]);
+            $pin = $mode === 'CUSTOM' ? (string)random_int(10000000, 99999999) : null;
+            $pdo->prepare('INSERT INTO booking_access_codes(booking_id,lock_id,code,starts_at,ends_at,code_mode) VALUES(?,?,?,?,?,?)')
+                ->execute([$bookingId, (int)config('ttlock.lock_id'), $pin, $window['starts_at'], $window['ends_at'], $mode]);
             $find->execute([$bookingId]);
             $row = $find->fetch();
         }
