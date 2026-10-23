@@ -109,7 +109,7 @@ function create_booking_api(): never
         $freshPackage = $packageLock->fetch();
         if (!$freshPackage || !(bool)$freshPackage['is_enabled']) throw new BookingException('Gói giá vừa được thay đổi. Vui lòng chọn lại.', 409);
         $freshPackageDto = locked_booking_package($room, $freshPackage);
-        [$freshStart,$freshEnd]=package_window($freshPackageDto,$q['start']->format('Y-m-d'),$freshPackageDto['mode']==='DURATION'?$q['start']->format('H:i'):'');
+        [$freshStart,$freshEnd]=bookable_package_window($freshPackageDto,$q['requestedDate'],$freshPackageDto['mode']==='DURATION'?$q['start']->format('H:i'):'');
         $q['package']=$freshPackageDto;$q['start']=$freshStart;$q['end']=$freshEnd;$q['total']=(int)$freshPackageDto['price'];
         $q=array_replace($q,booking_package_snapshot($freshPackageDto));
         if (!$room || !$room['is_active']) throw new BookingException('Phòng đang tạm ngưng nhận khách.', 409);

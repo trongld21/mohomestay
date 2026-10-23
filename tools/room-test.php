@@ -19,6 +19,16 @@ function room_throws(callable $callback, string $contains, string $message): voi
     catch (BookingException $e) { if (!str_contains($e->getMessage(), $contains)) $failures[] = $message . ' (sai thong bao: '.$e->getMessage().')'; }
 }
 
+$latePackage = ['mode' => 'FIXED_TIME', 'checkInTime' => '21:00', 'checkOutTime' => '09:00'];
+$lateNow = new DateTimeImmutable('2027-01-15 21:30:25', new DateTimeZone('Asia/Ho_Chi_Minh'));
+[$lateStart, $lateEnd] = bookable_package_window($latePackage, '2027-01-15', '', $lateNow);
+room_check($lateStart->format('Y-m-d H:i:s') === '2027-01-15 21:31:00', 'Late fixed arrival starts at next full minute');
+room_check($lateEnd->format('Y-m-d H:i:s') === '2027-01-16 09:00:00', 'Late fixed arrival preserves checkout');
+[$afterMidnightStart, $afterMidnightEnd] = bookable_package_window($latePackage, '2027-01-15', '', new DateTimeImmutable('2027-01-16 01:00:00', new DateTimeZone('Asia/Ho_Chi_Minh')));
+room_check($afterMidnightEnd->format('Y-m-d H:i:s') === '2027-01-16 09:00:00', 'Overnight original date does not shift checkout another day');
+room_throws(fn() => bookable_package_window($latePackage, '2027-01-15', '', new DateTimeImmutable('2027-01-16 09:00:00', new DateTimeZone('Asia/Ho_Chi_Minh'))), 'hết giờ', 'Ended fixed package rejects booking');
+room_throws(fn() => bookable_package_window(['mode' => 'DURATION', 'durationMinutes' => 180], '2027-01-15', '21:00', $lateNow), 'tương lai', 'Duration package must not silently lose time');
+
 room_check(normalize_slug('Phòng Mây  2') === 'phong-may-2', 'Slug tieng Viet phai duoc chuan hoa');
 
 $input = validate_room_input([

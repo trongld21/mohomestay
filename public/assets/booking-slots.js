@@ -5,7 +5,7 @@
     return (room?.packages || []).filter(slot => slot.enabled && ['FIXED_TIME', 'DURATION'].includes(slot.mode));
   }
 
-  function slotWindow(slot, date, time = '') {
+  function slotWindow(slot, date, time = '', now = new Date()) {
     if (!slot || !date) return null;
     const startTime = slot.mode === 'FIXED_TIME' ? slot.checkInTime : time;
     if (!startTime) return null;
@@ -20,7 +20,9 @@
     }
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
     if (end <= start) end.setTime(end.getTime() + 86400000);
-    return { start, end };
+    const fixed = slot.mode === 'FIXED_TIME';
+    if (fixed && start <= now && end > now) start.setTime(Math.ceil(now.getTime() / 60000) * 60000);
+    return { start, end, fixed };
   }
 
   function overlaps(window, interval) {
@@ -28,8 +30,9 @@
   }
 
   function slotState(window, intervals = [], now = new Date()) {
-    if (!window || window.start <= now) return 'past';
-    return intervals.some(interval => overlaps(window, interval)) ? 'booked' : 'available';
+    if (!window || window.end <= now || window.end <= window.start || (!window.fixed && window.start <= now)) return 'past';
+    const remaining = {start: window.fixed && window.start < now ? now : window.start, end: window.end};
+    return intervals.some(interval => overlaps(remaining, interval)) ? 'booked' : 'available';
   }
 
   scope.MoBookingSlots = { configuredSlots, slotWindow, slotState };

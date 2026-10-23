@@ -40,7 +40,7 @@
         const info = data?.rooms.find((room) => room.id === selectedRoom()?.id);
         if (!info) return "unknown";
         if (!info.active) return "inactive";
-        const window = MoBookingSlots.slotWindow(selectedPackage(), day, time.value);
+        const window = MoBookingSlots.slotWindow(selectedPackage(), day, time.value, now());
         if (!window) return "unknown";
         return MoBookingSlots.slotState(window, info.intervals, now());
     }
@@ -90,7 +90,7 @@
         const room = selectedRoom();
         const pkg = selectedPackage();
         const status = state(date, snapshot);
-        const window = MoBookingSlots.slotWindow(pkg, date, time.value);
+        const window = MoBookingSlots.slotWindow(pkg, date, time.value, now());
         const format = (value) => value.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" });
         output.innerHTML = room ? `<article>
             <div class="calendar-room-preview"><img src="${escape(room.image)}" alt="Phòng ${escape(room.name)}"><div>

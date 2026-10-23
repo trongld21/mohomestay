@@ -74,6 +74,21 @@ function stay_window(string $date, string $time, string $package): array
     return package_window(['mode'=>'DURATION','durationMinutes'=>$package === '3h' ? 180 : 360], $date, $time);
 }
 
+function bookable_package_window(array $package, string $date, string $time, ?DateTimeImmutable $now = null): array
+{
+    [$start, $end] = package_window($package, $date, $time);
+    $now ??= new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
+    if (($package['mode'] ?? '') === 'FIXED_TIME' && $start <= $now && $end > $now) {
+        // Late arrivals keep the original checkout and full package price.
+        $start = $now->setTimestamp((int)(ceil($now->getTimestamp() / 60) * 60));
+    }
+    if ($end <= $now || $end <= $start) throw new BookingException('Gói lưu trú này đã hết giờ. Vui lòng chọn gói khác.');
+    if ($start <= $now && ($package['mode'] ?? '') !== 'FIXED_TIME') {
+        throw new BookingException('Vui lòng chọn giờ nhận phòng trong tương lai.');
+    }
+    return [$start, $end];
+}
+
 function quote_booking(array $input): array
 {
     $roomId = (string)($input['roomId'] ?? '');
@@ -88,9 +103,8 @@ function quote_booking_for_room(array $room, array $input, bool $manual = false)
     $packageId = (string)($input['packageId'] ?? '');
     if ($packageId === '' && isset($input['stayPackage'])) $packageId = $roomId.'-'.(string)$input['stayPackage'];
     $package = resolve_bookable_slot($room, $packageId);
-    [$start,$end] = package_window($package, (string)($input['date'] ?? ''), (string)($input['time'] ?? ''));
+    [$start,$end] = bookable_package_window($package, (string)($input['date'] ?? ''), (string)($input['time'] ?? ''));
     $now = new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
-    if ($start <= $now) throw new BookingException('Vui lòng chọn giờ nhận phòng trong tương lai.');
     if ($start > $now->modify('+366 days')) throw new BookingException('Chỉ nhận đặt phòng trong vòng 12 tháng.');
     $guests = filter_var($input['numberOfGuests'] ?? null, FILTER_VALIDATE_INT);
     if (!$guests || $guests < 1 || $guests > (int)$room['maxGuests']) throw new BookingException('Số khách vượt quá sức chứa của phòng.');
@@ -104,7 +118,7 @@ function quote_booking_for_room(array $room, array $input, bool $manual = false)
     if (mb_strlen($note) > 1000) throw new BookingException('Lời nhắn tối đa 1.000 ký tự.');
     if (!$manual && ($input['acceptTerms'] ?? false) !== true) throw new BookingException('Vui lòng đồng ý điều kiện đặt phòng.');
     return compact('room','package','start','end','guests','name','phone','email','note')
-        + booking_package_snapshot($package) + ['total'=>(int)$package['price']];
+        + booking_package_snapshot($package) + ['total'=>(int)$package['price'], 'requestedDate'=>(string)($input['date'] ?? '')];
 }
 
 function mysql_datetime(DateTimeInterface $date): string

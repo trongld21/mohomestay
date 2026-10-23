@@ -353,3 +353,12 @@ nhất 3M, post_max_size ít nhất 8M; max_allowed_packet MySQL đủ cho một
 Ảnh được giữ cùng lịch sử đơn cho đến khi xóa đơn; hiện chưa tự xóa theo hạn.
 Kiểm thử: `php tools/booking-identity-test.php` dùng ảnh giả và SQLite, không
 đưa giấy tờ thật vào kiểm thử hoặc nguồn Git.
+
+### Nhận muộn với gói giờ cố định
+
+Gói FIXED_TIME vẫn cho đặt sau giờ bắt đầu nếu chưa hết giờ trả. Giờ nhận được
+đẩy đến phút kế tiếp tại lúc xác nhận đặt, giữ nguyên giá và giờ trả của gói.
+Kiểm tra trùng đơn và khóa phòng áp dụng từ giờ nhận thực tế đến giờ trả.
+Gói DURATION vẫn yêu cầu giờ nhận trong tương lai để giữ đủ thời lượng.
+Ngày gốc của gói qua đêm được giữ khi máy chủ kiểm tra lại giá và lịch trong
+transaction; nhận sau nửa đêm không tự đẩy giờ trả sang thêm một ngày.
