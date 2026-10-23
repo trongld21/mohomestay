@@ -111,7 +111,7 @@
             if (LANG_HOME.abilities.includes("bookings.overview")) {
                 const { overview } = await request("/api/admin/booking-overview");
                 const stats = [
-                    ["Đã thu", cash(overview.paid), "Tổng tiền các đơn đã thanh toán"],
+                    ["Doanh thu", cash(overview.paid), "Đơn đã thanh toán, không gồm đơn đã hủy"],
                     ["Đã xác nhận", overview.confirmed, "Sẵn sàng đón khách"],
                     ["Trong giờ lưu trú", overview.staying, "Theo giờ đặt hoặc xác nhận của admin"],
                     ["Cần đối soát", overview.reconcile, "Đơn đã hủy nhưng đã nhận tiền"],
@@ -297,6 +297,9 @@
         if (booking.status === "CHECKED_IN" && LANG_HOME.abilities.includes("availability.checkout")) {
             actions = '<a class="timeline-button" href="/admin/availability">Trả phòng & phụ thu</a>';
         }
+        if (LANG_HOME.isSuperAdmin === true && ["CHECKED_IN", "CHECKED_OUT", "EXPIRED"].includes(booking.status)) {
+            actions += action("CANCELLED", "Hủy đơn", "x", true);
+        }
         const identity = Number(booking.identity_image_count) === 2
             ? (LANG_HOME.abilities.includes('bookings.identity')
                 ? `<button type="button" data-view-identity="${esc(booking.id)}" class="min-h-10 rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Xem CCCD</button>`
@@ -400,7 +403,7 @@
                     ? "Giờ nhận phòng sẽ đổi thành thời điểm hiện tại, giờ trả và giá gói giữ nguyên. Hệ thống kiểm tra trùng lịch trước khi xác nhận."
                     : button.dataset.bookingAction === "CHECKED_OUT"
                         ? "Đơn sẽ kết thúc ngay và ngừng giữ phần thời gian còn lại. Thanh toán được giữ riêng."
-                        : "Đơn sẽ bị hủy và ngừng giữ lịch. Khoản tiền đã nhận vẫn được giữ để đối soát."),
+                        : "Đơn sẽ bị hủy, ngừng giữ lịch và tiền của đơn được loại khỏi doanh thu. Lịch sử thanh toán vẫn được lưu; thao tác này không tự hoàn tiền cho khách."),
                 confirmLabel: confirmation[1],
                 cancelLabel: "Quay lại",
                 tone: button.dataset.bookingAction === "CANCELLED" ? "danger" : "info",

@@ -93,5 +93,21 @@ $public = availability_snapshot($pdo, [['id' => 'r', 'status' => 'ACTIVE']], $lo
 $json = json_encode($public);
 operation_check(!str_contains($json, 'MO-TEST') && !str_contains($json, 'staff') && !str_contains($json, 'bookingId'), 'Public intervals must not disclose booking identities or staff.');
 operation_check(str_contains($json, 'CLEANING'), 'Public calendar must show cleaning time.');
+$_SESSION = ['admin_until' => time() + 3600];
+$pdo->prepare("UPDATE bookings SET status='CHECKED_IN' WHERE id=?")->execute([$nextId]);
+$pdo->prepare("INSERT INTO room_emergency_locks (id,booking_id,room_id,starts_at,locked_by) VALUES (?,?,'r',?,'staff')")
+    ->execute([uuid(), $nextId, gmdate('Y-m-d H:i:s', $now - 60)]);
+update_booking_lifecycle($pdo, $nextId, 'CANCELLED');
+update_booking_lifecycle($pdo, $nextId, 'CANCELLED');
+$cancelled = $pdo->prepare('SELECT status FROM bookings WHERE id=?');
+$cancelled->execute([$nextId]);
+operation_check($cancelled->fetchColumn() === 'CANCELLED', 'Super Admin cancellation must persist and allow safe retries.');
+$hold = $pdo->prepare('SELECT ended_at FROM room_emergency_locks WHERE booking_id=?');
+$hold->execute([$nextId]);
+operation_check((bool)$hold->fetchColumn(), 'Cancelling a stay must release its emergency lock.');
+assert_room_inventory($pdo, 'r', $a, $b);
+update_booking_lifecycle($pdo, $id, 'CANCELLED');
+operation_check($pdo->query('SELECT payment_status FROM booking_checkout_charges')->fetchColumn() === 'PAID', 'Cancellation must preserve financial history.');
+operation_conflict(fn() => ensure_checkout_payment($pdo, $id));
 echo "Room operations transactions, grace, locks, cleaning, retries, callbacks and privacy: OK
 ";

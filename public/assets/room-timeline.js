@@ -146,7 +146,7 @@
             if (!canRead || (!canLock && !canCheckout && !canHold)) return;
             section.hidden = false;
             const bookings = (snapshot.bookings || []).filter((b) => (!roomId || b.room_id === roomId)
-                && (b.status === "CHECKED_IN" || Number(b.surcharge_amount) > 0));
+                && b.status !== "CANCELLED" && (b.status === "CHECKED_IN" || Number(b.surcharge_amount) > 0));
             one("[data-timeline-stays]").innerHTML = bookings.map((b) => {
                 const locked = b.emergency_lock_id && !b.ended_at;
                 return `<article class="rounded-xl border border-[#e5dacb] p-3">

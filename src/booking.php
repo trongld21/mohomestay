@@ -166,6 +166,20 @@ function booking_lifecycle(array $booking, ?int $now = null): array
     ]);
 }
 
+function booking_transition_allowed(string $from, string $to, bool $superAdmin): bool
+{
+    if ($superAdmin && $to === 'CANCELLED'
+        && in_array($from, ['PENDING', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'EXPIRED', 'CANCELLED'], true)) {
+        return true;
+    }
+    $allowed = [
+        'PENDING' => ['CANCELLED'],
+        'CONFIRMED' => ['CHECKED_IN', 'CANCELLED'],
+        'CHECKED_IN' => ['CHECKED_OUT'],
+    ];
+    return in_array($to, $allowed[$from] ?? [], true);
+}
+
 function update_booking_lifecycle(PDO $pdo, string $id, string $status): void
 {
     if ($status === 'CHECKED_OUT') {
@@ -178,19 +192,15 @@ function update_booking_lifecycle(PDO $pdo, string $id, string $status): void
         $find->execute([$id]);
         $roomId = $find->fetchColumn();
         if (!$roomId) throw new BookingException('Không tìm thấy đơn.', 404);
-        $lock = $pdo->prepare('SELECT id FROM rooms WHERE id=? FOR UPDATE');
+        $lock = $pdo->prepare('SELECT id FROM rooms WHERE id=?' . room_operation_lock_suffix($pdo));
         $lock->execute([$roomId]);
-        $stmt = $pdo->prepare('SELECT * FROM bookings WHERE id=? FOR UPDATE');
+        $stmt = $pdo->prepare('SELECT * FROM bookings WHERE id=?' . room_operation_lock_suffix($pdo));
         $stmt->execute([$id]);
         $booking = $stmt->fetch();
         if (!$booking) throw new BookingException('Không tìm thấy đơn.', 404);
         $effective = booking_lifecycle($booking);
-        $allowed = [
-            'PENDING' => ['CANCELLED'],
-            'CONFIRMED' => ['CHECKED_IN', 'CANCELLED'],
-            'CHECKED_IN' => ['CHECKED_OUT'],
-        ];
-        if (!in_array($status, $allowed[$effective['status']] ?? [], true)) {
+        $superAdmin = (bool)(current_account()['root'] ?? false);
+        if (!booking_transition_allowed($effective['status'], $status, $superAdmin)) {
             throw new BookingException('Trạng thái đơn đã thay đổi. Vui lòng làm mới danh sách.', 409);
         }
         $start = $booking['check_in'];
@@ -204,6 +214,10 @@ function update_booking_lifecycle(PDO $pdo, string $id, string $status): void
             if ($blocked->fetch()) throw new BookingException('Phòng đang bị khóa trong khoảng nhận sớm.', 409);
         }
         $pdo->prepare('UPDATE bookings SET status=?,check_in=? WHERE id=?')->execute([$status, $start, $id]);
+        if ($status === 'CANCELLED') {
+            $pdo->prepare('UPDATE room_emergency_locks SET ended_at=?,ended_by=? WHERE booking_id=? AND ended_at IS NULL')
+                ->execute([gmdate('Y-m-d H:i:s'), (string)(current_account()['id'] ?? 'admin'), $id]);
+        }
         $pdo->commit();
     } catch (Throwable $error) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -217,7 +231,7 @@ function booking_overview(array $rows, ?int $now = null): array
     $overview = ['paid' => 0, 'confirmed' => 0, 'staying' => 0, 'reconcile' => 0];
     foreach ($rows as $row) {
         $booking = booking_lifecycle($row, $now);
-        if ($booking['payment_status'] === 'PAID' && empty($booking['is_test'])) {
+        if ($booking['payment_status'] === 'PAID' && $booking['status'] !== 'CANCELLED' && empty($booking['is_test'])) {
             $overview['paid'] += (int)$booking['total_price'];
         }
         if ($booking['status'] === 'CONFIRMED') {

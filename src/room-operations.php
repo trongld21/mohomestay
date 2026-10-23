@@ -208,6 +208,11 @@ function ensure_checkout_payment(PDO $pdo, string $bookingId, ?callable $create 
         $query->execute([$bookingId]);
         $charge = $query->fetch();
         if (!$charge) throw new BookingException('Chưa xác nhận trả phòng cho đơn này.', 409);
+        $bookingState = $pdo->prepare('SELECT status FROM bookings WHERE id=?');
+        $bookingState->execute([$bookingId]);
+        if ($bookingState->fetchColumn() === 'CANCELLED') {
+            throw new BookingException('Đơn đã hủy. Không tạo hoặc cấp lại QR phụ thu cho đơn này.', 409);
+        }
         if ((int)$charge['amount'] === 0 || $charge['payment_status'] === 'PAID' || !empty($charge['checkout_url'])) {
             $pdo->commit();
             return $charge;

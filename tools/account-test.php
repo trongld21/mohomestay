@@ -189,6 +189,6 @@ account_check(can_use('bookings.view') && !can_use('bookings.overview'), 'Bookin
 $now = strtotime('2026-10-23 12:00:00 UTC');
 $row = ['status' => 'CONFIRMED', 'payment_status' => 'PAID', 'total_price' => 287000, 'is_test' => 0, 'check_in' => '2026-10-23 11:00:00', 'check_out' => '2026-10-23 13:00:00'];
 $summary = booking_overview([$row, array_replace($row, ['is_test' => 1]), array_replace($row, ['status' => 'CANCELLED', 'total_price' => 100000])], $now);
-account_check($summary === ['paid' => 387000, 'confirmed' => 0, 'staying' => 2, 'reconcile' => 1], 'Overview must retain lifecycle counts and exclude test payments');
+account_check($summary === ['paid' => 287000, 'confirmed' => 0, 'staying' => 2, 'reconcile' => 1], 'Overview must retain lifecycle counts and exclude cancelled and test payments');
 account_check(array_keys(booking_overview([])) === ['paid', 'confirmed', 'staying', 'reconcile'], 'Overview must return aggregates only');
 echo "Account authorization tests: OK\n";

@@ -24,4 +24,15 @@ foreach (['CANCELLED', 'PENDING'] as $status) {
     lifecycle_expect(booking_lifecycle(array_replace($booking, ['status' => $status]), strtotime('2026-10-23 14:00:00 UTC'))['status'] === $status, 'Unconfirmed and cancelled bookings must not automatically check in.');
 }
 lifecycle_expect(booking_lifecycle(array_replace($booking, ['status' => 'CHECKED_IN']), strtotime('2026-10-23 17:00:00 UTC'))['status'] === 'CHECKED_IN', 'Manual check-in must remain until confirmed checkout.');
+foreach (['CHECKED_IN', 'CHECKED_OUT', 'EXPIRED', 'CANCELLED'] as $status) {
+    lifecycle_expect(booking_transition_allowed($status, 'CANCELLED', true), 'Super Admin must be able to cancel ' . $status);
+    lifecycle_expect(!booking_transition_allowed($status, 'CANCELLED', false), 'Staff must not cancel staying/finished bookings.');
+}
+$cancelledPaid = array_replace($booking, [
+    'status' => 'CANCELLED', 'payment_status' => 'PAID', 'total_price' => 223000,
+]);
+$activePaid = array_replace($booking, ['payment_status' => 'PAID', 'total_price' => 159000]);
+$overview = booking_overview([$cancelledPaid, $activePaid], strtotime('2026-10-23 14:00:00 UTC'));
+lifecycle_expect($overview['paid'] === 159000 && $overview['reconcile'] === 1, 'Cancellation must subtract revenue without erasing the payment reconciliation record.');
+lifecycle_expect($cancelledPaid['payment_status'] === 'PAID', 'Excluding cancelled revenue must not falsely mark an actual payment unpaid.');
 echo "Booking lifecycle tests: OK\n";

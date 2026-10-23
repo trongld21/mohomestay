@@ -123,6 +123,7 @@ function render_google_analytics(string $path, string $host): void
         if (!preg_match('#^/(admin|auth)(/|$)#', $pagePath)) render_contact_widget(); ?>
         <script>
             window.LANG_HOME = {
+                isSuperAdmin: <?= json_encode((bool)(current_account()['root'] ?? false)) ?>,
                 manualDateOverride: <?= json_encode((bool)(current_account()['root'] ?? false)) ?>,
                 csrf: <?= json_encode(csrf_token()) ?>,
                 abilities: <?= json_encode(array_values(array_filter(array_keys(account_permission_labels()), fn($key) => can_use($key)))) ?>,
