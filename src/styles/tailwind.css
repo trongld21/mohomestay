@@ -860,13 +860,16 @@
   .contact-widget { @apply hidden; }
 }
 
-/* The source PNG has transparency; avoid browser-dependent blend compositing. */
+/* SVG removes the cream pixels from the source image on all browsers. */
+.brand .brand-art {
+  @apply bg-none bg-transparent rounded-none;
+}
 .site-header .brand .brand-art {
   @apply bg-transparent rounded-none mix-blend-normal;
   filter: none;
 }
 .site-footer .brand .brand-art {
-  @apply bg-transparent rounded-none mix-blend-screen;
+  @apply bg-transparent rounded-none mix-blend-normal;
   filter: grayscale(1) contrast(4) invert(1);
 }
 .header-link {

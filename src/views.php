@@ -116,9 +116,25 @@ function render_contact_widget(): void
 
     </html><?php exit;
             }
-            function logo(): void
-            { ?><span class="brand"><span class="brand-art" role="img" aria-label="Mơ Home" style="background-image:url('<?= e(asset_url('/images/mo-home-wordmark.png')) ?>')"></span></span><?php }
-                                                                                                                                                                                        function render_header(): void
+function logo(): void
+{
+    static $instance = 0;
+    $filterId = 'mo-logo-transparency-' . ++$instance;
+    ?>
+    <span class="brand">
+        <svg class="brand-art" role="img" aria-label="Mơ Home" viewBox="400 1650 4000 1400" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <filter id="<?= e($filterId) ?>" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">
+                    <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -1 -1 -1 0 2.7" />
+                </filter>
+            </defs>
+            <image href="<?= e(asset_url('/images/mo-home-wordmark.png')) ?>" x="0" y="0" width="4699" height="4698" filter="url(#<?= e($filterId) ?>)" />
+        </svg>
+    </span>
+    <?php
+}
+
+function render_header(): void
                                                                                                                                                                                         { ?><header class="site-header">
         <div class="container nav-inner"><a href="/" aria-label="Mơ Home — Trang chủ"><?php logo(); ?></a>
             <nav class="nav-links" id="nav"><a class="header-link" href="/">Trang chủ</a><a class="header-link" href="/#ve-mo">Về Mơ</a><a class="header-link" href="/rooms">Phòng & giá</a><a class="header-link" href="/calendar">Lịch phòng</a><a class="header-link" href="/#lien-he">Liên hệ</a></nav>
