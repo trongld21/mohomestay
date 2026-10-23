@@ -200,7 +200,7 @@ function render_header(): void
                                                                                                                                                                                         {
                                                                                                                                                                                             return $package['mode'] === 'FIXED_TIME' ? substr((string)$package['checkInTime'], 0, 5) . ' – ' . substr((string)$package['checkOutTime'], 0, 5) : ((int)$package['durationMinutes'] >= 60 && ((int)$package['durationMinutes'] % 60 === 0) ? ((int)$package['durationMinutes'] / 60) . ' giờ' : (int)$package['durationMinutes'] . ' phút');
                                                                                                                                                                                         }
-function render_package_sale_price(array $package): void
+function render_package_sale_price(array $package, bool $showBadge = true): void
 {
     $base = (int)($package['basePrice'] ?? $package['price']);
     $price = (int)$package['price'];
@@ -208,7 +208,7 @@ function render_package_sale_price(array $package): void
     $sale = $percent > 0 && $base > $price;
     ?>
     <span class="inline-flex flex-col items-start gap-1">
-        <?php if ($sale): ?>
+        <?php if ($sale && $showBadge): ?>
             <span class="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Giảm <?= $percent ?>%</span>
         <?php endif ?>
         <span class="inline-flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -234,16 +234,25 @@ function render_room_cards(bool $liveAvailability = false): void
                     break;
                 }
             }
+            $discountPercent = (int)($minimumPackage['effectiveDiscountPercent'] ?? 0);
+            $hasDiscount = $minimumPackage !== null && $discountPercent > 0
+                && (int)($minimumPackage['basePrice'] ?? $minimumPackage['price']) > (int)$minimumPackage['price'];
             $coming = $room['status'] === 'COMING_SOON';
             ?>
-            <article class="room-card room-product-card <?= $coming ? 'coming-soon' : '' ?>" data-room-card-id="<?= e($room['id']) ?>">
-                <div class="room-image"><a href="/rooms/<?= e($room['slug']) ?>"><img src="<?= e($room['image']) ?>" alt="Phòng <?= e($room['name']) ?>" loading="lazy"></a><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php elseif ($room['tag']): ?><span class="room-tag"><svg class="icon icon-tabler icon-tabler-sparkles" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6" />
-                            </svg><?= e($room['tag']) ?></span><?php endif ?><span class="room-photo-count">▧ 1/<?= max(1, count($room['images'] ?? [])) ?></span></div>
-                <div class="room-body">
-                    <?php if ($liveAvailability && !$coming): ?>
-                        <span class="home-room-availability" data-room-availability data-state="unknown">Đang kiểm tra…</span>
+            <article class="room-card room-product-card relative <?= $coming ? 'coming-soon' : '' ?>" data-room-card-id="<?= e($room['id']) ?>">
+                <?php if ($liveAvailability && !$coming): ?>
+                    <span class="home-room-availability" data-room-availability data-state="unknown">Đang kiểm tra…</span>
+                <?php endif ?>
+                <div class="room-image">
+                    <a href="/rooms/<?= e($room['slug']) ?>"><img src="<?= e($room['image']) ?>" alt="Phòng <?= e($room['name']) ?>" loading="lazy"></a>
+                    <?php if ($coming): ?>
+                        <span class="room-status-badge">Sắp ra mắt</span>
+                    <?php elseif ($hasDiscount): ?>
+                        <span class="room-discount-corner">Giảm <?= $discountPercent ?>%</span>
                     <?php endif ?>
+                    <span class="room-photo-count">▧ 1/<?= max(1, count($room['images'] ?? [])) ?></span>
+                </div>
+                <div class="room-body">
                     <div class="room-title">
                         <h3><a href="/rooms/<?= e($room['slug']) ?>"><?= e($room['name']) ?></a></h3><span><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span>
                     </div>
@@ -266,7 +275,7 @@ function render_room_cards(bool $liveAvailability = false): void
                                 <path d="M3 12h18v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5ZM6 12V5a2 2 0 0 1 4 0M6 20v2m12-2v2" />
                             </svg><?= e($room['bathrooms']) ?> phòng tắm</span></div>
                     <div class="room-price">
-                        <div><?php if ($minimum !== null): ?><small>Từ</small><?php render_package_sale_price($minimumPackage); ?><?php else: ?><span>Liên hệ để biết giá</span><?php endif ?></div><?php if ($coming): ?><span class="disabled-action" aria-disabled="true">Sắp mở</span><?php else: ?><a href="/bookings?room=<?= e($room['id']) ?>" aria-label="Đặt <?= e($room['name']) ?>">→</a><?php endif ?>
+                        <div><?php if ($minimum !== null): ?><small>Từ</small><?php render_package_sale_price($minimumPackage, false); ?><?php else: ?><span>Liên hệ để biết giá</span><?php endif ?></div><?php if ($coming): ?><span class="disabled-action" aria-disabled="true">Sắp mở</span><?php else: ?><a href="/bookings?room=<?= e($room['id']) ?>" aria-label="Đặt <?= e($room['name']) ?>">→</a><?php endif ?>
                     </div>
                 </div>
             </article><?php endforeach ?><?php if (!$catalog): ?><div class="empty-state">
