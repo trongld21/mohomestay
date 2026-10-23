@@ -18,6 +18,9 @@ for (const payment_status of ['PAID', 'UNPAID', 'REFUNDED']) {
 assert.equal(isFinished({...stay, status: 'CHECKED_OUT', payment_status: 'UNPAID'}), false, 'Uncollected stay remains visible');
 assert.equal(tone({...stay, status: 'CANCELLED'}), 'attention');
 assert.equal(tone(stay), 'confirmed');
+assert.equal(tone({...stay, status: 'CHECKED_IN', isOverdue: true}), 'overdue');
+assert.equal(tone({...stay, status: 'CHECKED_IN', isOverdue: false}), 'staying');
+assert.equal(tone({...stay, status: 'CHECKED_OUT', isOverdue: true}), 'finished');
 assert.equal(matches(stay, {...filters, query: 'khách', room: 'Mơ'}), true);
 assert.equal(matches(stay, {...filters, room: 'Pink'}), false);
 console.log('Admin booking filters: OK');

@@ -44,9 +44,8 @@ function render_room_timeline(?array $room = null): void
         </div>
         <div class="mb-3 flex flex-wrap gap-x-4 gap-y-2 text-xs" aria-label="Chú thích lịch">
             <span class="flex items-center gap-2"><i class="size-3 rounded border border-emerald-700 bg-emerald-50" aria-hidden="true"></i>Trống</span>
-            <span class="flex items-center gap-2"><i class="size-3 rounded bg-amber-200" aria-hidden="true"></i>Đã đặt</span>
+            <span class="flex items-center gap-2"><i class="size-3 rounded bg-amber-200" aria-hidden="true"></i>Đã đặt / bận</span>
             <span class="flex items-center gap-2"><i class="size-3 rounded bg-red-200" aria-hidden="true"></i>Đang khóa</span>
-            <span class="flex items-center gap-2"><i class="size-3 rounded bg-violet-200" aria-hidden="true"></i>Dọn phòng · 1 giờ</span>
             <span class="flex items-center gap-2"><i class="size-3 rounded bg-sky-200" aria-hidden="true"></i>Đang giữ báo giá</span>
             <span class="flex items-center gap-2"><i class="size-3 rounded bg-stone-200" aria-hidden="true"></i>Đã qua / ngưng nhận</span>
         </div>
@@ -55,7 +54,7 @@ function render_room_timeline(?array $room = null): void
             data-timeline-scroll tabindex="0" role="region" aria-label="Ma trận lịch phòng, cuộn ngang để xem các giờ">
             <div data-timeline-grid aria-busy="true"></div>
         </div>
-        <p class="mt-3 text-sm text-[#736b61]" data-timeline-selection aria-live="polite">Giữa hai lượt khách có 1 giờ dọn phòng. Hệ thống kiểm tra lại lịch khi xác nhận đặt.</p>
+        <p class="mt-3 text-sm text-[#736b61]" data-timeline-selection aria-live="polite">Hệ thống kiểm tra lại lịch khi xác nhận đặt.</p>
         <div class="mt-5 border-t border-[#e5dacb] pt-4" data-timeline-operations hidden>
             <h3 class="text-lg font-semibold">Khách lưu trú & phụ thu</h3>
             <p class="mt-1 text-sm text-[#736b61]">Chỉ xác nhận trả khi khách đã rời phòng. Miễn 15 phút đầu, phần trễ còn lại làm tròn giờ × 50.000đ.</p>

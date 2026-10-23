@@ -384,3 +384,5 @@ Form tạo đơn admin mặc định **Theo gói lưu trú**. Khi cần, chuyể
 Chỉ tài khoản **Super Admin** (tài khoản gốc) được tạo đơn với ngày nhận trong quá khứ hoặc vượt giới hạn 12 tháng, ở cả chế độ theo gói và tùy chọn. Bỏ chọn **Nhận phòng ngay bây giờ** để tự chọn ngày giờ. Quyền này lấy từ phiên đăng nhập trên server, không cấp qua quyền nhân viên; vẫn kiểm tra giờ trả sau giờ nhận, trùng lịch, khóa và dọn phòng.
 
 Super Admin có thể hủy cả đơn đang lưu trú hoặc đã kết thúc từ danh sách đặt phòng. Đơn đã hủy được loại khỏi doanh thu, lịch giữ theo đơn được giải phóng; tiền đã nhận và dữ liệu đối soát vẫn giữ nguyên. Hủy đơn không tự chuyển khoản hoàn tiền cho khách.
+
+Khi xác nhận trả phòng, ô **Xác nhận thu phụ thu và tạo mã chuyển khoản** mặc định không tích. Không tích thì chỉ ghi giờ trả và không tạo khoản phụ thu/QR; tích mới chốt phụ thu theo quy tắc và tạo link QR. Quyết định được giữ nguyên khi gửi lại yêu cầu.

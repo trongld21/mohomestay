@@ -3095,7 +3095,7 @@ a.timeline-button:hover {
 }
 
 .timeline-cell[data-state="cleaning"] {
-    @apply bg-violet-100 text-violet-900 enabled:hover:bg-violet-200;
+    @apply bg-amber-100 text-amber-900 enabled:hover:bg-amber-200;
 }
 .timeline-cell[data-state="held"] {
     @apply bg-sky-100 text-sky-900 enabled:hover:bg-sky-200;
@@ -3103,4 +3103,11 @@ a.timeline-button:hover {
 
 a.timeline-primary:hover {
     @apply bg-[#55321f] text-white;
+}
+
+.admin-page .booking-work-table tr[data-booking-tone="overdue"] {
+    @apply border-orange-300 bg-orange-50;
+}
+.admin-page .booking-work-table tr[data-booking-tone="overdue"] .admin-booking-status {
+    @apply bg-orange-100 text-orange-900;
 }

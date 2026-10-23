@@ -221,7 +221,7 @@ function update_booking_api(): never
     $status = (string)($body['status'] ?? '');
     if ($status === 'CHECKED_OUT') {
         require_permission('availability.checkout');
-        $charge = confirm_room_checkout(db(), $id, (string)current_account()['id']);
+        $charge = confirm_room_checkout(db(), $id, (string)current_account()['id'], null, ($body['collectSurcharge'] ?? false) === true);
         json_response(['ok' => true, 'charge' => checkout_charge_dto($charge)]);
     }
     update_booking_lifecycle(db(), $id, $status);

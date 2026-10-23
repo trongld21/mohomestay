@@ -41,7 +41,7 @@
     }
 
     window.MoRoomTimeline = { freeWindows, cellState, overlaps };
-    const labels = { free: "Trống", booked: "Đã đặt", blocked: "Đang khóa", past: "Đã qua", inactive: "Ngưng nhận", cleaning: "Đang dọn", held: "Đang giữ" };
+    const labels = { free: "Trống", booked: "Đã đặt", blocked: "Đang khóa", past: "Đã qua", inactive: "Ngưng nhận", cleaning: "Bận", held: "Đang giữ" };
     document.querySelectorAll("[data-room-timeline]").forEach((root) => {
         const one = (s) => root.querySelector(s);
         const staff = root.dataset.staff === "true";
@@ -131,7 +131,7 @@
                         const state = cellState(room, a, a + 3600000, now);
                         const hour = String(slot).padStart(2, "0") + ":00";
                         const label = `${room.name} · ${date} ${hour} · ${labels[state]}`;
-                        rows += `<td><button type="button" class="timeline-cell" data-state="${state}" data-slot-start="${a}" data-slot-room="${escape(room.id)}" aria-label="${escape(label)}" title="${escape(label)}">${state === "free" ? "Trống" : state === "booked" ? "Bận" : state === "blocked" ? "Khóa" : state === "cleaning" ? "Dọn" : state === "held" ? "Giữ" : "—"}</button></td>`;
+                        rows += `<td><button type="button" class="timeline-cell" data-state="${state}" data-slot-start="${a}" data-slot-room="${escape(room.id)}" aria-label="${escape(label)}" title="${escape(label)}">${state === "free" ? "Trống" : state === "booked" ? "Bận" : state === "blocked" ? "Khóa" : state === "cleaning" ? "Bận" : state === "held" ? "Giữ" : "—"}</button></td>`;
                     }
                     rows += "</tr>";
                 });
@@ -243,7 +243,7 @@
                 const room = snapshot.rooms.find((r) => r.id === slot.dataset.slotRoom);
                 const intervals = room.intervals.filter((i) => overlaps(a, a + 3600000, i));
                 one("[data-timeline-selection]").textContent = `${room.name} · ${dateTime(a)}: `
-                    + (intervals.length ? intervals.map((i) => `${i.status === "BLOCKED" ? "Đang khóa" : i.status === "CLEANING" ? "Dọn phòng" : i.status === "HELD" ? "Đang giữ" : "Đã đặt"} ${dateTime(i.start)} – ${dateTime(i.end)}`).join("; ")
+                    + (intervals.length ? intervals.map((i) => `${i.status === "BLOCKED" ? "Đang khóa" : i.status === "CLEANING" ? "Bận" : i.status === "HELD" ? "Đang giữ" : "Đã đặt"} ${dateTime(i.start)} – ${dateTime(i.end)}`).join("; ")
                         : labels[cellState(room, a, a + 3600000, timestamp(snapshot.serverTime))]);
                 return;
             }
@@ -287,6 +287,11 @@
                     <p class="mt-3 text-sm">Khách đã rời phòng? Xác nhận sẽ mở khóa khẩn cấp và ghi giờ trả thực tế.</p>
                     <p class="mt-3 font-semibold">Phụ thu tạm tính: ${cash(hours * 50000)}</p>
                     <p class="mt-2 text-sm text-[#736b61]">Miễn 15 phút đầu; phần còn lại làm tròn giờ × 50.000đ. Máy chủ chốt tiền tại lúc bấm xác nhận.</p>
+                    <label class="mt-4 flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-[#d2bda7] p-3 text-sm">
+                        <input class="size-5 accent-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800" type="checkbox" data-checkout-collect>
+                        Xác nhận thu phụ thu và tạo mã chuyển khoản
+                    </label>
+                    <p class="mt-2 text-sm text-[#736b61]">Không tích: chỉ trả phòng, không thu phụ thu.</p>
                     <button class="timeline-button timeline-primary mt-4" type="button" data-checkout-confirm>Khách đã rời phòng · Xác nhận</button>`;
                 return;
             }
@@ -317,7 +322,9 @@
                     const result = await request("/api/admin/room-operations/charge?bookingId=" + encodeURIComponent(currentBooking));
                     renderCharge(result.charge);
                 } else {
-                    const result = await request("/api/admin/room-operations/" + (confirm ? "checkout" : "payment"), "POST", { bookingId: currentBooking });
+                    const payload = { bookingId: currentBooking };
+                    if (confirm) payload.collectSurcharge = one("[data-checkout-collect]")?.checked === true;
+                    const result = await request("/api/admin/room-operations/" + (confirm ? "checkout" : "payment"), "POST", payload);
                     renderCharge(result.charge, result.paymentError || "");
                     await load();
                 }

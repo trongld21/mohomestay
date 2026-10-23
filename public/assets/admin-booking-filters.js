@@ -21,6 +21,7 @@
     }
     function tone(item) {
         if (needsAttention(item)) return 'attention';
+        if (item.status === 'CHECKED_IN' && item.isOverdue === true) return 'overdue';
         return ({PENDING: 'pending', CONFIRMED: 'confirmed', CHECKED_IN: 'staying'})[item.status] || 'finished';
     }
     const api = {matches, isFinished, needsAttention, tone};

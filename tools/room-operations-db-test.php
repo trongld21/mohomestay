@@ -41,7 +41,7 @@ lock_overstaying_booking($pdo, $id, 'staff', $now);
 operation_check((int)$pdo->query('SELECT COUNT(*) FROM room_emergency_locks')->fetchColumn() === 1, 'Repeated lock must be idempotent.');
 $future = gmdate('Y-m-d H:i:s', $now + 86400);
 operation_conflict(fn() => assert_room_inventory($pdo, 'r', $future, gmdate('Y-m-d H:i:s', $now + 90000)));
-$charge = confirm_room_checkout($pdo, $id, 'staff', $now);
+$charge = confirm_room_checkout($pdo, $id, 'staff', $now, true);
 operation_check((int)$charge['amount'] === 50000, '70 minutes late minus grace must cost 50000.');
 operation_check($pdo->query('SELECT ended_at FROM room_emergency_locks')->fetchColumn() === gmdate('Y-m-d H:i:s', $now), 'Checkout must release emergency lock.');
 $repeat = confirm_room_checkout($pdo, $id, 'other', $now + 7200);
@@ -109,5 +109,14 @@ assert_room_inventory($pdo, 'r', $a, $b);
 update_booking_lifecycle($pdo, $id, 'CANCELLED');
 operation_check($pdo->query('SELECT payment_status FROM booking_checkout_charges')->fetchColumn() === 'PAID', 'Cancellation must preserve financial history.');
 operation_conflict(fn() => ensure_checkout_payment($pdo, $id));
+$waivedId = str_repeat('d', 32);
+$pdo->prepare("INSERT INTO bookings (id,room_id,booking_code,status,check_in,check_out) VALUES (?,'r','MO-WAIVED','CHECKED_IN',?,?)")
+    ->execute([$waivedId, gmdate('Y-m-d H:i:s', $now - 10800), gmdate('Y-m-d H:i:s', $now - 4200)]);
+$waived = confirm_room_checkout($pdo, $waivedId, 'staff', $now);
+operation_check((int)$waived['amount'] === 0 && (int)$waived['billable_hours'] === 0, 'Unchecked surcharge must only check out, even when late.');
+operation_check($waived['order_code'] === null && $waived['payment_status'] === 'NONE', 'No payment identity or receivable without explicit surcharge confirmation.');
+operation_check((int)$waived['late_seconds'] === 4200, 'Keep actual lateness for audit.');
+$waivedRetry = confirm_room_checkout($pdo, $waivedId, 'staff', $now + 3600, true);
+operation_check((int)$waivedRetry['amount'] === 0, 'A retry must not introduce a surcharge after checkout was finalized without one.');
 echo "Room operations transactions, grace, locks, cleaning, retries, callbacks and privacy: OK
 ";

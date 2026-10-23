@@ -69,7 +69,7 @@ function room_operations_api(string $path, string $method): never
         json_response(['ok' => true] + lock_overstaying_booking(db(), $id, $actor));
     }
     if ($path === '/api/admin/room-operations/checkout') {
-        $charge = confirm_room_checkout(db(), $id, $actor);
+        $charge = confirm_room_checkout(db(), $id, $actor, null, ($body['collectSurcharge'] ?? false) === true);
         // Provider errors never roll back departure or lose the amount owed.
         if ((int)$charge['amount'] > 0) {
             try {

@@ -89,7 +89,7 @@ function lock_overstaying_booking(PDO $pdo, string $bookingId, string $actor, ?i
     }
 }
 
-function confirm_room_checkout(PDO $pdo, string $bookingId, string $actor, ?int $now = null): array
+function confirm_room_checkout(PDO $pdo, string $bookingId, string $actor, ?int $now = null, bool $collectSurcharge = false): array
 {
     $now ??= time();
     $pdo->beginTransaction();
@@ -107,6 +107,10 @@ function confirm_room_checkout(PDO $pdo, string $bookingId, string $actor, ?int 
             throw new BookingException('Chỉ xác nhận trả phòng cho đơn đang lưu trú.', 409);
         }
         $fee = late_checkout_fee($booking['check_out'], $now);
+        if (!$collectSurcharge) {
+            $fee['billableHours'] = 0;
+            $fee['amount'] = 0;
+        }
         // A separate numeric namespace cannot collide with booking millisecond order codes.
         $orderCode = $fee['amount'] > 0 ? random_int(800000000000000, 899999999999999) : null;
         $query = $pdo->prepare(
