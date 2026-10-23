@@ -13,7 +13,7 @@ function render_room_timeline(?array $room = null): void
             <div>
                 <p class="mb-1 text-xs font-semibold tracking-widest text-[#79543e]">LỊCH PHÒNG · GIỜ VIỆT NAM</p>
                 <h2 class="font-sans text-xl font-semibold sm:text-2xl"><?= $staff ? 'Tìm phòng trống' : 'Giờ nào còn trống?' ?></h2>
-                <p class="mt-2 text-sm text-[#736b61]"><?= $staff ? 'Chọn giờ vào và giờ ra để trả lời nhanh phòng nào còn trống.' : 'Xem lịch 7 ngày. Mỗi ô là 30 phút; bấm ô để xem giờ bận chính xác.' ?></p>
+                <p class="mt-2 text-sm text-[#736b61]"><?= $staff ? 'Chọn giờ vào và giờ ra để trả lời nhanh phòng nào còn trống.' : 'Xem lịch 7 ngày. Mỗi ô là 1 giờ; bấm ô để xem giờ bận chính xác.' ?></p>
             </div>
             <button type="button" class="timeline-button" data-timeline-refresh>Làm mới lịch</button>
         </div>

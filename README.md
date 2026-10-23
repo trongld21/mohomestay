@@ -371,7 +371,7 @@ transaction; nhận sau nửa đêm không tự đẩy giờ trả sang thêm m�
 ## Lịch theo giờ, giữ căn và trả phòng
 
 - Màn nhân viên: `/admin/availability`. Cấp quyền **Tìm phòng trống** và từng quyền khóa khách quá giờ, giữ khung giờ báo giá, xác nhận trả phòng/QR trong trang phân quyền.
-- Chi tiết phòng có ma trận 30 phút; bấm ô xem khoảng bận chính xác. Dữ liệu công khai không chứa mã đơn, tên khách hay ghi chú nhân viên.
+- Chi tiết phòng có ma trận 1 giờ; bấm ô xem khoảng bận chính xác. Dữ liệu công khai không chứa mã đơn, tên khách hay ghi chú nhân viên.
 - Giữ báo giá khóa đúng khung giờ được chọn trong 1 giờ kể từ lúc thao tác, tự hết hạn mà không cần cron; nhân viên có quyền được mở sớm.
 - Dọn phòng: chặn 1 giờ sau giờ checkout dự kiến; khi nhân viên xác nhận trả phòng, dùng giờ trả thực tế. Đặt mới, tạo đơn thủ công, nhận sớm và callback thanh toán đều kiểm tra lại trên server.
 - Đến giờ checkout chỉ đánh dấu quá giờ, không coi khách đã rời phòng. Nhân viên kiểm tra, khóa khẩn cấp nếu khách còn ở, và xác nhận trả khi khách rời.

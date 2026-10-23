@@ -66,7 +66,7 @@
         let returnFocus = null;
         dateInput.value = localStamp(Date.now()).slice(0, 10);
         if (search) {
-            const rounded = Math.ceil(Date.now() / 1800000) * 1800000;
+            const rounded = Math.ceil(Date.now() / 3600000) * 3600000;
             search.elements.from.value = localStamp(rounded);
             search.elements.to.value = localStamp(rounded + 3 * 3600000);
         }
@@ -126,18 +126,18 @@
                         timeZone: "Asia/Ho_Chi_Minh", weekday: "short", day: "2-digit", month: "2-digit",
                     }).format(new Date(dayStart));
                     rows += `<tr><th class="timeline-row-heading" scope="row">${escape(date)}${staff ? `<span class="mt-1 block text-[#79543e]">${escape(room.name)}</span>` : ""}</th>`;
-                    for (let slot = 0; slot < 48; slot++) {
-                        const a = dayStart + slot * 1800000;
-                        const state = cellState(room, a, a + 1800000, now);
-                        const hour = String(Math.floor(slot / 2)).padStart(2, "0") + (slot % 2 ? ":30" : ":00");
+                    for (let slot = 0; slot < 24; slot++) {
+                        const a = dayStart + slot * 3600000;
+                        const state = cellState(room, a, a + 3600000, now);
+                        const hour = String(slot).padStart(2, "0") + ":00";
                         const label = `${room.name} · ${date} ${hour} · ${labels[state]}`;
                         rows += `<td><button type="button" class="timeline-cell" data-state="${state}" data-slot-start="${a}" data-slot-room="${escape(room.id)}" aria-label="${escape(label)}" title="${escape(label)}">${state === "free" ? "Trống" : state === "booked" ? "Bận" : state === "blocked" ? "Khóa" : state === "cleaning" ? "Dọn" : state === "held" ? "Giữ" : "—"}</button></td>`;
                     }
                     rows += "</tr>";
                 });
             }
-            grid.innerHTML = `<table class="timeline-table"><caption class="sr-only">Lịch phòng theo từng ô 30 phút, giờ Việt Nam. Ô bận có thể chỉ bận một phần, bấm để xem chính xác.</caption>
-                <thead><tr><th class="timeline-row-heading" scope="col">Ngày${staff ? " / Phòng" : ""}</th>${Array.from({ length: 48 }, (_, i) => `<th scope="col">${String(Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}</th>`).join("")}</tr></thead>
+            grid.innerHTML = `<table class="timeline-table"><caption class="sr-only">Lịch phòng theo từng ô 1 giờ, giờ Việt Nam. Ô bận có thể chỉ bận một phần, bấm để xem chính xác.</caption>
+                <thead><tr><th class="timeline-row-heading" scope="col">Ngày${staff ? " / Phòng" : ""}</th>${Array.from({ length: 24 }, (_, i) => `<th scope="col">${String(i).padStart(2, "0")}:00</th>`).join("")}</tr></thead>
                 <tbody>${rows || '<tr><td>Không tìm thấy phòng.</td></tr>'}</tbody></table>`;
         }
 
@@ -241,10 +241,10 @@
             if (slot && snapshot) {
                 const a = Number(slot.dataset.slotStart);
                 const room = snapshot.rooms.find((r) => r.id === slot.dataset.slotRoom);
-                const intervals = room.intervals.filter((i) => overlaps(a, a + 1800000, i));
+                const intervals = room.intervals.filter((i) => overlaps(a, a + 3600000, i));
                 one("[data-timeline-selection]").textContent = `${room.name} · ${dateTime(a)}: `
                     + (intervals.length ? intervals.map((i) => `${i.status === "BLOCKED" ? "Đang khóa" : i.status === "CLEANING" ? "Dọn phòng" : i.status === "HELD" ? "Đang giữ" : "Đã đặt"} ${dateTime(i.start)} – ${dateTime(i.end)}`).join("; ")
-                        : labels[cellState(room, a, a + 1800000, timestamp(snapshot.serverTime))]);
+                        : labels[cellState(room, a, a + 3600000, timestamp(snapshot.serverTime))]);
                 return;
             }
             const release = event.target.closest("[data-release-hold]");
@@ -345,7 +345,7 @@
         daysInput.addEventListener("change", load);
         function scrollToNow() {
             const hour = Number(localStamp(Date.now()).slice(11, 13));
-            one("[data-timeline-scroll]").scrollLeft = Math.max(0, hour * 96 - 96);
+            one("[data-timeline-scroll]").scrollLeft = Math.max(0, hour * 44 - 44);
         }
         one("[data-timeline-now]").addEventListener("click", () => {
             const today = localStamp(Date.now()).slice(0, 10);

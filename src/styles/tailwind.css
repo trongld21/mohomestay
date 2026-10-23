@@ -3060,7 +3060,7 @@ a.timeline-button:hover {
     @apply w-max min-w-full border-separate border-spacing-0 text-xs;
 }
 .timeline-table th {
-    @apply sticky top-0 z-10 border-b border-r border-[#e5dacb] bg-[#f5eee4] px-2 py-3 text-center font-semibold;
+    @apply sticky top-0 z-10 border-b border-r border-[#e5dacb] bg-[#f5eee4] px-1 py-2 text-center font-semibold;
 }
 .timeline-table .timeline-row-heading {
     @apply sticky left-0 z-10 min-w-28 max-w-40 whitespace-normal border-b border-r border-[#e5dacb] bg-[#fffdf9] px-3 py-2 text-left;
@@ -3072,7 +3072,7 @@ a.timeline-button:hover {
     @apply border-b border-r border-[#e5dacb] p-0;
 }
 .timeline-cell {
-    @apply flex min-h-11 w-12 cursor-pointer items-center justify-center p-1 text-[10px] font-medium focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#79543e];
+    @apply flex min-h-11 w-11 cursor-pointer appearance-none items-center justify-center rounded-none border-0 p-1 text-[10px] font-medium focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#79543e];
 }
 .timeline-cell[data-state="free"] {
     @apply bg-emerald-50 text-emerald-800 enabled:hover:bg-emerald-100;
