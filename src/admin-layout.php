@@ -90,31 +90,7 @@ function render_admin_topbar(): void
             <svg class="admin-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
         <div>Mơ Home <span aria-hidden="true">/</span> <strong data-admin-crumb><?= e($title) ?></strong></div>
-        <?php if (!empty(current_account()['root'])): ?>
-            <button class="ml-auto inline-flex min-h-11 shrink-0 items-center rounded-lg border border-[#d2bda7] bg-white px-3 py-2 text-sm text-[#70432c] enabled:hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800" type="button" data-staff-email-open>Gửi email thử</button>
-        <?php endif ?>
         <span class="admin-timezone">Giờ Việt Nam · UTC+7</span>
     </header>
-    <?php if (!empty(current_account()['root'])): ?>
-        <dialog class="timeline-dialog" data-staff-email-dialog aria-labelledby="staff-email-title">
-            <form class="p-5" data-staff-email-form>
-                <div class="flex items-center justify-between gap-4">
-                    <h2 class="text-lg font-semibold" id="staff-email-title">Gửi email thử</h2>
-                    <button class="timeline-button" type="button" data-staff-email-close>Đóng</button>
-                </div>
-                <p class="mt-3 text-sm text-stone-600">Gửi đến mohomestay01@gmail.com bằng dữ liệu minh họa. Không tạo đơn hoặc thay đổi thanh toán.</p>
-                <label class="mt-4 grid gap-2 text-sm">Loại thông báo
-                    <select class="timeline-input" name="event">
-                        <option value="BOOKED">Đặt phòng mới</option>
-                        <option value="CHECKED_OUT">Khách trả phòng</option>
-                        <option value="SURCHARGE">Phụ thu cần thu</option>
-                    </select>
-                </label>
-                <p class="mt-3 text-sm" data-staff-email-status role="status"></p>
-                <button class="timeline-button timeline-primary mt-4" type="submit">Gửi email thử</button>
-            </form>
-        </dialog>
-        <script defer src="<?= e(asset_url('/assets/staff-email-test.js')) ?>"></script>
-    <?php endif ?>
     <?php
 }
