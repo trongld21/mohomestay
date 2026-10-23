@@ -654,12 +654,12 @@
 .room-product-card .room-title h3 { @apply font-sans text-2xl font-bold text-[#171412]; }
 .room-product-card .room-title > span { @apply rounded-full bg-[#f7f4f0] px-3 py-1 text-xs font-semibold text-[#9b8b7d]; }
 .room-product-card .room-body > p { @apply mt-3 text-sm leading-6 text-[#82786f]; }
-.room-product-card .room-tag-chips { @apply my-5 flex flex-wrap gap-2; }
-.room-product-card .room-tag-chips > span { @apply inline-flex items-center gap-2 rounded-lg border-0 bg-[#f0edff] px-3 py-2 text-xs font-medium text-[#5141b2]; }
+.room-product-card .room-tag-chips { @apply my-3 flex flex-wrap gap-1; }
+.room-product-card .room-tag-chips > span { @apply inline-flex items-center gap-1 rounded-md border-0 bg-[#f0edff] px-2 py-1 text-[11px] leading-4 font-medium text-[#5141b2]; }
 #khong-gian .room-product-card .room-tag-chips > span:nth-child(n+5) {
     @apply hidden;
 }
-.room-product-card .room-tag-chips svg { @apply size-4 shrink-0; }
+.room-product-card .room-tag-chips svg { @apply size-3 shrink-0; }
 .room-product-card .room-amenities { @apply mb-6 mt-auto flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#625b55]; }
 .room-product-card .room-amenities > span { @apply inline-flex items-center gap-1.5; }
 .room-product-card .room-amenities svg { @apply size-4 shrink-0; }
@@ -860,9 +860,10 @@
   .contact-widget { @apply hidden; }
 }
 
-/* White background pixels blend away; retain the supplied handwritten logo. */
+/* The source PNG has transparency; avoid browser-dependent blend compositing. */
 .site-header .brand .brand-art {
-  @apply bg-transparent rounded-none mix-blend-multiply brightness-[1.18];
+  @apply bg-transparent rounded-none mix-blend-normal;
+  filter: none;
 }
 .site-footer .brand .brand-art {
   @apply bg-transparent rounded-none mix-blend-screen;
