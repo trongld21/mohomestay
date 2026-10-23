@@ -373,3 +373,5 @@ transaction; nhận sau nửa đêm không tự đẩy giờ trả sang thêm m�
 - Phụ thu: miễn 15 phút, phần còn lại làm tròn giờ lên × 50.000đ. Chốt giờ và số tiền một lần, tạo link QR payOS riêng và nhận webhook để đánh dấu đã thu. Lỗi payOS vẫn giữ khoản phải thu để thử lại.
 - Chạy migration `011_room_operations` và `012_room_quote_holds` trước khi dùng. Không reset dữ liệu. Kiểm tra mới: `php tools/room-operations-test.php`, `php tools/room-operations-db-test.php`, `node tools/room-timeline-test.cjs`.
 - Mã cổng mới không còn vào sớm 1 giờ. Mã TTLock tự sinh offline chỉ chính xác giờ tròn: giờ nhận lẻ được làm tròn lên để không vào sớm (10:30 → 11:00). Có gateway hoạt động thì đặt `TTLOCK_CODE_MODE=CUSTOM` để mã mới kích hoạt đúng phút; chế độ GENERATED dùng khi không có gateway; mã đã cấp trước thay đổi vẫn giữ thời hạn vật lý cũ.
+
+Admin có thể tạo đơn theo **Thời gian tùy chọn** hoặc theo gói. Với tùy chọn, chọn **Nhận phòng ngay bây giờ** hoặc nhập giờ nhận, chọn riêng ngày/giờ trả (kể cả nhiều ngày) và nhập giá chốt. Đơn tùy chọn không yêu cầu phòng có gói; vẫn kiểm tra sức chứa, trùng lịch, khóa căn và giờ dọn phòng trên server.

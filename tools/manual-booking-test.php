@@ -64,6 +64,42 @@ try {
 } catch (BookingException $error) {
     manual_expect(str_contains($error->getMessage(), 'email'), 'Optional admin email must not loosen public validation.');
 }
+$customInput = array_replace($input, [
+    'timingMode' => 'CUSTOM', 'packageId' => '', 'agreedPrice' => 555000,
+    'startNow' => '1',
+    'endDate' => (new DateTimeImmutable('tomorrow'))->format('Y-m-d'),
+    'endTime' => '17:00',
+]);
+$custom = quote_manual_booking($room, $customInput);
+manual_expect(quote_manual_booking(array_replace($room, ['packages' => []]), $customInput)['total'] === 555000, 'Custom stay must work even when no packages exist.');
+manual_expect($custom['packageId'] === null && $custom['stayPackage'] === 'CUSTOM', 'Custom stays must not depend on a package foreign key.');
+manual_expect($custom['end']->format('Y-m-d H:i') === $customInput['endDate'] . ' 17:00', 'Admin must choose tomorrow at 17:00 independently of configured duration.');
+manual_expect(abs($custom['start']->getTimestamp() - time()) < 2 && $custom['total'] === 555000, 'Now means the server creation time and uses the agreed price.');
+$explicit = quote_manual_booking($room, array_replace($customInput, [
+    'startNow' => false, 'date' => $input['date'], 'time' => '10:15',
+    'endDate' => (new DateTimeImmutable($input['date']))->modify('+2 days')->format('Y-m-d'),
+    'endTime' => '17:00',
+]));
+manual_expect($explicit['start']->format('H:i') === '10:15' && $explicit['packageDuration'] === 3285, 'Explicit multi-day custom times must be retained.');
+foreach ([
+    ['endDate' => '2020-01-01'],
+    ['endDate' => '2027-02-30'],
+    ['endTime' => '25:00'],
+    ['timingMode' => 'INVALID'],
+] as $bad) {
+    try {
+        quote_manual_booking($room, array_replace($customInput, $bad));
+        throw new RuntimeException('Invalid custom stay accepted.');
+    } catch (BookingException) {
+    }
+}
+$withoutPrice = $customInput;
+unset($withoutPrice['agreedPrice']);
+try {
+    quote_manual_booking($room, $withoutPrice);
+    throw new RuntimeException('Custom stay without agreed price accepted.');
+} catch (BookingException) {
+}
 $room['status'] = 'HIDDEN';
 try {
     quote_manual_booking($room, $input);
@@ -77,7 +113,7 @@ require_once APP_ROOT . '/src/manual-booking-view.php';
 ob_start();
 render_manual_booking_dialog();
 $form = (string)ob_get_clean();
-foreach (['<dialog', 'data-manual-booking-form', 'name="roomId"', 'name="packageId"', 'name="guestPhone"', 'name="bookingSource"', 'value="UNPAID"', 'data-manual-error', 'data-manual-discard'] as $contract) {
+foreach (['<dialog', 'data-manual-booking-form', 'name="roomId"', 'name="packageId"', 'name="timingMode"', 'name="startNow"', 'name="endDate"', 'name="endHour"', 'name="guestPhone"', 'name="bookingSource"', 'value="UNPAID"', 'data-manual-error', 'data-manual-discard'] as $contract) {
     manual_expect(str_contains($form, $contract), 'Manual booking form is missing: ' . $contract);
 }
 manual_expect(str_contains($form, 'name="arrivalHour"') && str_contains($form, 'name="arrivalMinute"'), 'Arrival time must have separate hour and minute controls.');

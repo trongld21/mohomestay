@@ -18,7 +18,13 @@ function quote_manual_booking(array $room, array $input): array
     if (!preg_match('/^[a-f0-9]{32}$/', $requestId)) {
         throw new BookingException('Mã yêu cầu tạo đơn không hợp lệ. Vui lòng mở lại form.', 422);
     }
-    $quote = quote_booking_for_room($room, $input, true);
+    $mode = (string)($input['timingMode'] ?? 'PACKAGE');
+    if (!in_array($mode, ['PACKAGE', 'CUSTOM'], true)) {
+        throw new BookingException('Chọn cách đặt theo gói hoặc thời gian tùy chọn.', 422);
+    }
+    $quote = $mode === 'CUSTOM'
+        ? quote_manual_custom_booking($room, $input)
+        : quote_booking_for_room($room, $input, true);
     if (array_key_exists('agreedPrice', $input)) {
         $price = filter_var($input['agreedPrice'], FILTER_VALIDATE_INT);
         if ((!is_int($input['agreedPrice']) && !is_string($input['agreedPrice']))
@@ -28,6 +34,48 @@ function quote_manual_booking(array $room, array $input): array
         $quote['total'] = (int)$price;
     }
     return $quote + compact('source', 'paymentStatus', 'paymentMethod', 'requestId');
+}
+
+function quote_manual_custom_booking(array $room, array $input, ?DateTimeImmutable $now = null): array
+{
+    assert_room_bookable($room);
+    $zone = new DateTimeZone('Asia/Ho_Chi_Minh');
+    $now ??= new DateTimeImmutable('now', $zone);
+    $parse = static function (string $value) use ($zone): DateTimeImmutable {
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d\TH:i', $value, $zone);
+        if (!$date || $date->format('Y-m-d\TH:i') !== $value) {
+            throw new BookingException('Ngày giờ nhận hoặc trả phòng không hợp lệ.', 422);
+        }
+        return $date;
+    };
+    $startNow = in_array($input['startNow'] ?? false, [true, '1', 'on'], true);
+    $start = $startNow ? $now : $parse((string)($input['date'] ?? '') . 'T' . (string)($input['time'] ?? ''));
+    if (!$startNow && $start < $now) {
+        if ($start->format('Y-m-d H:i') !== $now->format('Y-m-d H:i')) {
+            throw new BookingException('Giờ nhận phòng đã qua. Chọn Nhận phòng ngay hoặc một giờ khác.', 422);
+        }
+        $start = $now;
+    }
+    $end = $parse((string)($input['endDate'] ?? '') . 'T' . (string)($input['endTime'] ?? ''));
+    if ($end <= $start) throw new BookingException('Giờ trả phòng phải sau giờ nhận phòng.', 422);
+    if ($start > $now->modify('+366 days')) throw new BookingException('Chỉ nhận đặt phòng trong vòng 12 tháng.', 422);
+    if (!array_key_exists('agreedPrice', $input)) {
+        throw new BookingException('Nhập giá chốt với khách cho khung giờ tùy chọn.', 422);
+    }
+    return [
+        'room' => $room,
+        'start' => $start,
+        'end' => $end,
+        'stayPackage' => 'CUSTOM',
+        'packageId' => null,
+        'packageName' => 'Thời gian tùy chọn',
+        'packageMode' => 'DURATION',
+        'packageDuration' => (int)ceil(($end->getTimestamp() - $start->getTimestamp()) / 60),
+        'packageCheckIn' => null,
+        'packageCheckOut' => null,
+        'packagePrice' => null,
+        'total' => 0,
+    ] + booking_guest_details($room, $input, true);
 }
 
 function create_manual_booking(PDO $pdo, array $input, bool $test = false): array
@@ -66,7 +114,7 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false): arra
             'room_id' => $room['id'],
             'check_in' => $start,
             'check_out' => $end,
-            'stay_package' => $quote['packageId'],
+            'stay_package' => $quote['stayPackage'] ?? $quote['packageId'],
             'package_id' => $quote['packageId'],
             'package_name_snapshot' => $quote['packageName'],
             'package_mode_snapshot' => $quote['packageMode'],

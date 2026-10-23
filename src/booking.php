@@ -106,6 +106,13 @@ function quote_booking_for_room(array $room, array $input, bool $manual = false)
     [$start,$end] = bookable_package_window($package, (string)($input['date'] ?? ''), (string)($input['time'] ?? ''));
     $now = new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
     if ($start > $now->modify('+366 days')) throw new BookingException('Chỉ nhận đặt phòng trong vòng 12 tháng.');
+    $guestDetails = booking_guest_details($room, $input, $manual);
+    return compact('room', 'package', 'start', 'end') + $guestDetails
+        + booking_package_snapshot($package) + ['total'=>(int)$package['price'], 'requestedDate'=>(string)($input['date'] ?? '')];
+}
+
+function booking_guest_details(array $room, array $input, bool $manual): array
+{
     $guests = filter_var($input['numberOfGuests'] ?? null, FILTER_VALIDATE_INT);
     if (!$guests || $guests < 1 || $guests > (int)$room['maxGuests']) throw new BookingException('Số khách vượt quá sức chứa của phòng.');
     $name = trim((string)($input['guestName'] ?? ''));
@@ -117,8 +124,7 @@ function quote_booking_for_room(array $room, array $input, bool $manual = false)
     if ((!$manual || $email !== '') && (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254)) throw new BookingException('Vui lòng nhập email hợp lệ để nhận xác nhận đặt phòng.');
     if (mb_strlen($note) > 1000) throw new BookingException('Lời nhắn tối đa 1.000 ký tự.');
     if (!$manual && ($input['acceptTerms'] ?? false) !== true) throw new BookingException('Vui lòng đồng ý điều kiện đặt phòng.');
-    return compact('room','package','start','end','guests','name','phone','email','note')
-        + booking_package_snapshot($package) + ['total'=>(int)$package['price'], 'requestedDate'=>(string)($input['date'] ?? '')];
+    return compact('guests', 'name', 'phone', 'email', 'note');
 }
 
 function mysql_datetime(DateTimeInterface $date): string

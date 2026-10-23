@@ -49,6 +49,33 @@
         timePicker.set(value);
     }
 
+    const isCustom = () => fields.timingMode.value === "CUSTOM";
+    const endTime = () => String(fields.endHour.value).padStart(2, "0") + ":" + String(fields.endMinute.value).padStart(2, "0");
+
+    function updateMode() {
+        const custom = isCustom();
+        dialog.querySelector("[data-manual-package-field]").hidden = custom;
+        dialog.querySelector("[data-manual-now-field]").hidden = !custom;
+        dialog.querySelector("[data-manual-custom-end]").hidden = !custom;
+        fields.packageId.required = !custom;
+        fields.packageId.disabled = custom;
+        fields.startNow.disabled = !custom;
+        for (const name of ["endDate", "endHour", "endMinute"]) {
+            fields[name].disabled = !custom;
+            fields[name].required = custom;
+        }
+        dialog.querySelector("#manual-date-trigger").disabled = custom && fields.startNow.checked;
+    }
+
+    function customWindow() {
+        const now = new Date();
+        const start = fields.startNow.checked ? now : new Date(fields.date.value + "T" + fields.time.value + ":00+07:00");
+        const end = new Date(fields.endDate.value + "T" + endTime() + ":00+07:00");
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return null;
+        if (!fields.startNow.checked && start.getTime() < now.getTime() - 60000) return null;
+        return { start, end, fixed: true };
+    }
+
     function updatePackages() {
         const room = selectedRoom();
         const packages = MoBookingSlots.configuredSlots(room);
@@ -57,7 +84,7 @@
             : '<option value="">Phòng chưa có gói đang bật</option>';
         fields.numberOfGuests.max = room?.maxGuests || 50;
         fields.numberOfGuests.value = Math.min(Number(fields.numberOfGuests.value) || 1, room?.maxGuests || 1);
-        fields.agreedPrice.value = selectedPackage()?.price ?? "";
+        fields.agreedPrice.value = isCustom() ? "" : (selectedPackage()?.price ?? "");
     }
 
     async function updateAvailability() {
@@ -66,18 +93,43 @@
         submit.disabled = true;
         const room = selectedRoom();
         const slot = selectedPackage();
-        timePicker.setDisabled(slot?.mode === "FIXED_TIME");
-        if (slot?.mode === "FIXED_TIME") setArrivalTime(slot.checkInTime);
-        const window = MoBookingSlots.slotWindow(slot, fields.date.value, fields.time.value);
+        updateMode();
+        const custom = isCustom();
+        if (custom && fields.startNow.checked) {
+            const now = new Date();
+            fields.date.value = new Date(now.getTime() + 7 * 3600000).toISOString().slice(0, 10);
+            datePicker.refresh();
+            setArrivalTime(new Intl.DateTimeFormat("en-GB", {
+                timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+            }).format(now));
+        }
+        timePicker.setDisabled(custom ? fields.startNow.checked : slot?.mode === "FIXED_TIME");
+        if (!custom && slot?.mode === "FIXED_TIME") setArrivalTime(slot.checkInTime);
+        const window = custom ? customWindow() : MoBookingSlots.slotWindow(slot, fields.date.value, fields.time.value);
         summary.dataset.state = "loading";
         if (!room || !window) {
-            summary.textContent = "Chọn phòng, gói lưu trú và thời gian nhận phòng.";
+            summary.textContent = custom ? "Chọn giờ nhận hợp lệ và giờ trả sau giờ nhận phòng." : "Chọn phòng, gói lưu trú và thời gian nhận phòng.";
             return;
         }
-        const details = `<strong>${escape(room.name)} · ${escape(slot.name)}</strong><br>Nhận: ${dateTime(window.start)} → Trả: ${dateTime(window.end)}<br>Tổng tiền: <strong data-manual-total>${cash(fields.agreedPrice.value)}</strong>`;
+        const details = `<strong>${escape(room.name)} · ${escape(custom ? "Thời gian tùy chọn" : slot.name)}</strong><br>Nhận: ${dateTime(window.start)} → Trả: ${dateTime(window.end)}<br>Tổng tiền: <strong data-manual-total>${(fields.agreedPrice.value === "" ? "Chưa nhập giá" : cash(fields.agreedPrice.value))}</strong>`;
         summary.innerHTML = details + "<br>Đang kiểm tra lịch phòng…";
         try {
-            const data = await request("/api/availability?date=" + encodeURIComponent(fields.date.value));
+            const startDate = new Date(window.start.getTime() + 7 * 3600000).toISOString().slice(0, 10);
+            const rangeStart = new Date(startDate + "T00:00:00+07:00");
+            const days = Math.max(1, Math.ceil((window.end.getTime() + 3600000 - rangeStart.getTime()) / 86400000));
+            let data = null;
+            for (let offset = 0; offset < days; offset += 62) {
+                const date = new Date(rangeStart.getTime() + offset * 86400000 + 7 * 3600000).toISOString().slice(0, 10);
+                const part = await request("/api/availability?date=" + encodeURIComponent(date) + "&days=" + Math.min(62, days - offset));
+                if (current !== revision || !dialog.open) return;
+                if (!part.connected) throw new Error("Chưa kết nối được lịch phòng.");
+                if (!data) data = part;
+                else data.rooms.forEach((item) => {
+                    const next = part.rooms.find((r) => r.id === item.id);
+                    if (!next?.active) item.active = false;
+                    item.intervals.push(...(next?.intervals || []));
+                });
+            }
             if (current !== revision || !dialog.open) return;
             const inventory = data.rooms.find((item) => item.id === room.id);
             if (!data.connected || !inventory?.active) throw new Error("Phòng hiện không nhận đặt hoặc chưa kết nối được lịch.");
@@ -119,6 +171,10 @@
         requestId = [...crypto.getRandomValues(new Uint8Array(16))]
             .map((value) => value.toString(16).padStart(2, "0")).join("");
         const now = new Date();
+        const tomorrow = new Date(now.getTime() + 7 * 3600000 + 86400000).toISOString().slice(0, 10);
+        fields.endDate.value = tomorrow;
+        fields.endHour.value = "17";
+        fields.endMinute.value = "0";
         fields.date.value = new Intl.DateTimeFormat("en-CA", {
             timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
         }).format(now);
@@ -129,7 +185,7 @@
         datePicker.refresh();
         setArrivalTime(new Intl.DateTimeFormat("en-GB", {
             timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
-        }).format(new Date(now.getTime() + 3600000)));
+        }).format(now));
         fields.roomId.innerHTML = '<option value="">Đang tải phòng…</option>';
         summary.textContent = "Đang tải phòng và các gói lưu trú…";
         summary.dataset.state = "loading";
@@ -169,12 +225,14 @@
     });
     form.addEventListener("change", (event) => {
         if (event.target.name === "roomId") updatePackages();
-        if (event.target.name === "packageId") fields.agreedPrice.value = selectedPackage()?.price ?? "";
+        if (event.target.name === "packageId" || event.target.name === "timingMode") {
+            fields.agreedPrice.value = isCustom() ? "" : (selectedPackage()?.price ?? "");
+        }
         if (["arrivalHour", "arrivalMinute"].includes(event.target.name)) {
             setArrivalTime(`${fields.arrivalHour.value}:${fields.arrivalMinute.value}`);
             updateAvailability();
         }
-        if (["roomId", "packageId", "date", "time"].includes(event.target.name)) updateAvailability();
+        if (["roomId", "packageId", "date", "time", "timingMode", "startNow", "endDate", "endHour", "endMinute"].includes(event.target.name)) updateAvailability();
     });
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -182,6 +240,9 @@
         const payload = Object.fromEntries(new FormData(form));
         payload.numberOfGuests = Number(payload.numberOfGuests);
         payload.time = fields.time.value;
+        if (isCustom()) payload.endTime = endTime();
+        delete payload.endHour;
+        delete payload.endMinute;
         delete payload.arrivalHour;
         delete payload.arrivalMinute;
         payload.requestId = requestId;

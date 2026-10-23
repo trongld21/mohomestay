@@ -73,13 +73,13 @@ try {
     $repeat = create_manual_booking($pdo, $base);
     manual_db_expect($repeat['id'] === $booking['id'], 'Retries must return the same booking.');
     manual_db_conflict(fn() => create_manual_booking($pdo, array_replace($base, ['requestId' => uuid(), 'time' => '11:00'])), 'Overlapping bookings must be rejected.');
-    $adjacent = create_manual_booking($pdo, array_replace($base, ['requestId' => uuid(), 'time' => '13:00']));
-    manual_db_expect($adjacent['check_in'] === $booking['check_out'], 'Adjacent stays must be allowed.');
+    $adjacent = create_manual_booking($pdo, array_replace($base, ['requestId' => uuid(), 'time' => '14:00']));
+    manual_db_expect(strtotime($adjacent['check_in'] . ' UTC') === strtotime($booking['check_out'] . ' UTC') + 3600, 'Stays one hour after checkout must be allowed for cleaning.');
 
     $availability = json_decode((string)file_get_contents('http://localhost:8080/api/availability?date=' . $date), true, 512, JSON_THROW_ON_ERROR);
     manual_db_expect(($availability['connected'] ?? false) === true, 'Availability must use the actual database.');
     $inventory = array_values(array_filter($availability['rooms'], fn($item) => $item['id'] === $room['id']));
-    manual_db_expect(count($inventory[0]['intervals'] ?? []) === 2, 'Manual bookings must immediately block public availability.');
+    manual_db_expect(count($inventory[0]['intervals'] ?? []) === 4, 'Manual bookings must immediately block public availability.');
 
     confirm_manual_payment($pdo, $booking['id'], 'bank_transfer');
     confirm_manual_payment($pdo, $booking['id'], 'bank_transfer');
@@ -89,7 +89,7 @@ try {
     manual_db_expect(count($rows) === 1 && (int)$rows[0]['amount'] === 123000 && $rows[0]['status'] === 'PAID', 'Repeated payment confirmation must record money once.');
     $pdo->prepare("UPDATE bookings SET status='CANCELLED' WHERE id=?")->execute([$adjacent['id']]);
     manual_db_conflict(fn() => confirm_manual_payment($pdo, $adjacent['id'], 'cash'), 'Cancelled bookings must reject payment confirmation.');
-    $paid = create_manual_booking($pdo, array_replace($base, ['requestId' => uuid(), 'time' => '13:00', 'paymentStatus' => 'PAID', 'agreedPrice' => 99000]));
+    $paid = create_manual_booking($pdo, array_replace($base, ['requestId' => uuid(), 'time' => '14:00', 'paymentStatus' => 'PAID', 'agreedPrice' => 99000]));
     manual_db_expect($paid['payment_status'] === 'PAID', 'Paid bookings must be supported at creation.');
     manual_db_expect((int)$paid['total_price'] === 99000 && (int)$paid['package_price_snapshot'] === 123000, 'Agreed totals must persist without changing the configured package price snapshot.');
     $payments->execute([$paid['id']]);
