@@ -68,6 +68,7 @@
     }
 
     function customWindow() {
+        if (!fields.endDate.value || fields.endHour.value === "" || fields.endMinute.value === "") return null;
         const now = new Date();
         const start = fields.startNow.checked ? now : new Date(fields.date.value + "T" + fields.time.value + ":00+07:00");
         const end = new Date(fields.endDate.value + "T" + endTime() + ":00+07:00");
@@ -171,10 +172,11 @@
         requestId = [...crypto.getRandomValues(new Uint8Array(16))]
             .map((value) => value.toString(16).padStart(2, "0")).join("");
         const now = new Date();
-        const tomorrow = new Date(now.getTime() + 7 * 3600000 + 86400000).toISOString().slice(0, 10);
-        fields.endDate.value = tomorrow;
-        fields.endHour.value = "17";
-        fields.endMinute.value = "0";
+        fields.timingMode.value = "PACKAGE";
+        fields.startNow.checked = false;
+        fields.endDate.value = "";
+        fields.endHour.value = "";
+        fields.endMinute.value = "";
         fields.date.value = new Intl.DateTimeFormat("en-CA", {
             timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
         }).format(now);
@@ -225,6 +227,20 @@
     });
     form.addEventListener("change", (event) => {
         if (event.target.name === "roomId") updatePackages();
+        if (event.target.name === "timingMode" && isCustom()) {
+            fields.startNow.checked = false;
+            fields.date.value = "";
+            datePicker.refresh();
+            setArrivalTime("00:00");
+            fields.time.value = "";
+            fields.arrivalHour.value = "";
+            fields.arrivalMinute.value = "";
+            dialog.querySelector("[data-time-hour-label]").textContent = "Chọn giờ";
+            dialog.querySelector("[data-time-minute-label]").textContent = "Chọn phút";
+            fields.endDate.value = "";
+            fields.endHour.value = "";
+            fields.endMinute.value = "";
+        }
         if (event.target.name === "packageId" || event.target.name === "timingMode") {
             fields.agreedPrice.value = isCustom() ? "" : (selectedPackage()?.price ?? "");
         }

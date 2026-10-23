@@ -20,15 +20,15 @@ function render_manual_booking_dialog(): void
                 </label>
                 <label class="field">Cách chọn thời gian *
                     <select name="timingMode" required data-native-select>
+                        <option value="PACKAGE" selected>Theo gói lưu trú</option>
                         <option value="CUSTOM">Thời gian tùy chọn</option>
-                        <option value="PACKAGE">Theo gói lưu trú</option>
                     </select>
                 </label>
                 <label class="field sm:col-span-2" data-manual-package-field hidden>Gói lưu trú *
                     <select name="packageId" required data-native-select><option value="">Chọn phòng trước</option></select>
                 </label>
                 <label class="flex min-h-11 items-center gap-3 rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm sm:col-span-2" data-manual-now-field>
-                    <input class="size-5 accent-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800" type="checkbox" name="startNow" value="1" checked>
+                    <input class="size-5 accent-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800" type="checkbox" name="startNow" value="1">
                     Nhận phòng ngay bây giờ
                 </label>
                 <div class="field manual-date-field">
@@ -78,11 +78,11 @@ function render_manual_booking_dialog(): void
                         <legend class="mb-2 text-sm">Giờ trả phòng · 24 giờ (Việt Nam) *</legend>
                         <div class="flex items-center gap-2">
                             <label class="grid flex-1 gap-1 text-xs">Giờ
-                                <input class="min-h-11 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800" name="endHour" type="number" min="0" max="23" step="1" value="17" required>
+                                <input class="min-h-11 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800" name="endHour" type="number" min="0" max="23" step="1" required>
                             </label>
                             <span class="pt-4" aria-hidden="true">:</span>
                             <label class="grid flex-1 gap-1 text-xs">Phút
-                                <input class="min-h-11 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800" name="endMinute" type="number" min="0" max="59" step="1" value="0" required>
+                                <input class="min-h-11 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800" name="endMinute" type="number" min="0" max="59" step="1" required>
                             </label>
                         </div>
                     </fieldset>
