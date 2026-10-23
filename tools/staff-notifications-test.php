@@ -40,6 +40,12 @@ staff_expect(dispatch_staff_notifications($pdo, null, $transport) === 3, 'All th
 staff_expect(dispatch_staff_notifications($pdo, null, $transport) === 0, 'Sent events must not be sent again.');
 foreach ($sent as $mail) {
     staff_expect($mail['recipient'] === 'mohomestay01@gmail.com', 'Use the explicitly requested staff mailbox.');
+    staff_expect(($mail['headers']['MIME-Version'] ?? '') === '1.0', 'Pass MIME version as a named PHP header.');
+    staff_expect(($mail['headers']['Content-Type'] ?? '') === 'text/html; charset=UTF-8', 'Email must be delivered as HTML, not plain source.');
+    staff_expect(str_contains($mail['headers']['From'] ?? '', '<booking@example.test>'), 'Set the configured sender explicitly.');
+    foreach ($mail['headers'] as $name => $value) {
+        staff_expect(is_string($name) && !str_contains($value, "\r") && !str_contains($value, "\n"), 'Headers must be named fields without embedded line breaks.');
+    }
     staff_expect(str_contains($mail['html'], '&lt;b&gt;Bích&lt;/b&gt;'), 'Escape customer content.');
     staff_expect(str_contains($mail['html'], '10:00, 24/10/2026'), 'Display Vietnam timezone.');
     staff_expect(!str_contains($mail['html'], 'secret-token') && !str_contains($mail['html'], 'secret-pin'), 'Exclude access credentials.');

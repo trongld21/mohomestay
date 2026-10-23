@@ -81,13 +81,13 @@ function send_staff_notification_message(array $message, string $recipient, ?cal
         throw new BookingException('Hosting chưa bật hàm PHP mail().', 503);
     }
     $headers = [
-        'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=UTF-8',
-        'From: Mơ Home <' . $from . '>',
-        'Message-ID: <mo-staff-' . ($messageId ?? bin2hex(random_bytes(16))) . '@' . substr(strrchr($from, '@'), 1) . '>',
+        'MIME-Version' => '1.0',
+        'Content-Type' => 'text/html; charset=UTF-8',
+        'Content-Transfer-Encoding' => '8bit',
+        'From' => mb_encode_mimeheader('Mơ Home', 'UTF-8') . ' <' . $from . '>',
+        'Message-ID' => '<mo-staff-' . ($messageId ?? bin2hex(random_bytes(16))) . '@' . substr(strrchr($from, '@'), 1) . '>',
     ];
-    $send = $transport ?? static fn($to, $subject, $html, $headers): bool => mail($to, $subject, $html, implode("
-", $headers));
+    $send = $transport ?? static fn($to, $subject, $html, $headers): bool => mail($to, $subject, $html, $headers);
     return (bool)$send($recipient, mb_encode_mimeheader($message['subject'], 'UTF-8'), $message['html'], $headers);
 }
 
