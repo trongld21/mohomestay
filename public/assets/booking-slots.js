@@ -21,6 +21,13 @@
         if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
         if (end <= start) end.setTime(end.getTime() + 86400000);
         const fixed = slot.mode === 'FIXED_TIME';
+        const today = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
+        }).format(now);
+        if (fixed && slot.checkOutTime < slot.checkInTime && date === today && now.getTime() < end.getTime() - 86400000) {
+            start.setTime(start.getTime() - 86400000);
+            end.setTime(end.getTime() - 86400000);
+        }
         if (fixed && start <= now && end > now) start.setTime(Math.ceil(now.getTime() / 60000) * 60000);
         return { start, end, fixed };
     }

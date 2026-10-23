@@ -78,6 +78,15 @@ function bookable_package_window(array $package, string $date, string $time, ?Da
 {
     [$start, $end] = package_window($package, $date, $time);
     $now ??= new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
+    $localNow = $now->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'));
+    if (($package['mode'] ?? '') === 'FIXED_TIME'
+        && $package['checkOutTime'] < $package['checkInTime']
+        && $date === $localNow->format('Y-m-d')
+        && $localNow < $end->modify('-1 day')) {
+        // Before morning checkout, today also belongs to the ongoing overnight stay.
+        $start = $start->modify('-1 day');
+        $end = $end->modify('-1 day');
+    }
     if (($package['mode'] ?? '') === 'FIXED_TIME' && $start <= $now && $end > $now) {
         // Late arrivals keep the original checkout and full package price.
         $start = $now->setTimestamp((int)(ceil($now->getTimestamp() / 60) * 60));
@@ -107,8 +116,12 @@ function quote_booking_for_room(array $room, array $input, bool $manual = false)
     $now = new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
     if ($start > $now->modify('+366 days')) throw new BookingException('Chỉ nhận đặt phòng trong vòng 12 tháng.');
     $guestDetails = booking_guest_details($room, $input, $manual);
+    $requestedDate = ($package['mode'] ?? '') === 'FIXED_TIME'
+        && $package['checkOutTime'] < $package['checkInTime']
+        ? $end->modify('-1 day')->format('Y-m-d')
+        : (string)($input['date'] ?? '');
     return compact('room', 'package', 'start', 'end') + $guestDetails
-        + booking_package_snapshot($package) + ['total'=>(int)$package['price'], 'requestedDate'=>(string)($input['date'] ?? '')];
+        + booking_package_snapshot($package) + ['total'=>(int)$package['price'], 'requestedDate'=>$requestedDate];
 }
 
 function booking_guest_details(array $room, array $input, bool $manual): array

@@ -2399,7 +2399,10 @@ html:has(> body.admin-page) {
     }
 }
 :is(.admin-page, #booking-app, #calendar-app) .manual-time-popover [role=option] {
-    @apply flex min-h-7 cursor-pointer items-center justify-center gap-1 rounded-md border border-[#eee7de] bg-[#faf7f2] px-1 py-1 text-xs leading-4 tabular-nums text-[#5c5148] hover:border-[#b59b84] hover:bg-[#efe5d8] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#79543e];
+    @apply flex min-h-7 cursor-pointer items-center justify-center gap-1 rounded-md border border-[#eee7de] bg-[#faf7f2] px-1 py-1 text-xs leading-4 tabular-nums text-[#5c5148] enabled:hover:border-[#b59b84] enabled:hover:bg-[#efe5d8] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#79543e];
+}
+:is(.admin-page, #booking-app, #calendar-app) .manual-time-popover [role=option]:disabled {
+    @apply cursor-not-allowed border-[#eee7de] bg-[#f1ece5] text-[#85786b] line-through;
 }
 :is(.admin-page, #booking-app, #calendar-app) .manual-time-popover [aria-selected=true] {
     @apply border-[#79543e] bg-[#79543e] font-semibold text-white;

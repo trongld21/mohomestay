@@ -20,6 +20,16 @@ function room_throws(callable $callback, string $contains, string $message): voi
 }
 
 $latePackage = ['mode' => 'FIXED_TIME', 'checkInTime' => '21:00', 'checkOutTime' => '09:00'];
+$earlyNow = new DateTimeImmutable('2026-10-24T00:50:25+07:00');
+[$remainingStart, $remainingEnd] = bookable_package_window($latePackage, '2026-10-24', '', $earlyNow);
+room_check($remainingStart->format('Y-m-d H:i:s') === '2026-10-24 00:51:00', 'Today after midnight starts at the next full minute');
+room_check($remainingEnd->format('Y-m-d H:i:s') === '2026-10-24 09:00:00', 'Today after midnight checks out this morning');
+[$futureNightStart, $futureNightEnd] = bookable_package_window($latePackage, '2026-10-25', '', $earlyNow);
+room_check($futureNightStart->format('Y-m-d H:i:s') === '2026-10-25 21:00:00', 'Future night keeps its scheduled evening');
+[$nextNightStart, $nextNightEnd] = bookable_package_window($latePackage, '2026-10-24', '', new DateTimeImmutable('2026-10-24T09:00:00+07:00'));
+room_check($nextNightStart->format('Y-m-d H:i:s') === '2026-10-24 21:00:00', 'At checkout today refers to tonight again');
+room_throws(fn() => bookable_package_window($latePackage, '2026-10-24', '', new DateTimeImmutable('2026-10-24T08:59:30+07:00')), 'hết giờ', 'Do not offer a remaining night with no full minute left');
+room_throws(fn() => bookable_package_window($latePackage, '2026-10-23', '', new DateTimeImmutable('2026-10-24T09:00:00+07:00')), 'hết giờ', 'Expired original night must not move to the next evening on recheck');
 $lateNow = new DateTimeImmutable('2027-01-15 21:30:25', new DateTimeZone('Asia/Ho_Chi_Minh'));
 [$lateStart, $lateEnd] = bookable_package_window($latePackage, '2027-01-15', '', $lateNow);
 room_check($lateStart->format('Y-m-d H:i:s') === '2027-01-15 21:31:00', 'Late fixed arrival starts at next full minute');
