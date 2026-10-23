@@ -46,6 +46,33 @@ function render_contact_widget(): void
     </details><?php
             }
 
+function render_google_analytics(string $path, string $host): void
+{
+    // Track public pages only. Payment URLs can contain booking credentials.
+    if (!in_array(strtolower($host), ['mohomestay.vn', 'www.mohomestay.vn'], true)
+        || !preg_match('#^/(?:rooms(?:/[a-z0-9-]+)?|calendar|bookings)?/?$#', $path)) {
+        return;
+    }
+    ?>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4QZJV3WY0J"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        let analyticsReferrer = '';
+        try {
+            const referrer = new URL(document.referrer);
+            analyticsReferrer = referrer.origin + referrer.pathname;
+        } catch {}
+        gtag('config', 'G-4QZJV3WY0J', {
+            page_location: window.location.origin + window.location.pathname,
+            page_referrer: analyticsReferrer
+        });
+    </script>
+    <?php
+}
+
             function render_page(string $title, callable $content, array $options = []): never
             {
                 $fullTitle = e($title) . ' | Mơ Home';
@@ -59,6 +86,7 @@ function render_contact_widget(): void
 
     <head>
         <meta charset="utf-8">
+        <?php render_google_analytics($adminPath, $_SERVER['HTTP_HOST'] ?? ''); ?>
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <title><?= $fullTitle ?></title>
         <meta name="description" content="Mơ Home — homestay riêng tư tại Ninh Kiều, Cần Thơ.">
