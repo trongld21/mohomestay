@@ -368,6 +368,23 @@ Gói DURATION vẫn yêu cầu giờ nhận trong tương lai để giữ đủ 
 Ngày gốc của gói qua đêm được giữ khi máy chủ kiểm tra lại giá và lịch trong
 transaction; nhận sau nửa đêm không tự đẩy giờ trả sang thêm một ngày.
 
+### Superadmin đổi phòng và sửa lịch lưu trú
+
+Trong **Tổng quan & đặt phòng**, superadmin chọn **Đổi phòng / sửa lịch** ở đơn
+còn hiệu lực, chọn phòng và nhập ngày/giờ nhận, trả cùng lý do. Cho phép sửa về
+quá khứ theo giờ Việt Nam. Ngày tạo đơn, gói/giá đã chốt và thanh toán giữ nguyên.
+Nhân viên không được gọi API này dù đã có quyền cập nhật đơn thông thường.
+
+Thao tác dùng chung kiểm tra tồn phòng với ma trận **Tìm phòng trống**, gồm lịch
+khách, 1 giờ dọn phòng, khóa phòng và giữ báo giá. Sau khi lưu, ma trận giải phóng
+phòng cũ và tính lại lịch cùng thời gian dọn ở phòng mới. Lý do và dữ liệu trước/sau
+được ghi trong `booking_stay_changes`; chạy migration `013_booking_stay_changes`
+bằng `php tools/migrate.php` trước khi dùng tính năng.
+
+Đơn đã xác nhận trả/phát sinh phụ thu hoặc đang khóa khẩn cấp phải xử lý nghiệp vụ
+đó trước. Nếu cần đổi thời hạn của đơn đã cấp/đang đối soát mã TTLock, hệ thống
+yêu cầu xử lý mã cửa trước; không tự sửa thời hạn mã đã cấp.
+
 ## Lịch theo giờ, giữ căn và trả phòng
 
 - Màn nhân viên: `/admin/availability`. Cấp quyền **Tìm phòng trống** và từng quyền khóa khách quá giờ, giữ khung giờ báo giá, xác nhận trả phòng/QR trong trang phân quyền.

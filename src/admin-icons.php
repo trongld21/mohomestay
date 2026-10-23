@@ -34,6 +34,10 @@ function render_admin_icons(): void
 {
     ?>
     <svg class="hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+        <symbol id="admin-icon-refresh" viewBox="0 0 24 24">
+            <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
+            <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
+        </symbol>
         <symbol id="admin-icon-layout-dashboard" viewBox="0 0 24 24">
             <path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" />
             <path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" />

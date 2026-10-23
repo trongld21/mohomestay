@@ -184,5 +184,5 @@ require_once APP_ROOT . '/src/booking-identity.php';
 require_once APP_ROOT . '/src/room-operations.php';
 
 require_once APP_ROOT . '/src/room-inventory.php';
-
 require_once APP_ROOT . '/src/staff-notifications.php';
+require_once APP_ROOT . '/src/booking-stay.php';

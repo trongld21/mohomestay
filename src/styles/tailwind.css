@@ -258,10 +258,10 @@
     @apply grid grid-cols-2 gap-3 p-3 sm:grid-cols-2 sm:p-8;
 }
 .booking-success-room {
-    @apply mx-3 mt-3 flex flex-row items-center gap-3 border-b border-[#e8ded0] pb-3 sm:mx-8 sm:mt-8 sm:flex-row sm:items-center sm:gap-6;
+    @apply mx-3 mt-3 flex flex-row items-center gap-3 border-b border-[#e8ded0] pb-3 sm:mx-8 sm:mt-8 sm:gap-6;
 }
 .booking-success-room img {
-    @apply aspect-[4/3] h-16 w-20 shrink-0 rounded-lg object-cover sm:w-44;
+    @apply aspect-[4/3] h-auto w-28 shrink-0 rounded-lg object-cover sm:w-48;
 }
 .booking-success-room img[hidden] {
     @apply hidden;
@@ -282,7 +282,7 @@
     @apply break-words text-sm font-medium leading-6 sm:text-base;
 }
 .booking-success-details .booking-success-total {
-    @apply border-t border-[#e8ded0] pt-2 col-span-2 sm:flex sm:items-center sm:justify-between;
+    @apply sm:col-span-2 sm:flex sm:items-center sm:justify-between sm:border-t sm:border-[#e8ded0] sm:pt-2;
 }
 .booking-success-total strong {
     @apply text-2xl font-semibold text-[#79543e];
@@ -295,6 +295,35 @@
 }
 .booking-success-credentials .booking-arrival-wifi > div {
     @apply grid-cols-[5rem_minmax(0,1fr)] gap-2;
+}
+@media (max-width: 639px) {
+    .booking-success-page {
+        @apply py-2;
+    }
+    .booking-success-mark {
+        @apply mb-1 size-8;
+    }
+    .booking-success-ticket > header {
+        @apply py-2;
+    }
+    .booking-success-room .inline-block {
+        @apply mb-1;
+    }
+    .booking-success-details {
+        @apply gap-2;
+    }
+    .booking-success-credentials h3 {
+        @apply text-base leading-6;
+    }
+    .booking-success-credentials > p {
+        @apply mt-1 text-xs leading-5;
+    }
+    .booking-success-credentials .booking-gate-password {
+        @apply text-xl leading-7;
+    }
+    .booking-success-credentials .booking-arrival-wifi {
+        @apply text-xs leading-5;
+    }
 }
 .booking-success-next {
     @apply my-6 rounded-xl border border-[#e6dccf] bg-[#fffdf9] p-5 sm:p-8;
@@ -3044,8 +3073,90 @@ html:has(> body.admin-page) {
 }
 
 /* Shared room timeline and staff availability tools. */
+.admin-workspace > main:has(> .staff-availability) {
+    @apply px-3 py-4 sm:px-4 sm:py-5 xl:px-6 xl:py-6;
+}
+.staff-availability {
+    @apply m-0 min-w-0 p-3 sm:p-4 xl:p-5;
+}
+.staff-availability [data-timeline-results] {
+    @apply grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4;
+}
+.availability-room-card {
+    @apply relative isolate min-w-0 overflow-hidden rounded-lg border border-[#e5dacb] bg-[#45382f];
+}
+.availability-room-image {
+    @apply absolute inset-0 h-full w-full object-cover;
+}
+.availability-room-shade {
+    @apply absolute inset-0 bg-[#231a14]/75;
+}
+.availability-room-content {
+    @apply relative flex h-full min-h-48 flex-col items-start gap-2 p-4 text-white;
+}
+.availability-room-content h3 {
+    @apply m-0 text-base font-semibold leading-6 text-white;
+}
+.availability-room-status {
+    @apply m-0 rounded border border-[#e8cbb1] bg-[#fff1e3] px-2 py-1 text-xs font-medium leading-5 text-[#70432c];
+}
+.availability-room-status[data-available="true"] {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-900;
+}
+.availability-room-windows {
+    @apply m-0 text-xs leading-5 text-[#fff4e7];
+}
+.availability-room-link.timeline-button {
+    @apply mt-auto gap-2 self-end px-3 text-xs hover:bg-[#eee4d6] focus-visible:outline-white;
+}
+.staff-availability [data-timeline-search] {
+    @apply min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto];
+}
+.staff-availability [data-timeline-search] label {
+    @apply min-w-0;
+}
+.staff-availability [data-timeline-search] > button {
+    @apply sm:col-span-2 lg:col-span-1;
+}
+.staff-availability [data-timeline-stays] {
+    @apply gap-2 xl:grid-cols-3 2xl:grid-cols-4;
+}
+.staff-availability [data-timeline-stays] > article {
+    @apply flex min-w-0 flex-col;
+}
+.staff-availability [data-timeline-stays] > article > div:last-child {
+    @apply mt-auto pt-3;
+}
+.staff-availability [data-timeline-stays] > article > button:last-child {
+    @apply mt-auto self-start;
+}
+@media (max-width: 639px) {
+    .staff-availability .timeline-input {
+        @apply w-full;
+    }
+    .staff-availability > div:has(> label > [data-timeline-date]) {
+        @apply grid grid-cols-2 items-end gap-2;
+    }
+    .staff-availability > div:has(> label > [data-timeline-date]) > button {
+        @apply col-span-2;
+    }
+}
 .timeline-button {
     @apply inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-[#d2bda7] bg-[#fffdf9] px-3 py-2 text-sm font-medium text-[#70432c] enabled:hover:bg-[#eee4d6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:cursor-wait disabled:opacity-50;
+}
+.admin-page .admin-actions .timeline-button {
+    @apply min-h-11 whitespace-nowrap text-xs font-medium leading-5;
+}
+@media (min-width: 1280px) {
+    .admin-page .admin-booking-table .booking-actions-cell {
+        @apply w-48;
+    }
+    .admin-page .booking-actions-cell .admin-actions {
+        @apply flex w-36 flex-col items-stretch;
+    }
+    .admin-page .booking-actions-cell .admin-actions > :is(button, a) {
+        @apply w-full justify-center;
+    }
 }
 a.timeline-button:hover {
     @apply bg-[#eee4d6];
@@ -3055,6 +3166,31 @@ a.timeline-button:hover {
 }
 .timeline-input {
     @apply min-h-11 min-w-0 rounded-lg border border-[#d2bda7] bg-white px-3 py-2 text-sm text-[#45382f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e];
+}
+[data-room-timeline][data-staff="true"] [data-timeline-scroll] {
+    scrollbar-width: thin;
+    scrollbar-color: #b8a695 #f6efe6;
+}
+@supports selector(::-webkit-scrollbar) {
+    [data-room-timeline][data-staff="true"] [data-timeline-scroll] {
+        scrollbar-width: auto;
+        scrollbar-color: auto;
+    }
+    [data-room-timeline][data-staff="true"] [data-timeline-scroll]::-webkit-scrollbar {
+        @apply h-1.5 w-1.5;
+    }
+    [data-room-timeline][data-staff="true"] [data-timeline-scroll]::-webkit-scrollbar-track {
+        @apply rounded-none bg-[#f6efe6];
+    }
+    [data-room-timeline][data-staff="true"] [data-timeline-scroll]::-webkit-scrollbar-thumb {
+        @apply rounded-none bg-[#b8a695];
+    }
+    [data-room-timeline][data-staff="true"] [data-timeline-scroll]::-webkit-scrollbar-thumb:hover {
+        @apply bg-[#79543e];
+    }
+    [data-room-timeline][data-staff="true"] [data-timeline-scroll]::-webkit-scrollbar-button {
+        @apply hidden h-0 w-0;
+    }
 }
 .timeline-table {
     @apply w-max min-w-full border-separate border-spacing-0 text-xs;

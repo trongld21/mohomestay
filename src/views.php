@@ -144,6 +144,7 @@ function render_google_analytics(string $path, string $host): void
         <script defer src="<?= e(asset_url('/assets/admin-permissions.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-booking-filters.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin.js')) ?>"></script>
+        <script defer src="<?= e(asset_url('/assets/booking-stay.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-inputs.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-date-picker.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/booking-date-picker.js')) ?>"></script>
@@ -802,7 +803,6 @@ function render_admin(): void
                 <div>
                     <span class="eyebrow">MỖI LƯỢT GHÉ, MỘT NIỀM VUI</span>
                     <h1>Tổng quan & đặt phòng</h1>
-                    <p class="muted">Trạng thái tự cập nhật theo giờ đặt. Bạn vẫn có thể nhận phòng hoặc kết thúc sớm khi cần.</p>
                 </div>
                 <div class="admin-heading-actions flex flex-wrap items-center gap-3">
                     <button type="button" class="button outline" data-refresh-bookings><?= admin_icon('refresh') ?> Làm mới</button>

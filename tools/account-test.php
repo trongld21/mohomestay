@@ -135,6 +135,7 @@ foreach ([
     ['/api/admin/bookings', 'POST', [], 'bookings.create'],
     ['/api/admin/bookings', 'PATCH', [], 'bookings.update'],
     ['/api/admin/bookings/b/payment', 'POST', [], 'bookings.payment'],
+    ['/api/admin/bookings/b/stay', 'POST', [], 'accounts'],
     ['/api/admin/booking-rooms', 'GET', [], 'bookings.create'],
     ['/api/admin/door-codes/d', 'PATCH', ['status' => 'ACTIVE'], 'door-codes.toggle'],
     ['/api/admin/door-codes/d', 'PATCH', ['status' => 'ACTIVE', 'code' => '123456'], 'door-codes.edit'],
