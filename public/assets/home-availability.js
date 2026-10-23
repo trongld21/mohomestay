@@ -21,18 +21,22 @@
             const data = await response.json();
             if (!response.ok || !Array.isArray(data.roomIds)) throw new Error("availability");
             const available = new Set(data.roomIds);
-            let visible = 0;
             for (const card of cards) {
-                card.hidden = !available.has(card.dataset.roomCardId);
-                if (!card.hidden) visible++;
+                const badge = card.querySelector("[data-room-availability]");
+                if (!badge) continue;
+                const isAvailable = available.has(card.dataset.roomCardId);
+                badge.dataset.state = isAvailable ? "available" : "unavailable";
+                badge.textContent = isAvailable ? "Còn phòng" : "Hết phòng";
             }
-            status.textContent = visible
-                ? ""
-                : "Hiện chưa có phòng trống. Bạn có thể xem lịch để chọn khung giờ khác.";
-            status.hidden = visible > 0;
-            grid.hidden = visible === 0;
+            status.textContent = "";
+            status.hidden = true;
         } catch {
-            grid.hidden = true;
+            for (const card of cards) {
+                const badge = card.querySelector("[data-room-availability]");
+                if (!badge) continue;
+                badge.dataset.state = "unknown";
+                badge.textContent = "Chưa rõ tình trạng";
+            }
             status.hidden = false;
             status.textContent = "Chưa kiểm tra được phòng trống. Mơ sẽ tự thử lại; bạn cũng có thể xem lịch phòng.";
         } finally {

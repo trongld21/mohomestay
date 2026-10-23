@@ -72,6 +72,15 @@
 [data-room-card-id][hidden] {
     @apply hidden;
 }
+.home-room-availability {
+    @apply mb-2 inline-flex w-fit self-start rounded border border-stone-200 bg-stone-100 px-2 py-1 text-xs font-semibold leading-5 text-stone-700;
+}
+.home-room-availability[data-state="available"] {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-900;
+}
+.home-room-availability[data-state="unavailable"] {
+    @apply border-[#e8cbb1] bg-[#fff1e3] text-[#70432c];
+}
 
 .home-location {
     @apply relative isolate overflow-hidden border-y border-[#e5ded2] bg-[#f3efe7] py-12 text-[#3e3025] selection:bg-[#d8ddc9] selection:text-[#34412e] sm:py-16 lg:py-24;

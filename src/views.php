@@ -220,22 +220,30 @@ function render_package_sale_price(array $package): void
 }
 
 function render_room_cards(bool $liveAvailability = false): void
-                                                                                                                                                                                        {
-                                                                                                                                                                                            $catalog = array_values(rooms()); ?>
-    <div class="room-grid" data-public-room-grid <?= $liveAvailability ? 'hidden aria-busy="true"' : '' ?>><?php foreach ($catalog as $index => $room): $packages = array_values(array_filter($room['packages'] ?? [], fn($package) => $package['enabled']));
-                                                                                                                                                                                                $minimum = $packages ? min(array_column($packages, 'price')) : null;
-    $minimumPackage = null;
-    foreach ($packages as $candidate) {
-        if ($candidate['price'] === $minimum) {
-            $minimumPackage = $candidate;
-            break;
-        }
-    }
-                                                                                                                                                                                                $coming = $room['status'] === 'COMING_SOON'; ?><article class="room-card room-product-card <?= $coming ? 'coming-soon' : '' ?>" data-room-card-id="<?= e($room['id']) ?>">
+{
+    $catalog = array_values(rooms());
+    ?>
+    <div class="room-grid" data-public-room-grid <?= $liveAvailability ? 'aria-busy="true"' : '' ?>>
+        <?php foreach ($catalog as $index => $room):
+            $packages = array_values(array_filter($room['packages'] ?? [], fn($package) => $package['enabled']));
+            $minimum = $packages ? min(array_column($packages, 'price')) : null;
+            $minimumPackage = null;
+            foreach ($packages as $candidate) {
+                if ($candidate['price'] === $minimum) {
+                    $minimumPackage = $candidate;
+                    break;
+                }
+            }
+            $coming = $room['status'] === 'COMING_SOON';
+            ?>
+            <article class="room-card room-product-card <?= $coming ? 'coming-soon' : '' ?>" data-room-card-id="<?= e($room['id']) ?>">
                 <div class="room-image"><a href="/rooms/<?= e($room['slug']) ?>"><img src="<?= e($room['image']) ?>" alt="Phòng <?= e($room['name']) ?>" loading="lazy"></a><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php elseif ($room['tag']): ?><span class="room-tag"><svg class="icon icon-tabler icon-tabler-sparkles" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6" />
                             </svg><?= e($room['tag']) ?></span><?php endif ?><span class="room-photo-count">▧ 1/<?= max(1, count($room['images'] ?? [])) ?></span></div>
                 <div class="room-body">
+                    <?php if ($liveAvailability && !$coming): ?>
+                        <span class="home-room-availability" data-room-availability data-state="unknown">Đang kiểm tra…</span>
+                    <?php endif ?>
                     <div class="room-title">
                         <h3><a href="/rooms/<?= e($room['slug']) ?>"><?= e($room['name']) ?></a></h3><span><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span>
                     </div>
