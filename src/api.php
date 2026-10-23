@@ -3,6 +3,16 @@
 function handle_api(string $path, string $method): never
 {
     try {
+        if (str_starts_with($path, '/api/admin/')) {
+            $feature = explode('/', substr($path, strlen('/api/admin/')))[0];
+            $permission = match ($feature) {
+                'rooms' => 'rooms',
+                'bookings', 'booking-rooms' => 'bookings',
+                'door-codes', 'manual-access', 'booking-access' => 'door-codes',
+                default => 'accounts',
+            };
+            require_permission($permission);
+        }
         if ($path === '/api/health' && $method === 'GET') json_response(['status'=>'ok','service'=>'mo-home-php']);
         if ($path === '/api/rooms' && $method === 'GET') json_response(['rooms'=>array_values(room_repository()->publicRooms())]);
         if ($method === 'GET' && preg_match('#^/api/rooms/([a-z0-9-]+)$#', $path, $matches)) {
@@ -24,6 +34,7 @@ function handle_api(string $path, string $method): never
             admin_door_codes_api($method, $matches[1]);
         }
         if (preg_match('#^/api/admin/booking-access/([a-f0-9]{32})/retry$#', $path, $matches) && $method === 'POST') admin_booking_access_retry($matches[1]);
+        if ($path === '/api/admin/booking-rooms' && $method === 'GET') admin_rooms_api();
         if ($path === '/api/admin/rooms' && $method === 'GET') admin_rooms_api();
         if ($path === '/api/admin/rooms' && $method === 'POST') create_room_api();
         if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)/visibility$#', $path, $matches) && $method === 'PATCH') {

@@ -203,3 +203,16 @@ Không hỗ trợ sửa/thu hồi sớm mã tự sinh qua web khi khóa không c
 muốn thu hồi cần dùng app tại khóa qua Bluetooth. **Lưu mã có sẵn** vẫn chỉ lưu
 mã nhập tay trên web, không ghi mã đó vào khóa.
 Kiểm thử độc lập: `php tools/manual-access-test.php` (SQLite và TTLock giả lập).
+
+## Tài khoản và phân quyền quản trị
+
+Chạy `php tools/migrate.php` để áp dụng `009_accounts.sql` trước khi sử dụng.
+Tài khoản `ADMIN_EMAIL` / `ADMIN_PASSWORD_HASH` trong môi trường máy chủ là Admin gốc,
+luôn có toàn quyền và là tài khoản duy nhất được quản lý tài khoản, cấp quyền.
+
+- `/admin/accounts`: tạo, sửa tên/email, đặt lại mật khẩu, khóa hoặc mở tài khoản.
+- `/admin/permissions`: cấp quyền riêng cho đặt phòng, quản lý phòng và mã mở cửa.
+- Tài khoản mới mặc định không có quyền. Menu và API kiểm tra quyền theo từng chức năng.
+- Thu hồi quyền áp dụng từ yêu cầu tiếp theo. Khóa tài khoản hoặc lưu thông tin tài khoản
+  sẽ vô hiệu hóa phiên cũ; nhân viên cần đăng nhập lại.
+- Kiểm thử quyền độc lập bằng `php tools/account-test.php` (cần PDO SQLite).

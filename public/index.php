@@ -39,20 +39,46 @@ if ($path === '/auth/login' && $method === 'POST') {
     require_csrf((string)($_POST['csrf'] ?? ''));
     $email = strtolower(trim((string)($_POST['email'] ?? '')));
     $password = (string)($_POST['password'] ?? '');
-    if ($email === strtolower((string)config('admin_email')) && password_verify($password, (string)config('admin_password_hash'))) {
-        session_regenerate_id(true);
-        $_SESSION['admin_until'] = time() + 8 * 3600;
-        redirect('/admin');
+    try {
+        if (account_login($email, $password)) {
+            redirect(account_home());
+        }
+    } catch (Throwable $error) {
+        error_log('Account login failed: ' . $error->getMessage());
     }
     $loginError = 'Thông tin đăng nhập không đúng hoặc tài khoản quản lý chưa được cấu hình.';
 }
 
 require APP_ROOT . '/src/views.php';
 
+if (in_array($path, ['/admin/accounts', '/admin/permissions'], true)) {
+    if (!is_admin()) redirect('/auth/login');
+    require_permission('accounts');
+    header('Cache-Control: no-store');
+    require APP_ROOT . '/src/account-view.php';
+    $permissionPage = $path === '/admin/permissions';
+    $accountError = '';
+    if ($method === 'POST') {
+        require_csrf((string)($_POST['csrf'] ?? ''));
+        try {
+            save_account($_POST, $permissionPage);
+            redirect($path . '?saved=1');
+        } catch (BookingException $error) {
+            $accountError = $error->getMessage();
+        }
+    }
+    render_page($permissionPage ? 'Phân quyền tài khoản' : 'Quản lý tài khoản', fn() => render_accounts($permissionPage, $accountError), ['robots' => false]);
+}
+if ($path === '/admin/no-access') {
+    if (!is_admin()) redirect('/auth/login');
+    render_page('Quyền truy cập', fn() => print('<div class="p-6"><h1 class="text-2xl font-semibold">Chưa được cấp quyền</h1><p class="mt-3">Liên hệ Admin để được cấp quyền sử dụng chức năng.</p></div>'), ['robots' => false]);
+}
+
+
 if ($path === '/') render_page('Trang chủ', fn() => render_home());
 elseif ($path === '/rooms') render_page('Phòng & bảng giá', fn() => render_rooms());
 elseif (preg_match('#^/admin/rooms/([a-zA-Z0-9_-]+)/preview$#', $path, $m)) {
-    require_admin();
+    require_permission('rooms');
     $room = find_room($m[1], true);
     if (!$room) {
         http_response_code(404);
@@ -66,12 +92,15 @@ elseif ($path === '/payment') render_page('Thanh toán', fn() => render_payment(
 elseif ($path === '/auth/login') render_page('Đăng nhập quản lý', fn() => render_login($loginError ?? ''), ['robots' => false]);
 elseif ($path === '/admin/door-codes') {
     if (!is_admin()) redirect('/auth/login');
+    require_permission('door-codes');
     header('Cache-Control: no-store');
     require APP_ROOT . '/src/door-code-view.php';
     render_page('Mã mở cửa', fn() => render_door_codes(), ['robots' => false]);
 }
 elseif ($path === '/admin') {
     if (!is_admin()) redirect('/auth/login');
+    if (!can_use('bookings') && !can_use('rooms')) redirect(account_home());
+    header('Cache-Control: no-store');
     render_page('Quản lý', fn() => render_admin(), ['robots' => false]);
 } elseif ($path === '/robots.txt') {
     header('Content-Type: text/plain');

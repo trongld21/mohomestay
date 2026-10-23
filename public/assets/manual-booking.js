@@ -137,7 +137,7 @@
         dialog.showModal();
         document.body.classList.add("dialog-open");
         try {
-            const data = await request("/api/admin/rooms");
+            const data = await request("/api/admin/booking-rooms");
             if (!dialog.open) return;
             rooms = data.rooms.filter((room) => room.status === "ACTIVE");
             fields.roomId.innerHTML = rooms.length

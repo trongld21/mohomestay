@@ -50,7 +50,7 @@ function render_contact_widget(): void
             {
                 $fullTitle = e($title) . ' | Mơ Home';
                 $adminPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-                $adminLayout = in_array($adminPath, ['/admin', '/admin/door-codes'], true);
+                $adminLayout = in_array($adminPath, ['/admin', '/admin/door-codes', '/admin/accounts', '/admin/permissions', '/admin/no-access'], true);
                 if ($adminLayout) require_once APP_ROOT . '/src/admin-layout.php';
                 $robots = ($options['robots'] ?? true) ? 'index,follow' : 'noindex,nofollow';
                 ?>
@@ -96,6 +96,7 @@ function render_contact_widget(): void
         <script>
             window.LANG_HOME = {
                 csrf: <?= json_encode(csrf_token()) ?>,
+                permissions: <?= json_encode(array_values(array_filter(array_keys(account_permissions()), fn($key) => can_use($key)))) ?>,
                 today: <?= json_encode(date('Y-m-d')) ?>,
                 rooms: <?= json_encode(array_values(rooms()), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
             };

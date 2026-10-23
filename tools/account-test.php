@@ -1,0 +1,115 @@
+<?php
+
+declare(strict_types=1);
+
+require dirname(__DIR__) . '/src/booking.php';
+require dirname(__DIR__) . '/src/accounts.php';
+
+function db(): PDO
+{
+    static $pdo;
+    if (!$pdo) {
+        $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+        $pdo->exec('CREATE TABLE accounts (id TEXT PRIMARY KEY, name TEXT, email TEXT UNIQUE, password_hash TEXT, is_active INTEGER, permissions TEXT, session_version INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP)');
+    }
+    return $pdo;
+}
+
+function config(string $key): string
+{
+    return $key === 'admin_email' ? 'root@example.test' : '';
+}
+
+function uuid(): string
+{
+    return bin2hex(random_bytes(16));
+}
+
+function require_admin(): void
+{
+    if (!is_admin()) throw new RuntimeException('Unauthenticated');
+}
+
+function is_admin(): bool
+{
+    return current_account() !== null;
+}
+
+function json_response(array $data, int $status): never
+{
+    throw new RuntimeException((string)$status);
+}
+
+function account_check(bool $condition, string $message): void
+{
+    if (!$condition) throw new RuntimeException($message);
+}
+
+$_SESSION = [];
+account_check(!can_use('rooms'), 'Anonymous must be denied');
+$_SESSION = ['admin_until' => time() + 3600];
+account_check(can_use('accounts') && can_use('rooms') && can_use('door-codes'), 'Root must have all permissions');
+save_account(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'test-password-123', 'is_active' => 'on'], false);
+$row = db()->query('SELECT * FROM accounts')->fetch();
+account_check(password_verify('test-password-123', $row['password_hash']), 'Passwords must be hashed');
+$id = $row['id'];
+$_SESSION['account_id'] = $id;
+$_SESSION['account_version'] = 1;
+account_check(is_admin() && !can_use('rooms') && !can_use('accounts'), 'New staff must have no permissions');
+account_check(account_home() === '/admin/no-access', 'Staff without grants must see no-access page');
+try {
+    save_account(['id' => $id, 'permissions' => ['rooms']], true);
+    throw new LogicException('Staff escalated privileges');
+} catch (RuntimeException $error) {
+    account_check($error->getMessage() === '403', 'Staff cannot grant permissions');
+}
+unset($_SESSION['account_id'], $_SESSION['account_version']);
+save_account(['id' => $id, 'permissions' => ['rooms']], true);
+$_SESSION['account_id'] = $id;
+$_SESSION['account_version'] = 1;
+account_check(can_use('rooms') && !can_use('bookings') && !can_use('door-codes'), 'Grants must be isolated by feature');
+account_check(account_home() === '/admin#rooms', 'Landing page must match granted feature');
+db()->exec("UPDATE accounts SET permissions = '[]'");
+account_check(!can_use('rooms'), 'Revocation must apply to existing sessions');
+db()->exec('UPDATE accounts SET is_active = 0');
+account_check(!is_admin(), 'Disabled account session must be rejected');
+db()->exec('UPDATE accounts SET is_active = 1, session_version = 2');
+account_check(!is_admin(), 'Old password session must be rejected');
+unset($_SESSION['account_id'], $_SESSION['account_version']);
+foreach (['root@example.test', 'staff@example.test'] as $email) {
+    try {
+        save_account(['name' => 'Duplicate', 'email' => $email, 'password' => 'test-password-123'], false);
+        throw new LogicException('Duplicate email accepted');
+    } catch (BookingException $error) {
+        account_check($error->httpStatus === 422, 'Duplicate and reserved emails must be rejected');
+    }
+}
+$_SESSION['admin_until'] = time() - 1;
+account_check(!can_use('accounts'), 'Expired root session must be denied');
+$_SESSION = ['admin_until' => time() + 3600];
+require dirname(__DIR__) . '/src/account-view.php';
+require dirname(__DIR__) . '/src/admin-layout.php';
+function e(mixed $value): string
+{
+    return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+function csrf_token(): string
+{
+    return 'test-csrf';
+}
+ob_start();
+render_accounts(true, '');
+$html = ob_get_clean();
+account_check(str_contains($html, 'name="permissions[]"') && str_contains($html, 'name="csrf"'), 'Permission forms must render grants and CSRF tokens');
+ob_start();
+render_admin_navigation('/admin/accounts');
+$html = ob_get_clean();
+account_check(str_contains($html, 'href="/admin/permissions"'), 'Root must see account navigation');
+$_SESSION['account_id'] = $id;
+$_SESSION['account_version'] = 2;
+db()->exec("UPDATE accounts SET permissions = '[\"rooms\"]'");
+ob_start();
+render_admin_navigation('/admin');
+$html = ob_get_clean();
+account_check(str_contains($html, 'data-admin-tab="rooms"') && !str_contains($html, 'data-admin-tab="bookings"') && !str_contains($html, 'href="/admin/permissions"'), 'Navigation must hide all ungranted features');
+echo "Account authorization tests: OK\n";

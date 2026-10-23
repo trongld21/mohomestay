@@ -55,6 +55,9 @@
         imageList = one("[data-image-list]");
 
     function selectTab(name) {
+        if (!LANG_HOME.permissions.includes(name)) {
+            name = LANG_HOME.permissions.includes("bookings") ? "bookings" : "rooms";
+        }
         all("[data-admin-tab]").forEach((button) => {
             const selected = button.dataset.adminTab === name;
             button.classList.toggle("selected", selected);
@@ -100,6 +103,7 @@
               }).format(date);
     }
     async function loadBookings() {
+        if (!LANG_HOME.permissions.includes("bookings")) return;
         if (!bookingPanel) return;
         bookingPanel.setAttribute("aria-busy", "true");
         try {
@@ -313,6 +317,7 @@
     }
 
     async function loadRooms() {
+        if (!LANG_HOME.permissions.includes("rooms")) return;
         roomPanel.innerHTML = '<div class="skeleton" style="height:260px"></div>';
         try {
             ({ rooms } = await request("/api/admin/rooms"));

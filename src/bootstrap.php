@@ -150,7 +150,7 @@ function require_csrf(?string $token = null): void
     $token ??= $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     if (!hash_equals($_SESSION['csrf'] ?? '', $token)) json_response(['error'=>'Phiên làm việc không hợp lệ.'], 419);
 }
-function is_admin(): bool { return isset($_SESSION['admin_until']) && $_SESSION['admin_until'] >= time(); }
+function is_admin(): bool { return current_account() !== null; }
 function require_admin(): void { if (!is_admin()) json_response(['error'=>'Không có quyền truy cập.'], 401); }
 function uuid(): string { return bin2hex(random_bytes(16)); }
 function payment_enabled(): bool
@@ -170,3 +170,5 @@ require_once APP_ROOT . '/src/booking-access.php';
 require_once APP_ROOT . '/src/mail.php';
 
 require_once APP_ROOT . '/src/manual-access.php';
+
+require_once APP_ROOT . '/src/accounts.php';
