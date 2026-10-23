@@ -34,8 +34,9 @@ function booking_arrival_details(array $booking, PDO $pdo): ?array
         'guideUrl' => $httpsUrl('CHECKIN_GUIDE_URL'),
         'rulesUrl' => $httpsUrl('HOUSE_RULES_URL'),
         'rules' => trim((string)config('booking_terms', '')),
-        'wifiName' => trim((string)env_value('WIFI_NAME', '')),
-        'wifiPassword' => (string)env_value('WIFI_PASSWORD', ''),
+        'wifiName' => trim((string)env_value('WIFI_NAME', '')) ?: 'Mơ Home',
+        'wifiPassword' => trim((string)env_value('WIFI_PASSWORD', '')) !== ''
+            ? (string)env_value('WIFI_PASSWORD', '') : '82828282',
         'doorCodes' => array_map(static fn(array $code): array => [
             'code' => (string)$code['code'],
             'startsAt' => gmdate('c', strtotime($code['starts_at'] . ' UTC')),
