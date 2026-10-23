@@ -13,6 +13,12 @@
             .sort((a, b) => a - b);
     }
 
+    function minimumMinute(date, now = new Date()) {
+        const start = Date.parse(`${date}T00:00:00+07:00`);
+        if (!Number.isFinite(start)) return 0;
+        return Math.max(0, Math.min(1440, Math.floor((now.getTime() - start) / 60000) + 1));
+    }
+
     function create(dialog, options = {}) {
         const root = options.root || dialog.querySelector(".manual-time-picker");
         const panel = options.panel || dialog.querySelector("#manual-time-popover");
@@ -26,14 +32,21 @@
         let opened = false;
         let disabled = false;
         let activeTrigger = triggers[0];
+        const minimum = () => options.getDate ? minimumMinute(options.getDate(), options.now?.() || new Date()) : 0;
 
         function render() {
-            const option = (value, unit, selected) => `<button type="button" role="option" aria-selected="${selected}" tabindex="${selected ? 0 : -1}" data-time-${unit}="${value}"><span>${pad(value)} ${unit === "hour" ? "giờ" : "phút"}</span><span class="manual-time-check" aria-hidden="true"></span></button>`;
+            const cutoff = minimum();
+            const option = (value, unit, selected) => {
+                const past = (unit === "hour" ? value * 60 + 59 : hour * 60 + value) < cutoff;
+                return `<button type="button" role="option" aria-selected="${selected && !past}" tabindex="${selected && !past ? 0 : -1}" data-time-${unit}="${value}"${past ? ' disabled aria-disabled="true" title="Đã qua giờ"' : ""}><span>${pad(value)} ${unit === "hour" ? "giờ" : "phút"}</span><span class="manual-time-check" aria-hidden="true"></span></button>`;
+            };
             hourList.innerHTML = Array.from({ length: 24 }, (_, index) => option(index, "hour", index === hour)).join("");
             minuteList.innerHTML = minuteOptions(minute).map((value) => option(value, "minute", value === minute)).join("");
             root.querySelector("[data-time-hour-label]").textContent = pad(hour) + " giờ";
             root.querySelector("[data-time-minute-label]").textContent = pad(minute) + " phút";
             exact.value = minute;
+            exact.min = Math.max(0, Math.min(60, cutoff - hour * 60));
+            exact.disabled = exact.min > 59;
         }
 
         function set(value) {
@@ -74,12 +87,18 @@
         }
 
         function focusSelected(list) {
-            const selected = list.querySelector('[aria-selected="true"]');
+            const selected = list.querySelector('[aria-selected="true"]:not(:disabled)') || list.querySelector('[role="option"]:not(:disabled)');
+            if (selected) selected.tabIndex = 0;
             selected?.focus({ preventScroll: true });
             selected?.scrollIntoView({ block: "nearest" });
         }
 
         function commit(value) {
+            const [nextHour, nextMinute] = parse(value);
+            if (nextHour * 60 + nextMinute < minimum()) {
+                render();
+                return;
+            }
             set(value);
             fields.time.dispatchEvent(new Event("input", { bubbles: true }));
             fields.time.dispatchEvent(new Event("change", { bubbles: true }));
@@ -89,6 +108,7 @@
             if (disabled) return;
             if (opened && activeTrigger === button) return close(true);
             activeTrigger = button;
+            render();
             if (!opened) {
                 if (typeof panel.showPopover === "function") panel.showPopover();
                 else panel.classList.add("is-open");
@@ -100,9 +120,12 @@
         panel.addEventListener("toggle", (event) => reflectOpen(event.newState === "open"));
         panel.addEventListener("click", (event) => {
             const option = event.target.closest("[data-time-hour], [data-time-minute]");
-            if (!option || disabled) return;
+            if (!option || option.disabled || disabled) return;
             if (option.hasAttribute("data-time-hour")) {
-                commit(`${pad(option.dataset.timeHour)}:${pad(minute)}`);
+                const nextHour = Number(option.dataset.timeHour);
+                const nextMinute = Math.max(minute, minimum() - nextHour * 60);
+                if (nextMinute > 59) return render();
+                commit(`${pad(nextHour)}:${pad(nextMinute)}`);
                 focusSelected(minuteList);
             } else {
                 commit(`${pad(hour)}:${pad(option.dataset.timeMinute)}`);
@@ -120,7 +143,7 @@
         exact.addEventListener("keydown", (event) => {
             if (event.key !== "Enter") return;
             event.preventDefault();
-            if (exact.value === "" || !exact.reportValidity()) return;
+            if (disabled || exact.disabled || exact.value === "" || !exact.reportValidity()) return;
             commit(`${pad(hour)}:${pad(Number(exact.value))}`);
             close(true);
         });
@@ -133,7 +156,8 @@
             }
             const list = event.target.closest('[role="listbox"]');
             if (!list) return;
-            const options = [...list.querySelectorAll('[role="option"]')];
+            const options = [...list.querySelectorAll('[role="option"]:not(:disabled)')];
+            if (!options.length) return;
             const index = options.indexOf(document.activeElement);
             const step = list === hourList ? 12 : 1;
             const next = {
@@ -157,9 +181,30 @@
         }, { capture: true, passive: true });
         dialog.addEventListener("close", () => close());
         render();
+        if (options.getDate) {
+            let lastMinimum = minimum();
+            window.setInterval?.(() => {
+                const cutoff = minimum();
+                if (!opened || cutoff === lastMinimum) return;
+                lastMinimum = cutoff;
+                const focused = document.activeElement;
+                const unit = focused?.hasAttribute("data-time-hour") ? "hour" : "minute";
+                const value = focused?.getAttribute(`data-time-${unit}`);
+                const draft = exact.value;
+                render();
+                if (focused === exact) exact.value = draft;
+                if (value !== null && value !== undefined) {
+                    const list = unit === "hour" ? hourList : minuteList;
+                    const target = list.querySelector(`[data-time-${unit}="${value}"]:not(:disabled)`);
+                    if (target) target.focus({ preventScroll: true });
+                    else focusSelected(list);
+                }
+            }, 1000);
+        }
         return {
             set,
             close,
+            refresh: render,
             setDisabled(value) {
                 disabled = value;
                 triggers.forEach((button) => { button.disabled = value; });
@@ -168,6 +213,6 @@
         };
     }
 
-    scope.MoTimePicker = { create, parse, minuteOptions };
+    scope.MoTimePicker = { create, parse, minuteOptions, minimumMinute };
     if (typeof module !== "undefined") module.exports = scope.MoTimePicker;
 })(typeof window === "undefined" ? globalThis : window);

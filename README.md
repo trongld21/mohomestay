@@ -356,6 +356,11 @@ Kiểm thử: `php tools/booking-identity-test.php` dùng ảnh giả và SQLite
 
 ### Nhận muộn với gói giờ cố định
 
+Sau nửa đêm và trước giờ trả phòng, chọn ngày hôm nay sẽ đặt phần còn lại của
+đêm đang diễn ra. Ví dụ lúc 01:00 ngày 24, gói 21:00–09:00 nhận ngay và trả
+09:00 ngày 24, giữ nguyên giá gói và kiểm tra trùng lịch. Từ 09:00, ngày 24
+lại ứng với đêm 24 → sáng 25. Ngày tương lai vẫn dùng giờ nhận buổi tối.
+
 Gói FIXED_TIME vẫn cho đặt sau giờ bắt đầu nếu chưa hết giờ trả. Giờ nhận được
 đẩy đến phút kế tiếp tại lúc xác nhận đặt, giữ nguyên giá và giờ trả của gói.
 Kiểm tra trùng đơn và khóa phòng áp dụng từ giờ nhận thực tế đến giờ trả.

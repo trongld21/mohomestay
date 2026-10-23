@@ -114,6 +114,12 @@
         const selectedSlot = () => slots().find((slot) => slot.id === selectedId);
         const availabilityForRoom = () =>
             availability?.rooms?.find((item) => item.id === room()?.id);
+        const clockLabel = (value) => value.toLocaleTimeString("vi-VN", {
+            timeZone: "Asia/Ho_Chi_Minh",
+            hour: "2-digit",
+            minute: "2-digit",
+            hourCycle: "h23",
+        });
         const prettyDate = (value) =>
             new Date(`${value}T12:00:00+07:00`).toLocaleDateString("vi-VN", {
                 weekday: "long",
@@ -148,7 +154,7 @@
                 return;
             }
             const timeLabel = window
-                ? `${window.start.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} – ${window.end.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`
+                ? `${clockLabel(window.start)} – ${clockLabel(window.end)}`
                 : "Chưa chọn";
             summary.innerHTML = `<div class="summary-image"><img src="${esc(current.image)}" alt="Phòng ${esc(current.name)}"></div><span class="summary-kicker">TÓM TẮT CUỘC HẸN</span><h2>${esc(current.name)}</h2><p class="muted">${esc(current.subtitle)}</p><div class="room-tag-chips">${current.tags.map((tag) => `<span>${esc(tag)}</span>`).join("")}</div><div class="summary-row"><span>Ngày ghé</span><strong>${prettyDate(form.date.value)}</strong></div><div class="summary-row"><span>Khung giờ</span><strong>${timeLabel}</strong></div><div class="summary-row"><span>Gói lưu trú</span><strong>${esc(slot?.name || "—")}</strong></div><div class="summary-row total"><span>Tổng tiền</span><strong>${slot ? cash(slot.price) : "—"}</strong></div>${slot ? '<p class="summary-assurance"><span aria-hidden="true">✓</span> Khung giờ được giữ 15 phút khi tạo đơn.</p>' : '<p class="summary-prompt">Chọn một gói còn trống để xem đầy đủ chi tiết.</p>'}`;
         }
@@ -206,7 +212,7 @@
                                   : "Còn trống";
                     const timeLabel =
                         slot.mode === "FIXED_TIME"
-                            ? `<b>${esc(slot.checkInTime)}</b><i aria-hidden="true"></i><b>${esc(slot.checkOutTime)}</b>`
+                            ? `<b>${esc(window ? clockLabel(window.start) : slot.checkInTime)}</b><i aria-hidden="true"></i><b>${esc(window ? clockLabel(window.end) : slot.checkOutTime)}</b>`
                             : `<b>${esc(packageLabel(slot))}</b><i aria-hidden="true"></i><b>${selected && form.time.value ? "Từ " + esc(form.time.value) : "Tự chọn giờ"}</b>`;
                     return `<button class="booking-slot-card is-${state}${selected ? " is-selected" : ""}" type="button" data-slot-id="${esc(slot.id)}" ${state !== "available" && (slot.mode !== "DURATION" || state === "closed") ? "disabled" : ""} aria-pressed="${selected}" style="--slot-index:${index}"><span class="slot-card-top"><strong>${esc(slot.name)}</strong><span class="slot-state">${label}</span></span><span class="slot-time">${timeLabel}</span><span class="slot-price"><small>Trọn gói</small><strong>${cash(slot.price)}</strong></span></button>`;
                 })
