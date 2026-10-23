@@ -295,6 +295,11 @@
         if (booking.status === "PENDING") actions = action("CANCELLED", "Hủy đơn", "x", true);
         if (booking.status === "CONFIRMED") actions = action("CHECKED_IN", "Nhận sớm", "key") + action("CANCELLED", "Hủy", "x", true);
         if (booking.status === "CHECKED_IN") actions = action("CHECKED_OUT", "Kết thúc sớm", "logout");
+        const identity = Number(booking.identity_image_count) === 2
+            ? (LANG_HOME.abilities.includes('bookings.identity')
+                ? `<button type="button" data-view-identity="${esc(booking.id)}" class="min-h-10 rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Xem CCCD</button>`
+                : '<span class="text-xs text-stone-500">Đã lưu CCCD</span>')
+            : '<span class="text-xs text-stone-500">Chưa có CCCD</span>';
         return `<tr data-booking-tone="${MoBookingFilters.tone(booking)}">
             <td class="booking-photo-cell"><img class="booking-room-photo" src="${esc(booking.room_image || '/images/white-illustration.jpg')}" alt="Phòng ${esc(booking.room_name)}" width="104" height="78" loading="lazy"></td>
             <td class="booking-guest-cell"><div class="booking-cell">
@@ -305,6 +310,7 @@
                     <a class="booking-meta booking-phone" href="tel:${esc(booking.guest_phone)}">${icon("phone")} ${esc(booking.guest_phone)}</a>
                     <span class="booking-source">${icon(booking.booking_source === "PHONE" ? "phone" : "message-circle")} ${source}</span>
                 </div>
+                ${identity}
                 ${booking.guest_note ? `<details class="booking-note"><summary>Ghi chú khách</summary><p>${esc(booking.guest_note)}</p></details>` : ""}
             </div></td>
             <td class="booking-stay-cell"><div class="booking-cell">
@@ -327,6 +333,30 @@
         </tr>`;
     }
     async function bookingAction(event) {
+        const identityButton = event.target.closest('[data-view-identity]');
+        if (identityButton) {
+            const id = identityButton.dataset.viewIdentity;
+            let viewer = document.querySelector('[data-identity-viewer]');
+            if (viewer) viewer.remove();
+            viewer = document.createElement('dialog');
+            viewer.dataset.identityViewer = '';
+            viewer.className = 'm-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-4xl overflow-auto rounded-2xl border border-stone-200 bg-white p-5 text-stone-800 shadow-xl backdrop:bg-black/40';
+            viewer.innerHTML = `<div class="flex items-center justify-between gap-4"><h2 class="text-lg font-semibold" id="identity-viewer-title">CCCD của người thuê</h2><button type="button" data-identity-close class="min-h-11 rounded-lg border border-stone-300 px-4 py-2 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Đóng</button></div><div class="mt-4 grid gap-4 sm:grid-cols-2">${[['front', 'Mặt trước'], ['back', 'Mặt sau']].map(([side, label]) => `<section><h3 class="mb-2 font-medium">${label}</h3><img class="max-h-[60dvh] w-full rounded-lg border border-stone-200 object-contain" src="/api/admin/bookings/${encodeURIComponent(id)}/identity/${side}" alt="CCCD ${label.toLowerCase()}"><p data-identity-load-error class="mt-2 text-sm text-red-800" hidden>Không tải được ảnh. Kiểm tra phiên đăng nhập và quyền xem CCCD.</p></section>`).join('')}</div>`;
+            viewer.setAttribute('aria-labelledby', 'identity-viewer-title');
+            viewer.querySelectorAll('img').forEach(image => image.addEventListener('error', () => {
+                image.hidden = true;
+                image.nextElementSibling.hidden = false;
+            }));
+            document.body.append(viewer);
+            viewer.querySelector('[data-identity-close]').onclick = () => viewer.close();
+            viewer.addEventListener('close', () => {
+                viewer.querySelectorAll('img').forEach(image => image.removeAttribute('src'));
+                viewer.remove();
+                if (identityButton.isConnected) identityButton.focus();
+            }, {once: true});
+            viewer.showModal();
+            return;
+        }
         const paymentButton = event.target.closest("[data-booking-payment]");
         if (paymentButton) {
             const booking = bookings.find((item) => item.id === paymentButton.dataset.bookingPayment);

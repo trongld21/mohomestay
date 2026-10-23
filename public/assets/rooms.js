@@ -15,7 +15,7 @@
     async function request(url, options = {}) {
         const response = await fetch(url, {
             ...options,
-            headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+            headers: { ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }), ...(options.headers || {}) },
         });
         let data = {};
         try {
@@ -292,7 +292,9 @@
                 one("[data-slot-section]", form)?.focus();
                 return;
             }
-            const data = Object.fromEntries(new FormData(form));
+            if (!form.reportValidity()) return;
+            const upload = new FormData(form);
+            const data = Object.fromEntries([...upload].filter(([, value]) => !(value instanceof File)));
             data.numberOfGuests = Number(data.numberOfGuests);
             data.acceptTerms = !!data.acceptTerms;
             const testing = !!testPayment?.checked;
@@ -303,13 +305,15 @@
                 }
                 data.requestId = testRequest.id;
             }
+            upload.set('numberOfGuests', String(data.numberOfGuests));
+            upload.set('acceptTerms', String(data.acceptTerms));
             submit.disabled = true;
-            submit.textContent = "Đang giữ khung giờ…";
+            submit.textContent = "Đang lưu giấy tờ và giữ khung giờ…";
             try {
                 const result = await request(testing ? "/api/dev/payments/create" : "/api/bookings", {
                     method: "POST",
                     ...(testing ? { headers: { "X-CSRF-Token": LANG_HOME.csrf } } : {}),
-                    body: JSON.stringify(data),
+                    body: testing ? JSON.stringify(data) : upload,
                 });
                 if (testing) {
                     location.href = result.paymentUrl;

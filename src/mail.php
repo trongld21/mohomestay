@@ -54,7 +54,11 @@ function build_booking_confirmation_email(array $booking): array
         .'<tr><td style="padding:10px 0;border-bottom:1px solid #eee">Trả phòng</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right">'.$escape($checkOut).'</td></tr>'
         .'<tr><td style="padding:10px 0;border-bottom:1px solid #eee">Số khách</td><td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right">'.$guests.'</td></tr>'
         .'<tr><td style="padding:10px 0">Đã thanh toán</td><td style="padding:10px 0;text-align:right"><strong>'.$escape($total).'</strong></td></tr>'
-        .'</table>'.$doorHtml.'<p style="padding:14px;background:#edf4e9;border-radius:8px">Mơ sẽ liên hệ riêng để hướng dẫn nhận phòng. Cần hỗ trợ, gọi <a href="tel:0357907153" style="color:#70432c">0357 907 153</a>.</p>'
+        .'</table>'.$doorHtml
+        .'<h2 style="margin:24px 0 12px;font-size:20px">Wi-Fi tại Mơ</h2>'
+        .'<p style="margin:6px 0">Tên Wi-Fi: <strong>Mơ Home</strong></p>'
+        .'<p style="margin:6px 0 20px">Mật khẩu: <strong style="font-family:Arial,sans-serif;letter-spacing:1px">82828282</strong></p>'
+        .'<p style="padding:14px;background:#edf4e9;border-radius:8px">Mơ sẽ liên hệ riêng để hướng dẫn nhận phòng. Cần hỗ trợ, gọi <a href="tel:0357907153" style="color:#70432c">0357 907 153</a>.</p>'
         .'</div></div></body></html>';
     return ['subject'=>$subject,'html'=>$html];
 }

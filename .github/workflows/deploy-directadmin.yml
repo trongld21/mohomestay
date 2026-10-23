@@ -31,6 +31,7 @@ jobs:
           php tools/directadmin-deploy-test.php
           php tools/ttlock-test.php
           php tools/booking-access-test.php
+          php tools/booking-identity-test.php
           php tools/manual-access-test.php
           php tools/room-test.php
           php tools/room-discount-test.php
@@ -43,6 +44,7 @@ jobs:
           node --check public/assets/admin-booking-filters.js
           node tools/admin-booking-filters-test.cjs
           node --check public/assets/rooms.js
+          node --check public/assets/booking-identity.js
           node --check public/assets/door-codes.js
       - name: Build DirectAdmin upload package
         run: |

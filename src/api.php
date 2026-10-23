@@ -55,6 +55,7 @@ function handle_api(string $path, string $method): never
             $rows = db()->query('SELECT status,payment_status,total_price,is_test,check_in,check_out FROM bookings')->fetchAll();
             json_response(['overview' => booking_overview($rows)]);
         }
+        if ($method === 'GET' && preg_match('#^/api/admin/bookings/([a-f0-9]{32})/identity/(front|back)$#', $path, $matches)) admin_booking_identity_image($matches[1], $matches[2]);
         if ($path === '/api/admin/bookings' && $method === 'GET') admin_bookings_api();
         if ($path === '/api/admin/bookings' && $method === 'POST') {
             require_admin();
@@ -95,7 +96,9 @@ function availability_api(): never
 function create_booking_api(): never
 {
     if (!payment_enabled()) throw new BookingException('Đặt phòng trực tuyến chưa mở. Vui lòng gọi 0357 907 153 hoặc nhắn Zalo để đặt phòng.', 503);
-    $q = quote_booking(json_body()); $pdo = db(); $pdo->beginTransaction();
+    $q = quote_booking(booking_form_body());
+    $identity = read_booking_identity_uploads($_FILES);
+    $pdo = db(); $pdo->beginTransaction();
     try {
         $lock = $pdo->prepare("SELECT id,status,max_guests,discount_percent,(status='ACTIVE') is_active FROM rooms WHERE id=? FOR UPDATE");
         $lock->execute([$q['room']['id']]);
@@ -121,6 +124,7 @@ function create_booking_api(): never
         $booking=['id'=>uuid(),'bookingCode'=>'MO-'.strtoupper(bin2hex(random_bytes(5))),'accessToken'=>bin2hex(random_bytes(32)),'orderCode'=>(int)(floor(microtime(true)*1000)*1000+random_int(0,999)),'holdExpiresAt'=>gmdate('Y-m-d H:i:s',time()+900),'totalPrice'=>$q['total']];
         $sql='INSERT INTO bookings(id,booking_code,room_id,check_in,check_out,stay_package,package_id,package_name_snapshot,package_mode_snapshot,package_duration_snapshot,package_check_in_snapshot,package_check_out_snapshot,package_price_snapshot,hold_expires_at,access_token,order_code,total_price,number_of_guests,guest_name,guest_email,guest_phone,guest_note,payment_method) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,\'payos\')';
         $pdo->prepare($sql)->execute([$booking['id'],$booking['bookingCode'],$q['room']['id'],mysql_datetime($q['start']),mysql_datetime($q['end']),$q['packageId'],$q['packageId'],$q['packageName'],$q['packageMode'],$q['packageDuration'],$q['packageCheckIn'],$q['packageCheckOut'],$q['packagePrice'],$booking['holdExpiresAt'],$booking['accessToken'],$booking['orderCode'],$q['total'],$q['guests'],$q['name'],$q['email'],$q['phone'],$q['note']]);
+        save_booking_identity($pdo, $booking['id'], $identity);
         $pdo->commit();
     } catch (Throwable $e) { if($pdo->inTransaction())$pdo->rollBack(); throw $e; }
     try {
@@ -193,7 +197,7 @@ function admin_bookings_api(): never
 {
     require_admin();
     $rows = db()->query(
-        'SELECT b.*,r.name room_name,p.failure_reason FROM bookings b '
+        'SELECT b.*,r.name room_name,p.failure_reason,(SELECT COUNT(*) FROM booking_identity_images i WHERE i.booking_id=b.id) identity_image_count FROM bookings b '
         . 'JOIN rooms r ON r.id=b.room_id LEFT JOIN payments p ON p.booking_id=b.id '
         . 'ORDER BY b.created_at DESC,b.id'
     )->fetchAll();

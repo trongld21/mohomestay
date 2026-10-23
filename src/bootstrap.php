@@ -174,3 +174,5 @@ require_once APP_ROOT . '/src/mail.php';
 require_once APP_ROOT . '/src/manual-access.php';
 
 require_once APP_ROOT . '/src/accounts.php';
+
+require_once APP_ROOT . '/src/booking-identity.php';

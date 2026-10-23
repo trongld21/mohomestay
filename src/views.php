@@ -107,6 +107,7 @@ function render_contact_widget(): void
         <script defer src="<?= e(asset_url('/assets/booking-slots.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/time-picker.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/calendar.js')) ?>"></script>
+        <script defer src="<?= e(asset_url('/assets/booking-identity.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/rooms.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-slug.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/room-image-draft.js')) ?>"></script>
@@ -684,6 +685,7 @@ function render_room(array $r): void
                         <label class="field">Số khách *
                             <select name="numberOfGuests" data-guest-count required></select>
                         </label>
+                        <?php render_booking_identity_fields(); ?>
                         <label class="field full">Một lời nhắn cho Mơ (không bắt buộc)
                             <textarea name="guestNote" rows="3" maxlength="1000"></textarea>
                         </label>

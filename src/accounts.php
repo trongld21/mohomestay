@@ -158,6 +158,7 @@ function account_permission_groups(): array
         'bookings' => [
             'bookings.overview' => 'Xem tổng quan và thống kê',
             'bookings.view' => 'Xem danh sách đặt phòng',
+            'bookings.identity' => 'Xem ảnh CCCD của khách',
             'bookings.create' => 'Tạo đơn đặt phòng',
             'bookings.update' => 'Nhận phòng, kết thúc sớm và hủy đơn',
             'bookings.payment' => 'Xác nhận thu tiền',
@@ -205,7 +206,7 @@ function admin_api_permission(string $path, string $method, array $body = []): s
         'booking-overview' => 'bookings.overview',
         'booking-rooms' => 'bookings.create',
         'bookings' => match ($method) {
-            'GET' => 'bookings.view',
+            'GET' => str_contains($path, '/identity/') ? 'bookings.identity' : 'bookings.view',
             'POST' => str_ends_with($path, '/payment') ? 'bookings.payment' : 'bookings.create',
             'PATCH' => 'bookings.update',
             default => 'accounts',

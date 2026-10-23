@@ -326,3 +326,30 @@ không xóa dữ liệu và không thay đổi các số liệu tổng quan.
 Màu nền và khung: vàng chờ thanh toán, xanh dương đã xác nhận, xanh lá đang lưu
 trú, đỏ cần đối soát, xám lịch sử. Trạng thái bằng chữ luôn được giữ kèm màu.
 Kiểm thử: `node tools/admin-booking-filters-test.cjs`.
+
+### CCCD hai mặt cho khách đặt trên web
+
+Bước Thông tin của bạn bắt buộc ảnh CCCD mặt trước và mặt sau khi tạo đơn web.
+Khách xem trước và thay ảnh trước khi gửi; đơn thiếu ảnh bị từ chối ở máy chủ.
+Đơn tạo trong admin qua Điện thoại hoặc Zalo không bị yêu cầu CCCD.
+Đơn cũ không bị thay đổi. Trình tải chỉ kiểm tra định dạng, dung lượng và kích
+thước ảnh, không OCR hoặc xác minh giấy tờ là thật hay khớp người đặt.
+
+Chạy migration `010_booking_identity.sql`. Hai ảnh được mã hóa AES-256-GCM
+trong bảng riêng, gắn với đơn trong cùng transaction. Cần `APP_KEY` hiện có
+ít nhất 16 ký tự; sao lưu khóa cùng quy trình bảo mật riêng và giữ nguyên khóa
+để đọc lại dữ liệu đã mã hóa. Không đổi APP_KEY tùy tiện sau khi đã có ảnh.
+Ảnh không nằm trong public/uploads, không trả trong API tra cứu khách và không
+gửi kèm email. Xóa đơn trong database sẽ xóa hai ảnh theo khóa ngoại.
+
+Trong admin, nút Xem CCCD mở hai ảnh qua API yêu cầu phiên đăng nhập và quyền
+`bookings.identity` (Xem ảnh CCCD của khách). Admin gốc có quyền; tài khoản chỉ
+được cấp bookings.view không tự có quyền xem ảnh. Nhóm quyền bookings đầy đủ
+bao gồm quyền xem CCCD. Phản hồi ảnh có no-store và nosniff.
+
+Chấp nhận JPEG, PNG, WebP tối đa 3 MiB mỗi mặt, tối đa 24 megapixel và 8000 px
+mỗi cạnh; HEIC/PDF/SVG không được nhận. Hosting cần upload_max_filesize ít
+nhất 3M, post_max_size ít nhất 8M; max_allowed_packet MySQL đủ cho một ảnh.
+Ảnh được giữ cùng lịch sử đơn cho đến khi xóa đơn; hiện chưa tự xóa theo hạn.
+Kiểm thử: `php tools/booking-identity-test.php` dùng ảnh giả và SQLite, không
+đưa giấy tờ thật vào kiểm thử hoặc nguồn Git.
