@@ -352,7 +352,15 @@
         daysInput.addEventListener("change", load);
         function scrollToNow() {
             const hour = Number(localStamp(Date.now()).slice(11, 13));
-            one("[data-timeline-scroll]").scrollLeft = Math.max(0, hour * 44 - 44);
+            const scroll = one("[data-timeline-scroll]");
+            const cells = grid.querySelectorAll("tbody tr:first-child [data-slot-start]");
+            const cell = cells[Math.max(0, hour - 1)];
+            if (cell) {
+                const heading = grid.querySelector("tbody .timeline-row-heading");
+                scroll.scrollLeft = Math.max(0,
+                    scroll.scrollLeft + cell.getBoundingClientRect().left
+                    - scroll.getBoundingClientRect().left - (heading?.getBoundingClientRect().width || 0));
+            }
         }
         one("[data-timeline-now]").addEventListener("click", () => {
             const today = localStamp(Date.now()).slice(0, 10);
