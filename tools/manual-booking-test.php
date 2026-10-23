@@ -100,6 +100,28 @@ try {
     throw new RuntimeException('Custom stay without agreed price accepted.');
 } catch (BookingException) {
 }
+$historical = array_replace($customInput, [
+    'startNow' => false, 'date' => '2020-01-01', 'time' => '10:00',
+    'endDate' => '2020-01-02', 'endTime' => '17:00',
+    'allowAnyDate' => true, 'root' => true,
+]);
+try {
+    quote_manual_booking($room, $historical);
+    throw new RuntimeException('Client fields must not grant Super Admin date override.');
+} catch (BookingException) {
+}
+$rootQuote = quote_manual_booking($room, $historical, true);
+manual_expect($rootQuote['start']->format('Y-m-d H:i') === '2020-01-01 10:00', 'Trusted Super Admin must retain the requested past check-in.');
+manual_expect($rootQuote['end']->format('Y-m-d H:i') === '2020-01-02 17:00', 'Historical checkout must remain valid after check-in.');
+$rootPackage = quote_manual_booking($room, array_replace($input, ['date' => '2020-01-01']), true);
+manual_expect($rootPackage['start']->format('Y-m-d H:i') === '2020-01-01 14:00', 'Super Admin package bookings must allow past dates.');
+$farDate = (new DateTimeImmutable('+2 years'))->format('Y-m-d');
+manual_expect(quote_manual_booking($room, array_replace($input, ['date' => $farDate]), true)['start']->format('Y-m-d') === $farDate, 'Super Admin must not have the staff future-date limit.');
+try {
+    quote_manual_booking($room, array_replace($historical, ['endDate' => '2019-12-31']), true);
+    throw new RuntimeException('Super Admin must still choose checkout after check-in.');
+} catch (BookingException) {
+}
 $room['status'] = 'HIDDEN';
 try {
     quote_manual_booking($room, $input);

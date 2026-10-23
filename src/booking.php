@@ -106,15 +106,18 @@ function quote_booking(array $input): array
     return quote_booking_for_room($room, $input);
 }
 
-function quote_booking_for_room(array $room, array $input, bool $manual = false): array
+function quote_booking_for_room(array $room, array $input, bool $manual = false, bool $allowAnyDate = false): array
 {
     $roomId = (string)$room['id'];
     $packageId = (string)($input['packageId'] ?? '');
     if ($packageId === '' && isset($input['stayPackage'])) $packageId = $roomId.'-'.(string)$input['stayPackage'];
     $package = resolve_bookable_slot($room, $packageId);
-    [$start,$end] = bookable_package_window($package, (string)($input['date'] ?? ''), (string)($input['time'] ?? ''));
+    $unrestricted = $manual && $allowAnyDate;
+    [$start, $end] = $unrestricted
+        ? package_window($package, (string)($input['date'] ?? ''), (string)($input['time'] ?? ''))
+        : bookable_package_window($package, (string)($input['date'] ?? ''), (string)($input['time'] ?? ''));
     $now = new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
-    if ($start > $now->modify('+366 days')) throw new BookingException('Chỉ nhận đặt phòng trong vòng 12 tháng.');
+    if (!$unrestricted && $start > $now->modify('+366 days')) throw new BookingException('Chỉ nhận đặt phòng trong vòng 12 tháng.');
     $guestDetails = booking_guest_details($room, $input, $manual);
     $requestedDate = ($package['mode'] ?? '') === 'FIXED_TIME'
         && $package['checkOutTime'] < $package['checkInTime']

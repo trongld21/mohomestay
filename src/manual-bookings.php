@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-function quote_manual_booking(array $room, array $input): array
+function quote_manual_booking(array $room, array $input, bool $allowAnyDate = false): array
 {
     $source = (string)($input['bookingSource'] ?? 'PHONE');
     $paymentStatus = (string)($input['paymentStatus'] ?? 'UNPAID');
@@ -23,8 +23,8 @@ function quote_manual_booking(array $room, array $input): array
         throw new BookingException('Chọn cách đặt theo gói hoặc thời gian tùy chọn.', 422);
     }
     $quote = $mode === 'CUSTOM'
-        ? quote_manual_custom_booking($room, $input)
-        : quote_booking_for_room($room, $input, true);
+        ? quote_manual_custom_booking($room, $input, null, $allowAnyDate)
+        : quote_booking_for_room($room, $input, true, $allowAnyDate);
     if (array_key_exists('agreedPrice', $input)) {
         $price = filter_var($input['agreedPrice'], FILTER_VALIDATE_INT);
         if ((!is_int($input['agreedPrice']) && !is_string($input['agreedPrice']))
@@ -36,7 +36,7 @@ function quote_manual_booking(array $room, array $input): array
     return $quote + compact('source', 'paymentStatus', 'paymentMethod', 'requestId');
 }
 
-function quote_manual_custom_booking(array $room, array $input, ?DateTimeImmutable $now = null): array
+function quote_manual_custom_booking(array $room, array $input, ?DateTimeImmutable $now = null, bool $allowAnyDate = false): array
 {
     assert_room_bookable($room);
     $zone = new DateTimeZone('Asia/Ho_Chi_Minh');
@@ -50,7 +50,7 @@ function quote_manual_custom_booking(array $room, array $input, ?DateTimeImmutab
     };
     $startNow = in_array($input['startNow'] ?? false, [true, '1', 'on'], true);
     $start = $startNow ? $now : $parse((string)($input['date'] ?? '') . 'T' . (string)($input['time'] ?? ''));
-    if (!$startNow && $start < $now) {
+    if (!$allowAnyDate && !$startNow && $start < $now) {
         if ($start->format('Y-m-d H:i') !== $now->format('Y-m-d H:i')) {
             throw new BookingException('Giờ nhận phòng đã qua. Chọn Nhận phòng ngay hoặc một giờ khác.', 422);
         }
@@ -58,7 +58,7 @@ function quote_manual_custom_booking(array $room, array $input, ?DateTimeImmutab
     }
     $end = $parse((string)($input['endDate'] ?? '') . 'T' . (string)($input['endTime'] ?? ''));
     if ($end <= $start) throw new BookingException('Giờ trả phòng phải sau giờ nhận phòng.', 422);
-    if ($start > $now->modify('+366 days')) throw new BookingException('Chỉ nhận đặt phòng trong vòng 12 tháng.', 422);
+    if (!$allowAnyDate && $start > $now->modify('+366 days')) throw new BookingException('Chỉ nhận đặt phòng trong vòng 12 tháng.', 422);
     if (!array_key_exists('agreedPrice', $input)) {
         throw new BookingException('Nhập giá chốt với khách cho khung giờ tùy chọn.', 422);
     }
@@ -99,7 +99,9 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false): arra
             return $booking;
         }
         $room = (new RoomRepository($pdo))->findById((string)$input['roomId']);
-        $quote = quote_manual_booking($room, $input);
+        // Trusted account state only; request fields must never grant the override.
+        $allowAnyDate = !$test && (bool)(current_account()['root'] ?? false);
+        $quote = quote_manual_booking($room, $input, $allowAnyDate);
         $start = mysql_datetime($quote['start']);
         $end = mysql_datetime($quote['end']);
         assert_room_inventory($pdo, $room['id'], $start, $end);

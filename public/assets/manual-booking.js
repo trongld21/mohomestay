@@ -5,6 +5,7 @@
     if (!dialog) return;
     const form = dialog.querySelector("form");
     const fields = form.elements;
+    const allowAnyDate = window.LANG_HOME?.manualDateOverride === true;
     const summary = dialog.querySelector("[data-manual-summary]");
     const errorBox = dialog.querySelector("[data-manual-error]");
     const discard = dialog.querySelector("[data-manual-discard]");
@@ -73,7 +74,7 @@
         const start = fields.startNow.checked ? now : new Date(fields.date.value + "T" + fields.time.value + ":00+07:00");
         const end = new Date(fields.endDate.value + "T" + endTime() + ":00+07:00");
         if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return null;
-        if (!fields.startNow.checked && start.getTime() < now.getTime() - 60000) return null;
+        if (!allowAnyDate && !fields.startNow.checked && start.getTime() < now.getTime() - 60000) return null;
         return { start, end, fixed: true };
     }
 
@@ -106,7 +107,7 @@
         }
         timePicker.setDisabled(custom ? fields.startNow.checked : slot?.mode === "FIXED_TIME");
         if (!custom && slot?.mode === "FIXED_TIME") setArrivalTime(slot.checkInTime);
-        const window = custom ? customWindow() : MoBookingSlots.slotWindow(slot, fields.date.value, fields.time.value);
+        const window = custom ? customWindow() : MoBookingSlots.slotWindow(slot, fields.date.value, fields.time.value, allowAnyDate ? new Date(-8640000000000000) : new Date());
         summary.dataset.state = "loading";
         if (!room || !window) {
             summary.textContent = custom ? "Chọn giờ nhận hợp lệ và giờ trả sau giờ nhận phòng." : "Chọn phòng, gói lưu trú và thời gian nhận phòng.";
@@ -134,7 +135,7 @@
             if (current !== revision || !dialog.open) return;
             const inventory = data.rooms.find((item) => item.id === room.id);
             if (!data.connected || !inventory?.active) throw new Error("Phòng hiện không nhận đặt hoặc chưa kết nối được lịch.");
-            const state = MoBookingSlots.slotState(window, inventory.intervals);
+            const state = MoBookingSlots.slotState(window, inventory.intervals, allowAnyDate ? new Date(-8640000000000000) : new Date());
             available = state === "available";
             summary.dataset.state = state;
             summary.innerHTML = details + "<br>" + (available
@@ -180,10 +181,10 @@
         fields.date.value = new Intl.DateTimeFormat("en-CA", {
             timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
         }).format(now);
-        fields.date.min = fields.date.value;
+        fields.date.min = allowAnyDate ? "" : fields.date.value;
         const lastDate = MoAdminDatePicker.parse(fields.date.value);
         lastDate.setUTCDate(lastDate.getUTCDate() + 366);
-        fields.date.max = lastDate.toISOString().slice(0, 10);
+        fields.date.max = allowAnyDate ? "" : lastDate.toISOString().slice(0, 10);
         datePicker.refresh();
         setArrivalTime(new Intl.DateTimeFormat("en-GB", {
             timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", hourCycle: "h23",

@@ -380,3 +380,5 @@ transaction; nhận sau nửa đêm không tự đẩy giờ trả sang thêm m�
 - Mã cổng mới không còn vào sớm 1 giờ. Mã TTLock tự sinh offline chỉ chính xác giờ tròn: giờ nhận lẻ được làm tròn lên để không vào sớm (10:30 → 11:00). Có gateway hoạt động thì đặt `TTLOCK_CODE_MODE=CUSTOM` để mã mới kích hoạt đúng phút; chế độ GENERATED dùng khi không có gateway; mã đã cấp trước thay đổi vẫn giữ thời hạn vật lý cũ.
 
 Form tạo đơn admin mặc định **Theo gói lưu trú**. Khi cần, chuyển sang **Thời gian tùy chọn** và tự chọn ngày giờ (không điền sẵn). Với tùy chọn, chọn **Nhận phòng ngay bây giờ** hoặc nhập giờ nhận, chọn riêng ngày/giờ trả (kể cả nhiều ngày) và nhập giá chốt. Đơn tùy chọn không yêu cầu phòng có gói; vẫn kiểm tra sức chứa, trùng lịch, khóa căn và giờ dọn phòng trên server.
+
+Chỉ tài khoản **Super Admin** (tài khoản gốc) được tạo đơn với ngày nhận trong quá khứ hoặc vượt giới hạn 12 tháng, ở cả chế độ theo gói và tùy chọn. Bỏ chọn **Nhận phòng ngay bây giờ** để tự chọn ngày giờ. Quyền này lấy từ phiên đăng nhập trên server, không cấp qua quyền nhân viên; vẫn kiểm tra giờ trả sau giờ nhận, trùng lịch, khóa và dọn phòng.
