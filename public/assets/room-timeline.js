@@ -149,15 +149,17 @@
                 && b.status !== "CANCELLED" && (b.status === "CHECKED_IN" || Number(b.surcharge_amount) > 0));
             one("[data-timeline-stays]").innerHTML = bookings.map((b) => {
                 const locked = b.emergency_lock_id && !b.ended_at;
-                return `<article class="rounded-xl border border-[#e5dacb] p-3">
+                const unpaidSurcharge = Number(b.surcharge_amount) > 0 && ["DUE", "PENDING"].includes(b.surcharge_status);
+                return `<article class="rounded-xl border p-3 ${b.isOverdue || unpaidSurcharge ? 'border-red-400 bg-red-50' : 'border-[#e5dacb]'}">
                     <h4 class="font-semibold">${escape(b.room_name)} · ${escape(b.booking_code)}</h4>
                     <p class="mt-1 text-sm">Giờ trả dự kiến: ${escape(dateTime(utc(b.check_out)))}</p>
                     <p class="mt-1 text-sm ${b.isOverdue ? "text-red-800" : "text-[#736b61]"}">${b.status === "CHECKED_OUT" ? "Đã xác nhận trả phòng" : locked ? "Đang khóa khẩn cấp · khách chưa rời phòng" : b.isOverdue ? "Đã quá giờ · cần kiểm tra khách" : "Trong giờ lưu trú"}</p>
-                    ${Number(b.surcharge_amount) > 0 ? `<p class="mt-1 text-sm font-semibold">Phụ thu: ${cash(b.surcharge_amount)} · ${b.surcharge_status === "PAID" ? "Đã thu" : "Chưa thu"}</p>` : ""}
+                    ${Number(b.surcharge_amount) > 0 ? `<p class="mt-2 rounded-lg p-2 text-sm font-bold ${unpaidSurcharge ? 'bg-red-100 text-red-900' : 'text-stone-700'}">Phụ thu: ${cash(b.surcharge_amount)} · ${b.surcharge_status === "PAID" ? "Đã thu" : b.surcharge_status === "CANCELLED" ? "Đã hủy" : "Chưa thu"}</p>` : ""}
                     <div class="mt-3 flex flex-wrap gap-2">
                         ${canLock && b.isOverdue && !locked ? `<button class="timeline-button" data-lock-booking="${escape(b.id)}" type="button">Khóa khẩn cấp</button>` : ""}
                         ${canCheckout && b.status === "CHECKED_IN" ? `<button class="timeline-button timeline-primary" data-checkout-booking="${escape(b.id)}" type="button">Xác nhận trả phòng</button>` : ""}
-                        ${canCheckout && Number(b.surcharge_amount) > 0 ? `<button class="timeline-button" data-charge-booking="${escape(b.id)}" type="button">Xem phụ thu / QR</button>` : ""}
+                        ${canCheckout && Number(b.surcharge_amount) > 0 && b.surcharge_status !== "CANCELLED" ? `<button class="timeline-button" data-charge-booking="${escape(b.id)}" type="button">Xem phụ thu / QR</button>` : ""}
+                        ${window.LANG_HOME?.isSuperAdmin === true && unpaidSurcharge ? `<button class="timeline-button !border-red-400 !text-red-800 enabled:hover:!bg-red-100" data-cancel-surcharge="${escape(b.id)}" type="button">Hủy phụ thu</button>` : ""}
                     </div>
                 </article>`;
             }).join("") || '<p class="text-sm text-[#736b61]">Chưa có khách đang lưu trú hoặc khoản phụ thu.</p>';
@@ -224,14 +226,15 @@
         function renderCharge(charge, warning = "") {
             currentCharge = charge;
             const paid = charge.paymentStatus === "PAID";
+            const cancelled = charge.paymentStatus === "CANCELLED";
             body.innerHTML = `<p class="text-sm">Giờ trả thực tế: ${escape(dateTime(utc(charge.actualCheckoutAt)))}</p>
                 <p class="mt-2 text-sm">Trễ ${Math.ceil(charge.lateSeconds / 60)} phút · Miễn 15 phút đầu · ${charge.billableHours} giờ tính phí</p>
                 <p class="mt-4 text-2xl font-semibold">${cash(charge.amount)}</p>
-                <p class="mt-2 text-sm">${charge.amount === 0 ? "Không phát sinh phụ thu." : paid ? "Đã nhận tiền phụ thu." : "Chưa nhận tiền phụ thu. Khoản này tách riêng tiền đặt phòng."}</p>
+                <p class="mt-2 text-sm">${cancelled ? "Khoản phụ thu đã hủy." : charge.amount === 0 ? "Không phát sinh phụ thu." : paid ? "Đã nhận tiền phụ thu." : "Chưa nhận tiền phụ thu. Khoản này tách riêng tiền đặt phòng."}</p>
                 ${warning ? `<p class="mt-3 text-sm text-red-800" role="status">${escape(warning)}</p>` : ""}
                 <div class="mt-4 flex flex-wrap gap-2">
-                    ${charge.amount > 0 && !paid && charge.checkoutUrl ? `<a class="timeline-button timeline-primary" href="${escape(charge.checkoutUrl)}" target="_blank" rel="noopener noreferrer">Mở mã QR thanh toán ↗</a><button type="button" class="timeline-button" data-copy-charge-link>Sao chép link gửi khách</button>` : ""}
-                    ${charge.amount > 0 && !paid && !charge.checkoutUrl ? '<button class="timeline-button timeline-primary" type="button" data-checkout-pay>Tạo lại QR</button>' : ""}
+                    ${charge.amount > 0 && !paid && !cancelled && charge.checkoutUrl ? `<a class="timeline-button timeline-primary" href="${escape(charge.checkoutUrl)}" target="_blank" rel="noopener noreferrer">Mở mã QR thanh toán ↗</a><button type="button" class="timeline-button" data-copy-charge-link>Sao chép link gửi khách</button>` : ""}
+                    ${charge.amount > 0 && !paid && !cancelled && !charge.checkoutUrl ? '<button class="timeline-button timeline-primary" type="button" data-checkout-pay>Tạo lại QR</button>' : ""}
                     ${charge.amount > 0 ? '<button class="timeline-button" type="button" data-charge-refresh>Kiểm tra đã thu</button>' : ""}
                 </div><p class="mt-3 text-sm text-[#736b61]" data-charge-status role="status"></p>`;
         }
@@ -245,6 +248,28 @@
                 one("[data-timeline-selection]").textContent = `${room.name} · ${dateTime(a)}: `
                     + (intervals.length ? intervals.map((i) => `${i.status === "BLOCKED" ? "Đang khóa" : i.status === "CLEANING" ? "Bận" : i.status === "HELD" ? "Đang giữ" : "Đã đặt"} ${dateTime(i.start)} – ${dateTime(i.end)}`).join("; ")
                         : labels[cellState(room, a, a + 3600000, timestamp(snapshot.serverTime))]);
+                return;
+            }
+            const cancelSurcharge = event.target.closest("[data-cancel-surcharge]");
+            if (cancelSurcharge && !mutating) {
+                const confirmed = await LangUI["confirm"]({
+                    title: "Hủy khoản phụ thu?",
+                    message: "Khoản phụ thu chưa thu sẽ được hủy và ngừng thu tiền. Trạng thái trả phòng giữ nguyên.",
+                    confirmLabel: "Hủy phụ thu", cancelLabel: "Quay lại", tone: "danger",
+                });
+                if (!confirmed) return;
+                mutating = true;
+                cancelSurcharge.disabled = true;
+                try {
+                    await request("/api/admin/room-operations/cancel-surcharge", "POST", { bookingId: cancelSurcharge.dataset.cancelSurcharge });
+                    LangUI.toast({ type: "success", title: "Đã hủy phụ thu", message: "Khoản này không còn phải thu." });
+                    await load();
+                } catch (error) {
+                    LangUI.toast({ type: "error", title: "Chưa hủy được phụ thu", message: error.message });
+                } finally {
+                    mutating = false;
+                    cancelSurcharge.disabled = false;
+                }
                 return;
             }
             const release = event.target.closest("[data-release-hold]");

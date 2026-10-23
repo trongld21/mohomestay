@@ -386,3 +386,17 @@ Chỉ tài khoản **Super Admin** (tài khoản gốc) được tạo đơn v�
 Super Admin có thể hủy cả đơn đang lưu trú hoặc đã kết thúc từ danh sách đặt phòng. Đơn đã hủy được loại khỏi doanh thu, lịch giữ theo đơn được giải phóng; tiền đã nhận và dữ liệu đối soát vẫn giữ nguyên. Hủy đơn không tự chuyển khoản hoàn tiền cho khách.
 
 Khi xác nhận trả phòng, ô **Xác nhận thu phụ thu và tạo mã chuyển khoản** mặc định không tích. Không tích thì chỉ ghi giờ trả và không tạo khoản phụ thu/QR; tích mới chốt phụ thu theo quy tắc và tạo link QR. Quyết định được giữ nguyên khi gửi lại yêu cầu.
+
+Khoản phụ thu chưa thu được đánh dấu đỏ trong màn Tìm phòng trống. Super Admin có nút **Hủy phụ thu** ngay trên thẻ: hủy link payOS đã tạo trước khi chốt hủy, giữ nguyên số tiền cũ/người hủy/thời điểm để đối soát. Khoản đã thanh toán không được hủy bằng nút này. Cần migration `013_surcharge_cancellation`.
+
+## Email thông báo nội bộ
+
+Sau migration `014_staff_email_notifications`, hệ thống gửi tới **mohomestay01@gmail.com** khi đơn đặt phòng được xác nhận (online đã thanh toán hoặc đơn nhân viên tạo), khi xác nhận khách trả phòng và khi xác nhận thu phụ thu. Không gửi thông báo cho đơn test hay đơn online mới giữ 15 phút chưa thanh toán. Email chứa mã đơn, phòng, tên/điện thoại khách, giờ lưu trú và số tiền; không chứa PIN, token hoặc ảnh CCCD.
+
+Dùng cấu hình `MAIL_FROM` và mail server hiện có của hosting. Sự kiện được lưu cùng giao dịch đặt/trả phòng, gửi sau khi lưu thành công; mỗi đơn/mỗi loại thông báo có một bản ghi. Thư bị từ chối được thử lại tối đa 5 lần, cách nhau ít nhất 15 phút. Trường hợp tiến trình dừng đúng sau khi mail server nhận thư vẫn có thể gửi lặp khi phục hồi; Message-ID ổn định hỗ trợ đối soát.
+
+Đặt cron mỗi phút (độc lập TTLock):
+```sh
+php /duong-dan/domain/src/staff-notifications-worker.php
+```
+Kiểm thử không gửi mail thật: `php tools/staff-notifications-test.php`. PHP mail trả thành công chỉ xác nhận mail server nhận xử lý, cần kiểm tra hộp thư/spam để xác minh giao thư thực tế.

@@ -132,7 +132,7 @@
               <section class="admin-booking-panel" aria-labelledby="booking-list-title">
                   <div class="admin-table-heading"><div><h2 id="booking-list-title">Danh sách đặt phòng <span class="admin-count">${bookings.length}</span></h2><p>Thông tin và trạng thái từng lượt lưu trú.</p></div><span>${bookings.length} đơn</span></div>
                   <div class="admin-filters">
-                      <label class="admin-search">Tìm đặt phòng<input type="search" data-booking-search placeholder="Tên khách, số điện thoại, mã đơn…" value="${esc(bookingFilters.query)}"></label>
+                      <label class="admin-search">Tìm đặt phòng<input type="search" data-booking-search placeholder="Tên không dấu, một phần SĐT, mã đơn, tên phòng…" value="${esc(bookingFilters.query)}"></label>
                       <label>Phòng<select data-booking-room><option value="all">Tất cả phòng</option>${roomNames.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join("")}</select></label>
                       <label>Trạng thái<select data-booking-status><option value="all">Tất cả trạng thái</option>${Object.entries(
                           statusNames,

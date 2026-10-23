@@ -70,6 +70,9 @@ function apply_payment_callback(PDO $pdo, array $data, bool $test = false): ?arr
             $booking['status'] = $status;
             $booking['payment_status'] = 'PAID';
         }
+        if (!$test && $booking['status'] === 'CONFIRMED') {
+            queue_staff_notification($pdo, $booking, 'BOOKED');
+        }
         $pdo->commit();
         return $booking;
     } catch (Throwable $error) {

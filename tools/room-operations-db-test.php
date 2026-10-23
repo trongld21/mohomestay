@@ -24,13 +24,14 @@ $pdo = new PDO('sqlite::memory:', null, null, [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ]);
-$pdo->exec("CREATE TABLE rooms (id TEXT PRIMARY KEY,is_active INTEGER,status TEXT);
+$pdo->exec("CREATE TABLE rooms (id TEXT PRIMARY KEY,is_active INTEGER,status TEXT,name TEXT);
 CREATE TABLE bookings (id TEXT PRIMARY KEY,room_id TEXT,booking_code TEXT,status TEXT,check_in TEXT,check_out TEXT,hold_expires_at TEXT,is_test INTEGER DEFAULT 0);
 CREATE TABLE room_availability (id TEXT,room_id TEXT,date TEXT,available INTEGER);
 CREATE TABLE room_emergency_locks (id TEXT PRIMARY KEY,booking_id TEXT UNIQUE,room_id TEXT,starts_at TEXT,ended_at TEXT,locked_by TEXT,ended_by TEXT);
-CREATE TABLE booking_checkout_charges (booking_id TEXT PRIMARY KEY,actual_checkout_at TEXT,confirmed_by TEXT,late_seconds INTEGER,billable_hours INTEGER,amount INTEGER,order_code INTEGER UNIQUE,payment_status TEXT,qr_code TEXT,checkout_url TEXT,payment_link_id TEXT,transaction_reference TEXT UNIQUE,paid_at TEXT);
+CREATE TABLE booking_checkout_charges (booking_id TEXT PRIMARY KEY,actual_checkout_at TEXT,confirmed_by TEXT,late_seconds INTEGER,billable_hours INTEGER,amount INTEGER,order_code INTEGER UNIQUE,payment_status TEXT,qr_code TEXT,checkout_url TEXT,payment_link_id TEXT,transaction_reference TEXT UNIQUE,paid_at TEXT,cancelled_at TEXT,cancelled_by TEXT);
 CREATE TABLE room_quote_holds (id TEXT PRIMARY KEY,room_id TEXT,package_id TEXT,starts_at TEXT,ends_at TEXT,expires_at TEXT,released_at TEXT,created_by TEXT,released_by TEXT);
-INSERT INTO rooms VALUES ('r',1,'ACTIVE');");
+CREATE TABLE staff_email_notifications (id TEXT PRIMARY KEY,booking_id TEXT,event_type TEXT,recipient TEXT,payload TEXT,status TEXT DEFAULT 'PENDING',attempts INTEGER DEFAULT 0,last_attempt_at TEXT,sent_at TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP,UNIQUE(booking_id,event_type));
+INSERT INTO rooms VALUES ('r',1,'ACTIVE','Room');");
 $id = str_repeat('a', 32);
 $now = time();
 $scheduled = gmdate('Y-m-d H:i:s', $now - 4200);
@@ -118,5 +119,32 @@ operation_check($waived['order_code'] === null && $waived['payment_status'] === 
 operation_check((int)$waived['late_seconds'] === 4200, 'Keep actual lateness for audit.');
 $waivedRetry = confirm_room_checkout($pdo, $waivedId, 'staff', $now + 3600, true);
 operation_check((int)$waivedRetry['amount'] === 0, 'A retry must not introduce a surcharge after checkout was finalized without one.');
+$pdo->prepare("UPDATE booking_checkout_charges SET amount=150000,payment_status='DUE' WHERE booking_id=?")->execute([$waivedId]);
+$_SESSION = [];
+try {
+    cancel_checkout_surcharge($pdo, $waivedId);
+    throw new RuntimeException('Non-Super-Admin cancelled a surcharge.');
+} catch (BookingException $e) {
+    operation_check($e->httpStatus === 403, 'Only root may cancel surcharges.');
+}
+$_SESSION = ['admin_until' => time() + 3600];
+try {
+    cancel_checkout_surcharge($pdo, $waivedId, static function (): never { throw new RuntimeException('Provider unavailable'); });
+} catch (RuntimeException) {
+}
+$state = $pdo->prepare('SELECT payment_status FROM booking_checkout_charges WHERE booking_id=?');
+$state->execute([$waivedId]);
+operation_check($state->fetchColumn() === 'DUE', 'Failed provider cancellation must preserve receivable.');
+$cancelledCharge = cancel_checkout_surcharge($pdo, $waivedId, static function (): void {});
+operation_check($cancelledCharge['payment_status'] === 'CANCELLED' && $cancelledCharge['cancelled_by'] === 'admin', 'Cancellation must retain actor and timestamp.');
+operation_check((int)$cancelledCharge['amount'] === 150000, 'Retain original amount for audit.');
+operation_check(cancel_checkout_surcharge($pdo, $waivedId)['cancelled_at'] === $cancelledCharge['cancelled_at'], 'Repeated cancellation must be idempotent.');
+operation_conflict(fn() => ensure_checkout_payment($pdo, $waivedId));
+operation_conflict(fn() => cancel_checkout_surcharge($pdo, $id));
+$countMail = $pdo->prepare('SELECT COUNT(*) FROM staff_email_notifications WHERE booking_id=?');
+$countMail->execute([$id]);
+operation_check((int)$countMail->fetchColumn() === 2, 'Checkout with surcharge must queue exactly one checkout and one surcharge notification.');
+$countMail->execute([$waivedId]);
+operation_check((int)$countMail->fetchColumn() === 1, 'Checkout without surcharge queues only checkout notification.');
 echo "Room operations transactions, grace, locks, cleaning, retries, callbacks and privacy: OK
 ";

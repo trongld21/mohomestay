@@ -128,6 +128,8 @@ function confirm_room_checkout(PDO $pdo, string $bookingId, string $actor, ?int 
         $query = $pdo->prepare('SELECT * FROM booking_checkout_charges WHERE booking_id=?');
         $query->execute([$bookingId]);
         $charge = $query->fetch();
+        queue_staff_notification($pdo, $booking, 'CHECKED_OUT', $charge);
+        if ((int)$charge['amount'] > 0) queue_staff_notification($pdo, $booking, 'SURCHARGE', $charge);
         $pdo->commit();
         return $charge;
     } catch (Throwable $error) {
@@ -145,7 +147,7 @@ function checkout_charge_dto(array $charge): array
         'billableHours' => (int)$charge['billable_hours'],
         'amount' => (int)$charge['amount'],
         'paymentStatus' => $charge['payment_status'],
-        'checkoutUrl' => $charge['checkout_url'],
+        'checkoutUrl' => $charge['payment_status'] === 'CANCELLED' ? null : $charge['checkout_url'],
     ];
 }
 
@@ -217,6 +219,9 @@ function ensure_checkout_payment(PDO $pdo, string $bookingId, ?callable $create 
         if ($bookingState->fetchColumn() === 'CANCELLED') {
             throw new BookingException('Đơn đã hủy. Không tạo hoặc cấp lại QR phụ thu cho đơn này.', 409);
         }
+        if ($charge['payment_status'] === 'CANCELLED') {
+            throw new BookingException('Khoản phụ thu đã hủy, không thể tạo lại QR.', 409);
+        }
         if ((int)$charge['amount'] === 0 || $charge['payment_status'] === 'PAID' || !empty($charge['checkout_url'])) {
             $pdo->commit();
             return $charge;
@@ -273,6 +278,66 @@ function apply_checkout_payment_callback(PDO $pdo, array $data): bool
         }
         $pdo->commit();
         return true;
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $error;
+    }
+}
+
+function cancel_checkout_payment_link(array $charge): void
+{
+    if (empty($charge['checkout_url'])) return;
+    $ch = curl_init('https://api-merchant.payos.vn/v2/payment-requests/' . $charge['order_code'] . '/cancel');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_POSTFIELDS => json_encode(['cancellationReason' => 'Super Admin huy phu thu']),
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'x-client-id: ' . config('payos.client_id'),
+            'x-api-key: ' . config('payos.api_key'),
+        ],
+    ]);
+    $raw = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+    $response = json_decode((string)$raw, true);
+    $data = $response['data'] ?? [];
+    if ($status < 200 || $status >= 300 || ($response['code'] ?? '') !== '00'
+        || (string)($data['orderCode'] ?? '') !== (string)$charge['order_code']
+        || (float)($data['amount'] ?? -1) !== (float)$charge['amount']
+        || ($data['status'] ?? '') !== 'CANCELLED'
+        || (float)($data['amountPaid'] ?? -1) !== 0.0) {
+        throw new BookingException('Chưa hủy được link thanh toán hoặc đã phát sinh tiền nhận. Vui lòng kiểm tra payOS trước khi thử lại.', 409);
+    }
+}
+
+function cancel_checkout_surcharge(PDO $pdo, string $bookingId, ?callable $cancelLink = null): array
+{
+    $account = current_account();
+    if (empty($account['root'])) throw new BookingException('Chỉ Super Admin được hủy phụ thu.', 403);
+    $pdo->beginTransaction();
+    try {
+        $query = $pdo->prepare('SELECT * FROM booking_checkout_charges WHERE booking_id=?' . room_operation_lock_suffix($pdo));
+        $query->execute([$bookingId]);
+        $charge = $query->fetch();
+        if (!$charge) throw new BookingException('Không tìm thấy khoản phụ thu.', 404);
+        if ($charge['payment_status'] === 'CANCELLED') {
+            $pdo->commit();
+            return $charge;
+        }
+        if (!in_array($charge['payment_status'], ['DUE', 'PENDING'], true) || (int)$charge['amount'] <= 0) {
+            throw new BookingException('Chỉ hủy khoản phụ thu chưa thanh toán.', 409);
+        }
+        ($cancelLink ?? 'cancel_checkout_payment_link')($charge);
+        $pdo->prepare("UPDATE booking_checkout_charges SET payment_status='CANCELLED',cancelled_at=?,cancelled_by=? WHERE booking_id=?")
+            ->execute([gmdate('Y-m-d H:i:s'), (string)$account['id'], $bookingId]);
+        $query->execute([$bookingId]);
+        $charge = $query->fetch();
+        $pdo->commit();
+        return $charge;
     } catch (Throwable $error) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $error;

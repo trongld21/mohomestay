@@ -8,12 +8,26 @@
         return ['CANCELLED', 'EXPIRED'].includes(item.status)
             || item.status === 'CHECKED_OUT' && !needsAttention(item);
     }
+    function normalizeSearch(value) {
+        return String(value ?? '').normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[đĐ]/g, 'd')
+            .toLowerCase();
+    }
+    function matchesSearch(item, query) {
+        const terms = normalizeSearch(query).trim().split(/\s+/).filter(Boolean);
+        const values = [item.guest_name, item.guest_phone, item.booking_code, item.room_name]
+            .map(value => normalizeSearch(value).replace(/[^a-z0-9]/g, ''));
+        return terms.every(term => {
+            const compact = term.replace(/[^a-z0-9]/g, '');
+            return compact === '' || values.some(value => value.includes(compact));
+        });
+    }
     function matches(item, filters) {
         if (!filters.showFinished && filters.status === 'all' && isFinished(item)) return false;
         if (filters.status !== 'all' && item.status !== filters.status) return false;
         if (filters.room !== 'all' && item.room_name !== filters.room) return false;
-        if (![item.guest_name, item.guest_phone, item.booking_code].join(' ').toLocaleLowerCase('vi')
-            .includes(filters.query.trim().toLocaleLowerCase('vi'))) return false;
+        if (!matchesSearch(item, filters.query)) return false;
         // Include any stay overlapping the selected Vietnam calendar days, with exclusive checkout.
         if (filters.from && timestamp(item.check_out) <= Date.parse(filters.from + 'T00:00:00+07:00')) return false;
         if (filters.to && timestamp(item.check_in) >= Date.parse(filters.to + 'T00:00:00+07:00') + 86400000) return false;

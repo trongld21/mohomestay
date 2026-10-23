@@ -27,7 +27,7 @@ function room_operations_api(string $path, string $method): never
             . 'LEFT JOIN booking_checkout_charges c ON c.booking_id=b.id '
             . "WHERE (b.check_in<? AND b.check_out>?) OR "
             . "(b.check_in<? AND b.status IN ('CONFIRMED','CHECKED_IN')) OR "
-            . "(c.amount>0 AND c.payment_status<>'PAID') ORDER BY b.check_in DESC LIMIT 500"
+            . "(c.amount>0 AND c.payment_status IN ('DUE','PENDING')) ORDER BY b.check_in DESC LIMIT 500"
         );
         $start = mysql_datetime(new DateTimeImmutable($snapshot['rangeStart']));
         $end = mysql_datetime(new DateTimeImmutable($snapshot['rangeEnd']));
@@ -51,6 +51,7 @@ function room_operations_api(string $path, string $method): never
         '/api/admin/room-operations/release',
         '/api/admin/room-operations/checkout',
         '/api/admin/room-operations/payment',
+        '/api/admin/room-operations/cancel-surcharge',
     ], true)) {
         json_response(['error' => 'Không tìm thấy API.'], 404);
     }
@@ -58,6 +59,9 @@ function room_operations_api(string $path, string $method): never
     $body = json_body();
     $id = (string)($body['bookingId'] ?? '');
     $actor = (string)current_account()['id'];
+    if ($path === '/api/admin/room-operations/cancel-surcharge') {
+        json_response(['charge' => checkout_charge_dto(cancel_checkout_surcharge(db(), $id))]);
+    }
     if ($path === '/api/admin/room-operations/hold') {
         json_response(['hold' => create_room_quote_hold(db(), $body, $actor)]);
     }
@@ -70,6 +74,7 @@ function room_operations_api(string $path, string $method): never
     }
     if ($path === '/api/admin/room-operations/checkout') {
         $charge = confirm_room_checkout(db(), $id, $actor, null, ($body['collectSurcharge'] ?? false) === true);
+        try_dispatch_staff_notifications(db(), $id);
         // Provider errors never roll back departure or lose the amount owed.
         if ((int)$charge['amount'] > 0) {
             try {

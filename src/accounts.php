@@ -211,6 +211,7 @@ function admin_api_permission(string $path, string $method, array $body = []): s
     $feature = explode('/', substr($path, strlen('/api/admin/')))[0];
     return match ($feature) {
         'room-operations' => match (true) {
+            str_ends_with($path, '/cancel-surcharge') => 'accounts',
             $method === 'GET' => 'availability.view',
             str_ends_with($path, '/lock') => 'availability.lock',
             str_ends_with($path, '/hold'), str_ends_with($path, '/release') => 'availability.hold',

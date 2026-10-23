@@ -151,6 +151,7 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false): arra
         if (!$test && $quote['paymentStatus'] === 'PAID') {
             record_manual_payment($pdo, $values['id'], $quote['total'], $quote['paymentMethod']);
         }
+        if (!$test) queue_staff_notification($pdo, $values, 'BOOKED');
         $pdo->commit();
         return $values;
     } catch (Throwable $error) {

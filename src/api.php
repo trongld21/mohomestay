@@ -69,6 +69,7 @@ function handle_api(string $path, string $method): never
                 require_permission('bookings.payment');
             }
             $booking = create_manual_booking(db(), $body);
+            try_dispatch_staff_notifications(db(), $booking['id']);
             json_response(['bookingCode' => $booking['booking_code']], 201);
         }
         if ($method === 'POST' && preg_match('#^/api/admin/bookings/([a-f0-9]{32})/payment$#', $path, $matches)) {
@@ -192,7 +193,10 @@ function payment_webhook_api(): never
     if(!isset($data['orderCode'],$data['amount'],$data['reference'])||!is_numeric($data['orderCode'])||!is_numeric($data['amount'])||!is_string($data['reference'])||$data['reference']==='')json_response(['error'=>'Invalid payment data'],400);
     if (apply_checkout_payment_callback(db(), $data)) json_response(['ok' => true]);
     $booking = apply_payment_callback(db(), $data);
-    if ($booking) dispatch_confirmation_email((string)$booking['id']);
+    if ($booking) {
+        try_dispatch_staff_notifications(db(), (string)$booking['id']);
+        dispatch_confirmation_email((string)$booking['id']);
+    }
     json_response(['ok'=>true]);
 }
 
@@ -222,6 +226,7 @@ function update_booking_api(): never
     if ($status === 'CHECKED_OUT') {
         require_permission('availability.checkout');
         $charge = confirm_room_checkout(db(), $id, (string)current_account()['id'], null, ($body['collectSurcharge'] ?? false) === true);
+        try_dispatch_staff_notifications(db(), $id);
         json_response(['ok' => true, 'charge' => checkout_charge_dto($charge)]);
     }
     update_booking_lifecycle(db(), $id, $status);

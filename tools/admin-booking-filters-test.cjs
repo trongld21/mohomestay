@@ -23,4 +23,11 @@ assert.equal(tone({...stay, status: 'CHECKED_IN', isOverdue: false}), 'staying')
 assert.equal(tone({...stay, status: 'CHECKED_OUT', isOverdue: true}), 'finished');
 assert.equal(matches(stay, {...filters, query: 'khách', room: 'Mơ'}), true);
 assert.equal(matches(stay, {...filters, room: 'Pink'}), false);
+const searchable = {...stay, guest_name: 'Đặng Thị Bích', guest_phone: '0862 903 126', booking_code: 'MO-ADFB9449E5', room_name: 'Vintage'};
+for (const query of ['bich', 'DANG', 'thi bich', 'bich dang', 'dang 3126', '0862903', '0862-903-126', 'adfb', 'MOADFB9449E5', 'mo adfb9449e5', 'vintage bich', '  BÍCH  ']) {
+    assert.equal(matches(searchable, {...filters, query}), true, 'Partial/accent-insensitive search: ' + query);
+}
+assert.equal(matches(searchable, {...filters, query: 'khongkhop'}), false);
+assert.equal(matches(searchable, {...filters, query: 'bich', room: 'Black'}), false, 'Room filter still applies.');
+assert.equal(matches({...searchable, status: 'CHECKED_OUT'}, {...filters, query: 'bich'}), false, 'History visibility remains explicit.');
 console.log('Admin booking filters: OK');
