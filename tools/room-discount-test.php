@@ -41,4 +41,26 @@ $hydrated=hydrate_room_rows([
 ]);
 discount_expect($hydrated['r']['packages'][0]['price']===240000 && $hydrated['r']['packages'][1]['price']===450000,'API catalog applies inherited and individual discounts independently');
 discount_expect($hydrated['r']['packages'][1]['basePrice']===500000,'Admin editor retains original package price');
+// The final transaction re-reads raw database rows, not the hydrated catalog.
+$lockedRoom = ['status' => 'ACTIVE', 'discount_percent' => 30];
+$lockedPackage = [
+    'id' => 'overnight', 'name' => 'Overnight', 'timing_mode' => 'FIXED_TIME',
+    'duration_minutes' => null, 'check_in_time' => '21:00:00', 'check_out_time' => '09:00:00',
+    'price' => '410000', 'discount_percent' => null, 'is_enabled' => 1,
+];
+$payable = locked_booking_package($lockedRoom, $lockedPackage);
+discount_expect($payable['price'] === 287000, 'Final online booking price must retain inherited discount (410000 -> 287000)');
+discount_expect(booking_package_snapshot($payable)['packagePrice'] === 287000, 'Stored package snapshot must match payment amount');
+discount_expect($payable['checkInTime'] === '21:00' && $payable['checkOutTime'] === '09:00', 'Repricing must preserve fixed-time package hours');
+$lockedPackage['discount_percent'] = '10';
+discount_expect(locked_booking_package($lockedRoom, $lockedPackage)['price'] === 369000, 'Package discount overrides room discount during final pricing');
+$lockedPackage['discount_percent'] = '0';
+discount_expect(locked_booking_package($lockedRoom, $lockedPackage)['price'] === 410000, 'Explicit zero discount must override room discount during final pricing');
+$lockedPackage['is_enabled'] = 0;
+try {
+    locked_booking_package($lockedRoom, $lockedPackage);
+    throw new LogicException('Disabled package accepted during final pricing');
+} catch (BookingException $error) {
+    discount_expect($error->httpStatus === 409, 'Disabled package must still be rejected');
+}
 echo "Room discount tests: OK\n";

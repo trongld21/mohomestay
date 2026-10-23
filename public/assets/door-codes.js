@@ -246,6 +246,8 @@
         errorBox.hidden = true;
         discard.hidden = true;
         dirty = false;
+        const statusField = form.elements.status.closest("label");
+        statusField?.toggleAttribute("data-permission-denied", Boolean(row) && !LANG_HOME.abilities.includes("door-codes.toggle"));
         dialog.showModal();
         document.body.classList.add("dialog-open");
         form.elements.code.focus();

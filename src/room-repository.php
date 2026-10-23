@@ -97,12 +97,19 @@ final class RoomRepository
         return $this->findById($id) ?? throw new RuntimeException('Room create failed');
     }
 
-    public function update(string $id, array $input): array
+    public function update(string $id, array $input, bool $allowVisibilityChange = true): array
     {
         $data=validate_room_input($input);$this->pdo->beginTransaction();
         try {
-            $lock=$this->pdo->prepare('SELECT id FROM rooms WHERE id=? FOR UPDATE');$lock->execute([$id]);
-            if(!$lock->fetch())throw new BookingException('Không tìm thấy phòng.',404);
+            $lock = $this->pdo->prepare('SELECT id,status FROM rooms WHERE id=? FOR UPDATE');
+            $lock->execute([$id]);
+            $existing = $lock->fetch();
+            if (!$existing) {
+                throw new BookingException('Không tìm thấy phòng.', 404);
+            }
+            if (!$allowVisibilityChange) {
+                $data['status'] = $existing['status'];
+            }
             $stmt=$this->pdo->prepare('UPDATE rooms SET name=?,slug=?,price=?,max_guests=?,is_active=?,subtitle=?,description=?,tag=COALESCE(?,tag),status=?,bedrooms=?,bathrooms=?,sort_order=? WHERE id=?');
             $stmt->execute([$data['name'],$data['slug'],$this->minimumPrice($data['packages']),$data['maxGuests'],$data['status']==='ACTIVE'?1:0,$data['subtitle'],$data['description'],$data['tag'],$data['status'],$data['bedrooms'],$data['bathrooms'],$data['sortOrder'],$id]);
             if (array_key_exists('highlights', $input)) {

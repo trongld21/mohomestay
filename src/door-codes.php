@@ -111,11 +111,15 @@ function admin_door_codes_api(string $method, ?string $id = null): never
         $pdo = db();
         $pdo->beginTransaction();
         try {
-            $find = $pdo->prepare('SELECT id FROM door_codes WHERE id=? FOR UPDATE');
+            $find = $pdo->prepare('SELECT id,status FROM door_codes WHERE id=? FOR UPDATE');
             $find->execute([$id]);
-            if (!$find->fetchColumn()) {
+            $existing = $find->fetch();
+            if (!$existing) {
                 $pdo->rollBack();
                 json_response(['error' => 'Không tìm thấy mã mở cửa.'], 404);
+            }
+            if (!can_use('door-codes.toggle')) {
+                $row['status'] = $existing['status'];
             }
             $pdo->prepare('UPDATE door_codes SET code=?,period=?,status=?,starts_at=?,ends_at=? WHERE id=?')
                 ->execute([$row['code'], $row['period'], $row['status'], $row['starts_at'], $row['ends_at'], $id]);

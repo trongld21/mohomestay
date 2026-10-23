@@ -58,13 +58,13 @@ $_SESSION['account_version'] = 1;
 account_check(is_admin() && !can_use('rooms') && !can_use('accounts'), 'New staff must have no permissions');
 account_check(account_home() === '/admin/no-access', 'Staff without grants must see no-access page');
 try {
-    save_account(['id' => $id, 'permissions' => ['rooms']], true);
+    save_account(['id' => $id, 'permissions' => ['rooms.view']], true);
     throw new LogicException('Staff escalated privileges');
 } catch (RuntimeException $error) {
     account_check($error->getMessage() === '403', 'Staff cannot grant permissions');
 }
 unset($_SESSION['account_id'], $_SESSION['account_version']);
-save_account(['id' => $id, 'permissions' => ['rooms']], true);
+save_account(['id' => $id, 'permissions' => ['rooms.view']], true);
 $_SESSION['account_id'] = $id;
 $_SESSION['account_version'] = 1;
 account_check(can_use('rooms') && !can_use('bookings') && !can_use('door-codes'), 'Grants must be isolated by feature');
@@ -117,4 +117,55 @@ ob_start();
 render_admin_navigation('/admin');
 $html = ob_get_clean();
 account_check(str_contains($html, 'data-admin-tab="rooms"') && !str_contains($html, 'data-admin-tab="bookings"') && !str_contains($html, 'href="/admin/permissions"'), 'Navigation must hide all ungranted features');
+// Legacy grants expand without losing existing access.
+account_check(can_use('rooms.edit') && can_use('rooms.delete'), 'Legacy room grant must preserve existing access');
+unset($_SESSION['account_id'], $_SESSION['account_version']);
+save_account(['id' => $id, 'permissions' => ['rooms.images']], true);
+$_SESSION['account_id'] = $id;
+$_SESSION['account_version'] = 2;
+account_check(can_use('rooms') && can_use('rooms.images') && !can_use('rooms.edit') && !can_use('rooms.delete'), 'Image grant must add view without granting room mutations');
+foreach ([
+    ['/api/admin/rooms', 'GET', [], 'rooms.view'],
+    ['/api/admin/rooms', 'POST', [], 'rooms.create'],
+    ['/api/admin/rooms/r', 'PATCH', [], 'rooms.edit'],
+    ['/api/admin/rooms/r', 'DELETE', [], 'rooms.delete'],
+    ['/api/admin/rooms/r/images/i', 'DELETE', [], 'rooms.images'],
+    ['/api/admin/rooms/r/visibility', 'PATCH', [], 'rooms.visibility'],
+    ['/api/admin/bookings', 'GET', [], 'bookings.view'],
+    ['/api/admin/bookings', 'POST', [], 'bookings.create'],
+    ['/api/admin/bookings', 'PATCH', [], 'bookings.update'],
+    ['/api/admin/bookings/b/payment', 'POST', [], 'bookings.payment'],
+    ['/api/admin/booking-rooms', 'GET', [], 'bookings.create'],
+    ['/api/admin/door-codes/d', 'PATCH', ['status' => 'ACTIVE'], 'door-codes.toggle'],
+    ['/api/admin/door-codes/d', 'PATCH', ['status' => 'ACTIVE', 'code' => '123456'], 'door-codes.edit'],
+    ['/api/admin/door-codes/d', 'DELETE', [], 'door-codes.delete'],
+    ['/api/admin/manual-access', 'POST', [], 'door-codes.create'],
+    ['/api/admin/manual-access/a/retry', 'POST', [], 'door-codes.retry'],
+    ['/api/admin/booking-access/b/retry', 'POST', [], 'door-codes.retry'],
+    ['/api/admin/unknown', 'POST', [], 'accounts'],
+] as [$path, $method, $body, $expected]) {
+    account_check(admin_api_permission($path, $method, $body) === $expected, 'Wrong permission for ' . $method . ' ' . $path);
+    if (!in_array($expected, ['rooms.images', 'rooms.view'], true)) {
+        try {
+            require_permission($expected);
+            throw new LogicException('Image-only account performed ' . $expected);
+        } catch (RuntimeException $error) {
+            account_check($error->getMessage() === '403' || $expected === 'rooms.view', 'Unexpected authorization failure');
+        }
+    }
+}
+unset($_SESSION['account_id'], $_SESSION['account_version']);
+save_account(['id' => $id, 'permissions' => ['rooms.view', 'bookings.view', 'door-codes.view']], true);
+$_SESSION['account_id'] = $id;
+$_SESSION['account_version'] = 2;
+foreach (array_keys(account_permission_labels()) as $permission) {
+    account_check(can_use($permission) === str_ends_with($permission, '.view'), 'View-only grants must deny mutation: ' . $permission);
+}
+unset($_SESSION['account_id'], $_SESSION['account_version']);
+try {
+    save_account(['id' => $id, 'permissions' => ['accounts']], true);
+    throw new LogicException('Root management grant accepted');
+} catch (BookingException $error) {
+    account_check($error->httpStatus === 422, 'Root-only management must not be grantable');
+}
 echo "Account authorization tests: OK\n";

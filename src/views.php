@@ -96,6 +96,7 @@ function render_contact_widget(): void
         <script>
             window.LANG_HOME = {
                 csrf: <?= json_encode(csrf_token()) ?>,
+                abilities: <?= json_encode(array_values(array_filter(array_keys(account_permission_labels()), fn($key) => can_use($key)))) ?>,
                 permissions: <?= json_encode(array_values(array_filter(array_keys(account_permissions()), fn($key) => can_use($key)))) ?>,
                 today: <?= json_encode(date('Y-m-d')) ?>,
                 rooms: <?= json_encode(array_values(rooms()), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
@@ -109,6 +110,7 @@ function render_contact_widget(): void
         <script defer src="<?= e(asset_url('/assets/rooms.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-slug.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/room-image-draft.js')) ?>"></script>
+        <script defer src="<?= e(asset_url('/assets/admin-permissions.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-inputs.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-date-picker.js')) ?>"></script>
@@ -982,7 +984,7 @@ function render_admin(): void
                         </div>
                     </template>
                 </section>
-                <section class="editor-section">
+                <section class="editor-section" data-room-images-section>
                     <div class="editor-section-title">
                         <div>
                             <h3>Hình ảnh</h3>

@@ -37,15 +37,19 @@ function render_accounts(bool $permissionsOnly, string $error): void
                         <form method="post" class="mt-4 space-y-4">
                             <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
                             <input type="hidden" name="id" value="<?= e($account['id']) ?>">
-                            <fieldset class="space-y-2">
-                                <legend class="mb-2 font-medium">Chức năng được phép sử dụng</legend>
-                                <?php foreach (account_permissions() as $key => $label): ?>
-                                    <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-amber-50">
-                                        <input class="h-5 w-5 accent-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800" type="checkbox" name="permissions[]" value="<?= e($key) ?>" <?= in_array($key, json_decode($account['permissions'], true) ?: [], true) ? 'checked' : '' ?>>
-                                        <span><?= e($label) ?></span>
-                                    </label>
-                                <?php endforeach ?>
-                            </fieldset>
+                            <p class="text-sm text-stone-600">Chọn từng thao tác được phép. Quyền thao tác tự kèm quyền xem trang tương ứng. Sửa thông tin phòng và quản lý ảnh là hai quyền riêng.</p>
+                            <?php $grants = expanded_account_permissions(json_decode($account['permissions'], true) ?: []); ?>
+                            <?php foreach (account_permission_groups() as $group => $actions): ?>
+                                <fieldset class="space-y-2 rounded-xl border border-stone-200 p-3">
+                                    <legend class="px-2 font-semibold"><?= e(account_permissions()[$group]) ?></legend>
+                                    <?php foreach ($actions as $key => $label): ?>
+                                        <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-amber-50">
+                                            <input class="h-5 w-5 shrink-0 accent-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800" type="checkbox" name="permissions[]" value="<?= e($key) ?>" <?= in_array($key, $grants, true) ? 'checked' : '' ?>>
+                                            <span><?= e($label) ?></span>
+                                        </label>
+                                    <?php endforeach ?>
+                                </fieldset>
+                            <?php endforeach ?>
                             <button class="<?= $button ?>" type="submit">Lưu quyền</button>
                         </form>
                     <?php else: ?>

@@ -569,9 +569,16 @@
         updateRoomUrl();
         setDirty(false);
         editor.hidden = false;
+        window.MoAdminPermissions?.refresh();
         setEditorInert(true);
         document.body.classList.add("dialog-open");
-        requestAnimationFrame(() => form.elements.name.focus());
+        requestAnimationFrame(() => {
+            if (room && !LANG_HOME.abilities.includes("rooms.edit")) {
+                one("[data-image-input]")?.focus();
+            } else {
+                form.elements.name.focus();
+            }
+        });
     }
     async function closeEditor() {
         if (savingRoom) return;
@@ -629,6 +636,9 @@
         updateRoomUrl();
         if (!form.reportValidity()) return;
         const payload = serialize();
+        if (editing && !LANG_HOME.abilities.includes("rooms.visibility")) {
+            payload.status = editing.status;
+        }
         if (
             editing?.status === "ACTIVE" &&
             payload.status === "HIDDEN" &&
@@ -651,16 +661,20 @@
         button.textContent = "Đang lưu…";
         try {
             let result;
-            if (editing)
+            if (editing && !LANG_HOME.abilities.includes("rooms.edit"))
+                result = { room: editing };
+            else if (editing)
                 result = await request(
                     "/api/admin/rooms/" + encodeURIComponent(editing.id),
                     mutation("PATCH", payload),
                 );
             else result = await request("/api/admin/rooms", mutation("POST", payload));
             editing = result.room;
-            await imageDraft.save(editing.id, (method, url, body) =>
-                request(url, mutation(method, body)),
-            );
+            if (LANG_HOME.abilities.includes("rooms.images")) {
+                await imageDraft.save(editing.id, (method, url, body) =>
+                    request(url, mutation(method, body)),
+                );
+            }
             setDirty(false);
             LangUI.toast({
                 type: "success",

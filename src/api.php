@@ -4,13 +4,9 @@ function handle_api(string $path, string $method): never
 {
     try {
         if (str_starts_with($path, '/api/admin/')) {
-            $feature = explode('/', substr($path, strlen('/api/admin/')))[0];
-            $permission = match ($feature) {
-                'rooms' => 'rooms',
-                'bookings', 'booking-rooms' => 'bookings',
-                'door-codes', 'manual-access', 'booking-access' => 'door-codes',
-                default => 'accounts',
-            };
+            require_admin();
+            $body = $method === 'PATCH' && str_contains($path, '/door-codes/') ? json_body() : [];
+            $permission = admin_api_permission($path, $method, $body);
             require_permission($permission);
         }
         if ($path === '/api/health' && $method === 'GET') json_response(['status'=>'ok','service'=>'mo-home-php']);
@@ -59,7 +55,11 @@ function handle_api(string $path, string $method): never
         if ($path === '/api/admin/bookings' && $method === 'POST') {
             require_admin();
             require_csrf();
-            $booking = create_manual_booking(db(), json_body());
+            $body = json_body();
+            if (($body['paymentStatus'] ?? 'UNPAID') === 'PAID') {
+                require_permission('bookings.payment');
+            }
+            $booking = create_manual_booking(db(), $body);
             json_response(['bookingCode' => $booking['booking_code']], 201);
         }
         if ($method === 'POST' && preg_match('#^/api/admin/bookings/([a-f0-9]{32})/payment$#', $path, $matches)) {
@@ -93,13 +93,15 @@ function create_booking_api(): never
     if (!payment_enabled()) throw new BookingException('Đặt phòng trực tuyến chưa mở. Vui lòng gọi 0357 907 153 hoặc nhắn Zalo để đặt phòng.', 503);
     $q = quote_booking(json_body()); $pdo = db(); $pdo->beginTransaction();
     try {
-        $lock = $pdo->prepare("SELECT id,status,max_guests,(status='ACTIVE') is_active FROM rooms WHERE id=? FOR UPDATE"); $lock->execute([$q['room']['id']]); $room = $lock->fetch();
+        $lock = $pdo->prepare("SELECT id,status,max_guests,discount_percent,(status='ACTIVE') is_active FROM rooms WHERE id=? FOR UPDATE");
+        $lock->execute([$q['room']['id']]);
+        $room = $lock->fetch();
         if ($q['guests'] > (int)($room['max_guests'] ?? 0)) throw new BookingException('Sức chứa phòng vừa được cập nhật. Vui lòng chọn lại số khách.', 409);
-        $packageLock = $pdo->prepare('SELECT id,name,timing_mode,duration_minutes,check_in_time,check_out_time,price,is_enabled FROM room_packages WHERE id=? AND room_id=? FOR UPDATE');
-        $packageLock->execute([$q['packageId'],$q['room']['id']]); $freshPackage = $packageLock->fetch();
+        $packageLock = $pdo->prepare('SELECT id,name,timing_mode,duration_minutes,check_in_time,check_out_time,price,discount_percent,is_enabled FROM room_packages WHERE id=? AND room_id=? FOR UPDATE');
+        $packageLock->execute([$q['packageId'], $q['room']['id']]);
+        $freshPackage = $packageLock->fetch();
         if (!$freshPackage || !(bool)$freshPackage['is_enabled']) throw new BookingException('Gói giá vừa được thay đổi. Vui lòng chọn lại.', 409);
-        $freshPackageDto=['id'=>$freshPackage['id'],'name'=>$freshPackage['name'],'mode'=>$freshPackage['timing_mode'],'durationMinutes'=>$freshPackage['duration_minutes']===null?null:(int)$freshPackage['duration_minutes'],'checkInTime'=>$freshPackage['check_in_time']===null?null:substr((string)$freshPackage['check_in_time'],0,5),'checkOutTime'=>$freshPackage['check_out_time']===null?null:substr((string)$freshPackage['check_out_time'],0,5),'price'=>(int)$freshPackage['price'],'enabled'=>true];
-        $freshPackageDto=resolve_bookable_slot(['status'=>$room['status'],'packages'=>[$freshPackageDto]],$q['packageId']);
+        $freshPackageDto = locked_booking_package($room, $freshPackage);
         [$freshStart,$freshEnd]=package_window($freshPackageDto,$q['start']->format('Y-m-d'),$freshPackageDto['mode']==='DURATION'?$q['start']->format('H:i'):'');
         $q['package']=$freshPackageDto;$q['start']=$freshStart;$q['end']=$freshEnd;$q['total']=(int)$freshPackageDto['price'];
         $q=array_replace($q,booking_package_snapshot($freshPackageDto));
@@ -223,7 +225,7 @@ function create_room_api():never
 
 function update_room_api(string $roomId):never
 {
-    require_admin();require_csrf();$room=room_repository()->update($roomId,json_body());json_response(['room'=>$room]);
+    require_admin();require_csrf();$room=room_repository()->update($roomId, json_body(), can_use('rooms.visibility'));json_response(['room'=>$room]);
 }
 
 function delete_room_api(string $roomId):never

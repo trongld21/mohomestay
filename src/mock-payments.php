@@ -12,6 +12,7 @@ function require_mock_payment_access(): void
 function mock_payment_api(string $action): never
 {
     require_mock_payment_access();
+    require_permission($action === 'create' ? 'bookings.create' : 'bookings.payment');
     $input = json_body();
     $pdo = db();
     if ($action === 'create') {

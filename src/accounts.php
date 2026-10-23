@@ -32,7 +32,16 @@ function current_account(): ?array
 function can_use(string $permission): bool
 {
     $account = current_account();
-    return $account !== null && ($account['root'] || in_array($permission, json_decode($account['permissions'], true) ?: [], true));
+    if ($account === null) {
+        return false;
+    }
+    if ($account['root']) {
+        return true;
+    }
+    if (array_key_exists($permission, account_permissions())) {
+        $permission .= '.view';
+    }
+    return in_array($permission, expanded_account_permissions(json_decode($account['permissions'], true) ?: []), true);
 }
 
 function require_permission(string $permission): void
@@ -91,8 +100,11 @@ function save_account(array $data, bool $permissionsOnly): void
     }
     if ($permissionsOnly) {
         $permissions = $data['permissions'] ?? [];
-        if (!is_array($permissions) || array_diff($permissions, array_keys(account_permissions()))) {
+        if (!is_array($permissions) || array_diff($permissions, array_keys(account_permission_labels()))) {
             throw new BookingException('Danh sách quyền không hợp lệ.', 422);
+        }
+        foreach ($permissions as $permission) {
+            $permissions[] = explode('.', $permission)[0] . '.view';
         }
         $stmt = db()->prepare('UPDATE accounts SET permissions = ? WHERE id = ?');
         $stmt->execute([json_encode(array_values(array_unique($permissions))), $id]);
@@ -132,4 +144,82 @@ function save_account(array $data, bool $permissionsOnly): void
         }
         throw $error;
     }
+}
+
+function account_permission_groups(): array
+{
+    return [
+        'bookings' => [
+            'bookings.view' => 'Xem tổng quan và danh sách đặt phòng',
+            'bookings.create' => 'Tạo đơn đặt phòng',
+            'bookings.update' => 'Nhận phòng, kết thúc sớm và hủy đơn',
+            'bookings.payment' => 'Xác nhận thu tiền',
+        ],
+        'rooms' => [
+            'rooms.view' => 'Xem danh sách và xem trước phòng',
+            'rooms.create' => 'Tạo phòng mới',
+            'rooms.edit' => 'Sửa thông tin, tiện nghi và gói giá',
+            'rooms.images' => 'Tải lên, sửa, sắp xếp và xóa ảnh phòng',
+            'rooms.visibility' => 'Ẩn hoặc hiển thị phòng',
+            'rooms.delete' => 'Xóa phòng',
+        ],
+        'door-codes' => [
+            'door-codes.view' => 'Xem mã mở cửa và trạng thái đồng bộ',
+            'door-codes.create' => 'Tạo mã TTLock và lưu mã có sẵn',
+            'door-codes.edit' => 'Sửa mã có sẵn và thời hạn',
+            'door-codes.toggle' => 'Bật hoặc tắt mã có sẵn',
+            'door-codes.delete' => 'Xóa mã có sẵn',
+            'door-codes.retry' => 'Đối soát và thử lại đồng bộ mã',
+        ],
+    ];
+}
+
+function account_permission_labels(): array
+{
+    return array_merge(...array_values(account_permission_groups()));
+}
+
+function expanded_account_permissions(array $permissions): array
+{
+    $expanded = [];
+    foreach (account_permission_groups() as $group => $actions) {
+        // Preserve the full access previously granted by a legacy feature key.
+        if (in_array($group, $permissions, true)) {
+            $expanded = array_merge($expanded, array_keys($actions));
+        }
+    }
+    return array_values(array_unique(array_merge($expanded, array_intersect($permissions, array_keys(account_permission_labels())))));
+}
+
+function admin_api_permission(string $path, string $method, array $body = []): string
+{
+    $feature = explode('/', substr($path, strlen('/api/admin/')))[0];
+    return match ($feature) {
+        'booking-rooms' => 'bookings.create',
+        'bookings' => match ($method) {
+            'GET' => 'bookings.view',
+            'POST' => str_ends_with($path, '/payment') ? 'bookings.payment' : 'bookings.create',
+            'PATCH' => 'bookings.update',
+            default => 'accounts',
+        },
+        'rooms' => match (true) {
+            $method === 'GET' => 'rooms.view',
+            (bool)preg_match('~/images(?:/[^/]+)?$~', $path) => 'rooms.images',
+            str_ends_with($path, '/visibility') => 'rooms.visibility',
+            $method === 'POST' => 'rooms.create',
+            $method === 'PATCH' => 'rooms.edit',
+            $method === 'DELETE' => 'rooms.delete',
+            default => 'accounts',
+        },
+        'manual-access' => str_ends_with($path, '/retry') ? 'door-codes.retry' : 'door-codes.create',
+        'booking-access' => 'door-codes.retry',
+        'door-codes' => match ($method) {
+            'GET' => 'door-codes.view',
+            'POST' => 'door-codes.create',
+            'DELETE' => 'door-codes.delete',
+            'PATCH' => count($body) === 1 && isset($body['status']) ? 'door-codes.toggle' : 'door-codes.edit',
+            default => 'accounts',
+        },
+        default => 'accounts',
+    };
 }

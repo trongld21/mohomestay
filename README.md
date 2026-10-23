@@ -292,3 +292,17 @@ luôn có toàn quyền và là tài khoản duy nhất được quản lý tài
 - Thu hồi quyền áp dụng từ yêu cầu tiếp theo. Khóa tài khoản hoặc lưu thông tin tài khoản
   sẽ vô hiệu hóa phiên cũ; nhân viên cần đăng nhập lại.
 - Kiểm thử quyền độc lập bằng `php tools/account-test.php` (cần PDO SQLite).
+
+### Quyền chi tiết cho nhân viên
+
+Trang `/admin/permissions` chia quyền theo thao tác:
+- Đặt phòng: xem tổng quan/danh sách, tạo đơn, cập nhật lưu trú/hủy đơn, xác nhận thu tiền.
+- Phòng: xem/xem trước, tạo, sửa thông tin/gói giá, quản lý ảnh, ẩn/hiện, xóa.
+- Mã mở cửa: xem, tạo, sửa, bật/tắt, xóa, đối soát/thử lại.
+
+Chọn một thao tác sẽ tự kèm quyền xem trang tương ứng khi lưu. Quyền quản lý ảnh
+độc lập với sửa thông tin phòng. Quyền sửa thông tin không thay đổi trạng thái ẩn/hiện;
+quyền sửa mã không thay đổi trạng thái bật/tắt. Tạo đơn đã thanh toán cần thêm quyền
+xác nhận thu tiền. API vẫn chặn thao tác không có quyền dù gọi trực tiếp.
+Các quyền tổng quát đã lưu trước đây được hiểu là đầy đủ các quyền trong nhóm;
+Admin có thể bỏ bớt từng quyền rồi lưu, không cần migration mới.

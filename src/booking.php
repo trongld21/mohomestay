@@ -31,6 +31,26 @@ function resolve_bookable_slot(array $room, string $packageId): array
     return $package;
 }
 
+// Resolve the payable price from the rows locked by the booking transaction.
+function locked_booking_package(array $room, array $package): array
+{
+    return resolve_bookable_slot([
+        'status' => $room['status'],
+        'discountPercent' => (int)$room['discount_percent'],
+        'packages' => [[
+            'id' => $package['id'],
+            'name' => $package['name'],
+            'mode' => $package['timing_mode'],
+            'durationMinutes' => $package['duration_minutes'] === null ? null : (int)$package['duration_minutes'],
+            'checkInTime' => $package['check_in_time'] === null ? null : substr((string)$package['check_in_time'], 0, 5),
+            'checkOutTime' => $package['check_out_time'] === null ? null : substr((string)$package['check_out_time'], 0, 5),
+            'price' => (int)$package['price'],
+            'discountPercent' => $package['discount_percent'] === null ? null : (int)$package['discount_percent'],
+            'enabled' => (bool)$package['is_enabled'],
+        ]],
+    ], (string)$package['id']);
+}
+
 function booking_package_snapshot(array $package): array
 {
     return [
