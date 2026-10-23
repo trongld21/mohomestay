@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 function booking_access_allowed(array $booking): bool
 {
-    return ($booking['payment_status'] ?? '') === 'PAID'
+    return empty($booking['is_test']) && ($booking['payment_status'] ?? '') === 'PAID'
         && in_array($booking['status'] ?? '', ['CONFIRMED', 'CHECKED_IN'], true);
 }
 

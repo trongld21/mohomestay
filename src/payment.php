@@ -40,6 +40,64 @@ function payment_return_credentials(array $query): array
     return ['code'=>$code,'token'=>$token];
 }
 
+function payos_payment_status(string $orderCode): array
+{
+    if (!preg_match('/^\d{10,20}$/', $orderCode)) {
+        throw new RuntimeException('Mã thanh toán không hợp lệ.');
+    }
+    $ch = curl_init('https://api-merchant.payos.vn/v2/payment-requests/' . $orderCode);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_TIMEOUT => 5,
+        CURLOPT_HTTPHEADER => [
+            'x-client-id: ' . config('payos.client_id'),
+            'x-api-key: ' . config('payos.api_key'),
+        ],
+    ]);
+    $raw = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+    $result = json_decode((string)$raw, true);
+    if ($status !== 200 || ($result['code'] ?? '') !== '00' || !is_array($result['data'] ?? null)) {
+        throw new RuntimeException('Chưa kiểm tra được trạng thái thanh toán.');
+    }
+    return $result['data'];
+}
+
+function refresh_payment_cancellation(PDO $pdo, array $booking, ?callable $fetch = null): void
+{
+    if ($booking['status'] !== 'PENDING' || $booking['payment_status'] === 'PAID'
+        || !empty($booking['is_test']) || ($booking['payment_method'] ?? '') !== 'payos') {
+        return;
+    }
+    $key = (string)$booking['id'];
+    $now = time();
+    $_SESSION['payment_status_checked'] ??= [];
+    foreach ($_SESSION['payment_status_checked'] as $id => $checkedAt) {
+        if ($checkedAt <= $now - 30) unset($_SESSION['payment_status_checked'][$id]);
+    }
+    if (isset($_SESSION['payment_status_checked'][$key])) return;
+    $_SESSION['payment_status_checked'][$key] = $now;
+    try {
+        $remote = ($fetch ?? 'payos_payment_status')((string)$booking['order_code']);
+    } catch (Throwable $error) {
+        // A provider outage must not cancel a reservation or imply that it was paid.
+        error_log('Payment status check unavailable for booking ' . $key);
+        return;
+    }
+    if (($remote['status'] ?? '') !== 'CANCELLED'
+        || (string)($remote['orderCode'] ?? '') !== (string)$booking['order_code']
+        || !isset($remote['amount'], $remote['amountPaid'])
+        || (float)$remote['amount'] !== (float)$booking['total_price']
+        || (float)$remote['amountPaid'] !== 0.0) {
+        return;
+    }
+    // Conditional update also protects a payment committed while payOS was queried.
+    $stmt = $pdo->prepare("UPDATE bookings SET status='CANCELLED' WHERE id=? AND status='PENDING' AND payment_status IN ('UNPAID','PENDING','FAILED')");
+    $stmt->execute([$key]);
+}
+
 function create_payment(array $booking): array
 {
     $url = rtrim((string)config('app_url'), '/') . '/payment';

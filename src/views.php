@@ -103,12 +103,13 @@ function render_contact_widget(): void
         <script defer src="<?= e(asset_url('/assets/ui.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/app.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/booking-slots.js')) ?>"></script>
+        <script defer src="<?= e(asset_url('/assets/time-picker.js')) ?>"></script>
+        <script defer src="<?= e(asset_url('/assets/calendar.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/rooms.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-slug.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/room-image-draft.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-inputs.js')) ?>"></script>
-        <script defer src="<?= e(asset_url('/assets/time-picker.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-date-picker.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/booking-date-picker.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/manual-booking.js')) ?>"></script>
@@ -182,10 +183,10 @@ function render_package_sale_price(array $package): void
     <?php
 }
 
-function render_room_cards(): void
+function render_room_cards(bool $liveAvailability = false): void
                                                                                                                                                                                         {
                                                                                                                                                                                             $catalog = array_values(rooms()); ?>
-    <div class="room-grid" data-public-room-grid><?php foreach ($catalog as $index => $room): $packages = array_values(array_filter($room['packages'] ?? [], fn($package) => $package['enabled']));
+    <div class="room-grid" data-public-room-grid <?= $liveAvailability ? 'hidden aria-busy="true"' : '' ?>><?php foreach ($catalog as $index => $room): $packages = array_values(array_filter($room['packages'] ?? [], fn($package) => $package['enabled']));
                                                                                                                                                                                                 $minimum = $packages ? min(array_column($packages, 'price')) : null;
     $minimumPackage = null;
     foreach ($packages as $candidate) {
@@ -194,13 +195,10 @@ function render_room_cards(): void
             break;
         }
     }
-                                                                                                                                                                                                $coming = $room['status'] === 'COMING_SOON'; ?><article class="room-card room-product-card <?= $coming ? 'coming-soon' : '' ?>">
-                <div class="room-image"><a href="/rooms/<?= e($room['slug']) ?>"><img src="<?= e($room['image']) ?>" alt="Phòng <?= e($room['name']) ?>" loading="lazy"></a><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php elseif ($room['tag']): ?><span class="room-tag"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-                                <rect x="5" y="10" width="14" height="11" rx="2" />
-                                <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
-                            </svg><?= e($room['tag']) ?></span><?php endif ?><button type="button" class="room-favorite" data-room-favorite="<?= e($room['id']) ?>" aria-label="Yêu thích phòng <?= e($room['name']) ?>" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-                            <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />
-                        </svg></button><span class="room-photo-count">▧ 1/<?= max(1, count($room['images'] ?? [])) ?></span></div>
+                                                                                                                                                                                                $coming = $room['status'] === 'COMING_SOON'; ?><article class="room-card room-product-card <?= $coming ? 'coming-soon' : '' ?>" data-room-card-id="<?= e($room['id']) ?>">
+                <div class="room-image"><a href="/rooms/<?= e($room['slug']) ?>"><img src="<?= e($room['image']) ?>" alt="Phòng <?= e($room['name']) ?>" loading="lazy"></a><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php elseif ($room['tag']): ?><span class="room-tag"><svg class="icon icon-tabler icon-tabler-sparkles" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6" />
+                            </svg><?= e($room['tag']) ?></span><?php endif ?><span class="room-photo-count">▧ 1/<?= max(1, count($room['images'] ?? [])) ?></span></div>
                 <div class="room-body">
                     <div class="room-title">
                         <h3><a href="/rooms/<?= e($room['slug']) ?>"><?= e($room['name']) ?></a></h3><span><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span>
@@ -239,7 +237,7 @@ function render_room_cards(): void
     <section class="hero" data-hero-carousel aria-label="Không gian Mơ Home" aria-roledescription="carousel">
         <?php foreach (['pink', 'white', 'black'] as $index => $image): ?><img class="hero-photo hero-slide <?= $index === 0 ? 'is-active' : '' ?>" src="<?= e(asset_url('/images/' . $image . '-illustration.jpg')) ?>" alt="Không gian phòng <?= e(ucfirst($image)) ?>" data-hero-slide aria-hidden="<?= $index === 0 ? 'false' : 'true' ?>" <?= $index === 0 ? ' fetchpriority="high"' : ' loading="lazy"' ?>><?php endforeach ?>
         <div class="hero-shade"></div>
-        <div class="container hero-content"><span class="eyebrow"><span class="tiny-line"></span> CHÀO BẠN, MƠ ĐÂY</span>
+        <div class="container hero-content" data-home-reveal><span class="eyebrow"><span class="tiny-line"></span> CHÀO BẠN, MƠ ĐÂY</span>
             <h1>Chạm vào<br>một chốn <em>mơ.</em></h1>
             <p>Một căn phòng ấm. Một khoảng trời riêng.<br>Để bạn nghỉ ngơi, kết nối và tận hưởng những điều nhỏ bé.</p><a href="/rooms" class="button cream">Khám phá không gian ↗</a>
         </div>
@@ -252,24 +250,34 @@ function render_room_cards(): void
         </div>
         <div class="hero-bottom container"><span>STAY SLOW. FEEL AT HOME.</span><a href="#khong-gian">Kéo xuống để khám phá ↓</a></div>
     </section>
-    <div class="container search-wrap">
+    <div class="container search-wrap" data-home-reveal>
         <form class="search-bar" action="/calendar"><label><span>NGÀY GHÉ MƠ</span><input type="date" name="date" min="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>"></label><label><span>KHÔNG GIAN</span><select name="room">
                     <option value="all">Tất cả phòng</option><?php foreach (rooms() as $r): ?><option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option><?php endforeach ?>
-                </select></label><label><span>GÓI LƯU TRÚ</span><select name="package"><?php foreach (packages() as $id => $label): ?><option value="<?= e($id) ?>"><?= e($label) ?></option><?php endforeach ?></select></label><button class="button">Kiểm tra phòng →</button></form>
+                </select></label><label><span>GÓI LƯU TRÚ</span><select name="package"><?php foreach (packages() as $id => $label): ?><option value="<?= e($id) ?>"><?= e($label) ?></option><?php endforeach ?></select></label><button class="button" type="submit">Kiểm tra phòng →</button></form>
     </div>
-    <section class="container intro-strip">
+    <section class="container intro-strip" data-home-reveal>
         <p>♡ Một nơi để đến. Một cảm giác để nhớ.</p>
         <div><span>✓ Riêng tư & an tâm</span><span>⌁ Self check-in</span><span>◷ Linh hoạt theo giờ</span></div>
     </section>
-    <section id="khong-gian" class="container section">
+    <section id="khong-gian" class="container section" data-home-availability data-home-reveal>
         <div class="section-heading">
             <div><span class="eyebrow">KHÔNG GIAN CỦA BẠN</span>
                 <h2>Mỗi căn phòng, một cảm xúc.</h2>
                 <p>Chọn một góc nhỏ phù hợp với tâm trạng hôm nay.</p>
             </div><a class="text-link" href="/rooms">Xem tất cả phòng ↗</a>
-        </div><?php render_room_cards(); ?>
+        </div>
+        <p class="mb-5 text-sm text-[#736b61]" data-home-availability-status role="status">Đang kiểm tra phòng trống lúc này…</p>
+        <?php render_room_cards(true); ?>
+        <a class="mt-5 inline-flex min-h-11 items-center rounded-sm text-sm text-[#79543e] underline underline-offset-4 hover:text-[#493020] focus-visible:outline-2 focus-visible:outline-offset-4" href="/calendar">Xem lịch phòng</a>
+        <noscript><p>Vui lòng bật JavaScript hoặc xem lịch phòng để kiểm tra phòng trống.</p></noscript>
+        <script defer src="<?= e(asset_url('/assets/home-availability.js')) ?>"></script>
     </section>
-    <section id="ve-mo" class="story-section">
+    <?php
+    require_once APP_ROOT . '/src/home-location-view.php';
+    render_home_location();
+    ?>
+    <section id="ve-mo" class="story-section story-editorial" data-home-reveal>
+        <img class="story-editorial-backdrop" src="<?= e(asset_url('/images/story-interior.webp')) ?>" alt="" width="1920" height="720" loading="lazy" aria-hidden="true">
         <div class="container story-grid">
             <div class="story-main story-brand" data-story-scene><img src="<?= e(asset_url('/images/mo-home-illustration.png')) ?>" alt="Mơ Home — Homestay for a slower life, EST 2026"><canvas class="story-scene-canvas" aria-hidden="true"></canvas></div>
             <div class="story-copy"><span class="eyebrow">CÂU CHUYỆN CỦA MƠ</span>
@@ -280,7 +288,7 @@ function render_room_cards(): void
         </div>
     </section>
     <div class="perks-background" style="--perks-background:url('<?= e(asset_url('/images/perks-botanical.png')) ?>')">
-        <section class="section perks-section">
+        <section class="section perks-section" data-home-reveal>
             <div class="container">
                 <div class="center-heading"><span class="eyebrow">NHỮNG ĐIỀU NHỎ, ĐƯỢC CHĂM CHÚT</span>
                     <h2>Đến Mơ, cứ thoải mái là mình.</h2>
@@ -319,11 +327,13 @@ function render_room_cards(): void
                 </div>
             </div>
         </section>
-        <section class="container final-cta"><span class="eyebrow">MỘT CUỘC HẸN VỚI BÌNH YÊN</span>
+        <section class="container final-cta" data-home-reveal><span class="eyebrow">MỘT CUỘC HẸN VỚI BÌNH YÊN</span>
             <h2>Chừa một khoảng nhỏ cho mình nhé?</h2>
             <p>Căn phòng ấm áp đang chờ. Còn lại, để Mơ lo.</p><a href="/calendar" class="button">Tìm ngày ghé Mơ →</a>
         </section>
-    </div><?php }
+    </div>
+    <script defer src="<?= e(asset_url('/assets/home-reveal.js')) ?>"></script>
+    <?php }
 
                                                                                                                                                                                         function render_rooms(): void
                                                                                                                                                                                         { ?><div class="container section">
@@ -565,8 +575,43 @@ function render_room(array $r): void
                         <h2 data-month-title></h2><button class="icon-button" aria-label="Tháng sau" data-month-next>›</button>
                     </div>
                     <div class="month-grid" data-calendar-grid></div>
-                    <div class="calendar-legend"><span><i class="calendar-dot"></i>Ngày có thể chọn</span><span><i class="calendar-dot unavailable"></i>Ngày không khả dụng</span></div>
-                    <div class="form-grid form-section"><label class="field">Không gian<select data-cal-room><?php foreach ($active as $r): ?><option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option><?php endforeach ?></select></label><label class="field">Khung giờ<select data-cal-package data-flex-package></select></label><label class="field" hidden>Giờ nhận phòng<input type="time" value="14:00" data-cal-time></label></div>
+                    <div class="calendar-legend"><span><i class="calendar-dot"></i>Còn trống</span><span><i class="calendar-dot booked"></i>Đã có lịch</span><span><i class="calendar-dot unavailable"></i>Chưa kiểm tra / đã qua giờ</span></div>
+                    <div class="form-grid form-section">
+                        <label class="field">Không gian
+                            <select data-cal-room>
+                                <?php foreach ($active as $r): ?>
+                                    <option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option>
+                                <?php endforeach ?>
+                            </select>
+                        </label>
+                        <label class="field">Khung giờ
+                            <select data-cal-package data-flex-package></select>
+                        </label>
+                        <fieldset class="manual-time-field calendar-time-field" data-cal-time-field hidden>
+                            <legend>Giờ nhận phòng · 24 giờ</legend>
+                            <input type="hidden" value="14:00" data-cal-time>
+                            <input type="hidden" data-cal-hour>
+                            <input type="hidden" data-cal-minute>
+                            <div class="manual-time-picker">
+                                <button type="button" data-time-trigger="hour" aria-haspopup="dialog" aria-controls="calendar-time-popover" aria-expanded="false"><span data-time-hour-label>14 giờ</span><span class="manual-time-chevron" aria-hidden="true"></span></button>
+                                <span aria-hidden="true">:</span>
+                                <button type="button" data-time-trigger="minute" aria-haspopup="dialog" aria-controls="calendar-time-popover" aria-expanded="false"><span data-time-minute-label>00 phút</span><span class="manual-time-chevron" aria-hidden="true"></span></button>
+                            </div>
+                            <div id="calendar-time-popover" class="manual-time-popover" popover="auto" role="dialog" aria-label="Chọn giờ nhận phòng theo định dạng 24 giờ">
+                                <section class="manual-time-column">
+                                    <h4 id="calendar-hour-title">Chọn giờ</h4>
+                                    <div class="manual-hour-options" role="listbox" aria-labelledby="calendar-hour-title" data-time-hours></div>
+                                </section>
+                                <section class="manual-time-column manual-minute-column">
+                                    <h4 id="calendar-minute-title">Chọn phút</h4>
+                                    <div class="manual-minute-options" role="listbox" aria-labelledby="calendar-minute-title" data-time-minutes></div>
+                                    <label class="manual-exact-minute">Phút chính xác
+                                        <input type="number" min="0" max="59" step="1" inputmode="numeric" data-time-exact aria-label="Nhập phút chính xác từ 0 đến 59">
+                                    </label>
+                                </section>
+                            </div>
+                        </fieldset>
+                    </div>
                 </section>
                 <section class="panel calendar-details">
                     <div class="calendar-nav">
@@ -584,7 +629,6 @@ function render_room(array $r): void
                             <li>Vui lòng kiểm tra kỹ thời gian trước khi đặt.</li>
                             <li>Cần hỗ trợ? <a href="https://zalo.me/0357907153" target="_blank" rel="noopener noreferrer">Nhắn Mơ qua Zalo ↗</a></li>
                         </ul>
-                        <p>Lịch công khai không hiển thị thông tin của khách.</p>
                     </aside>
                 </section>
             </div>
@@ -604,13 +648,11 @@ function render_room(array $r): void
                 <div class="booking-step-heading"><span>01</span>
                     <div>
                         <h2>Phòng và ngày ghé</h2>
-                        <p>Chọn không gian phù hợp với cuộc hẹn của bạn.</p>
                     </div>
                 </div>
                 <div class="form-grid booking-primary-fields"><label class="field">Không gian<select name="roomId"><?php foreach ($active as $r): ?><option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option><?php endforeach ?></select></label><label class="field">Ngày ghé Mơ<input name="date" type="date" min="<?= date('Y-m-d') ?>" required></label></div>
                 <fieldset class="booking-slot-section" data-slot-section tabindex="-1">
                     <legend><span>02</span><strong>Chọn khung giờ</strong></legend>
-                    <p class="booking-slot-hint">Giá đã bao gồm toàn bộ thời gian hiển thị.</p>
                     <div class="slot-status-legend" aria-label="Chú thích trạng thái"><span><i class="is-available"></i>Còn trống</span><span><i class="is-selected"></i>Đang chọn</span><span><i class="is-booked"></i>Đã đặt</span></div>
                     <div class="booking-slot-grid" data-slot-grid aria-live="polite" aria-busy="true">
                         <div class="slot-skeleton"></div>
@@ -643,6 +685,12 @@ function render_room(array $r): void
                         </label>
                     </div>
                 </div>
+                <?php if (dev_reload_enabled() && env_value('APP_ENV') !== 'production' && is_admin()): ?>
+                    <label class="my-5 flex cursor-pointer items-start gap-3 rounded-xl border border-[#dccbb7] bg-[#f3ece1] p-4 text-sm leading-6 text-[#654831]">
+                        <input class="mt-1 size-4 shrink-0 cursor-pointer accent-[#79543e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e]" type="checkbox" name="testPayment" data-test-payment>
+                        <span><strong class="block">Test thanh toán tại local</strong>Tạo đơn thử, không chuyển tiền, không gửi email hoặc mã cửa.</span>
+                    </label>
+                <?php endif ?>
                 <div class="notice" data-terms hidden></div><label class="check"><input type="checkbox" name="acceptTerms" required> Tôi đã đọc điều kiện đặt phòng và đồng ý để Mơ sử dụng thông tin liên hệ xử lý đơn này.</label>
                 <div data-booking-message aria-live="assertive"></div><button class="button wide booking-submit" type="submit" disabled>Chọn một khung giờ để tiếp tục</button>
             </form>
@@ -691,9 +739,9 @@ function render_admin(): void
                     <h1>Tổng quan & đặt phòng</h1>
                     <p class="muted">Trạng thái tự cập nhật theo giờ đặt. Bạn vẫn có thể nhận phòng hoặc kết thúc sớm khi cần.</p>
                 </div>
-                <div class="flex flex-wrap items-center gap-3">
+                <div class="admin-heading-actions flex flex-wrap items-center gap-3">
                     <button type="button" class="button outline" data-refresh-bookings><?= admin_icon('refresh') ?> Làm mới</button>
-                    <button type="button" class="button" data-create-booking><?= admin_icon('plus') ?> Tạo đơn đặt phòng</button>
+                    <button type="button" class="button" data-create-booking><?= admin_icon('plus') ?><span class="hidden sm:inline">Tạo đơn đặt phòng</span><span class="sm:hidden">Tạo đơn</span></button>
                 </div>
             </div>
             <div id="admin-bookings"><p class="notice">Đang tải danh sách đơn…</p></div>
@@ -772,6 +820,10 @@ function render_admin(): void
                                 Đổi đường dẫn sẽ làm liên kết cũ không còn truy cập được.
                             </small>
                         </div>
+                        <label class="field full">
+                            Nhãn trên ảnh
+                            <input name="tag" maxlength="100" placeholder="Ví dụ: Tinh giản & thư thái" aria-describedby="room-image-tag-help" />
+                        </label>
                         <label class="field full">
                             Mô tả ngắn
                             <input name="subtitle" maxlength="255" aria-describedby="room-subtitle-help" />
@@ -855,76 +907,76 @@ function render_admin(): void
                     </div>
                     <label class="mb-4 grid max-w-sm gap-2 text-sm font-medium">Ưu đãi chung của căn (%)
                         <input name="discountPercent" type="number" min="0" max="99" step="1" value="0" required class="min-h-11 rounded-lg border border-stone-300 px-3 py-2 focus-visible:outline-2 focus-visible:outline-amber-800">
-                        <span class="text-xs font-normal text-stone-600">Áp dụng cho gói để trống ưu đãi riêng. Giá sau giảm làm tròn đến đồng.</span>
                     </label>
                     <div class="package-editor" data-package-list></div>
                     <template data-package-template>
                         <div class="package-row">
                             <input type="hidden" data-package-field="id" />
-                            <label class="field">
+                            <input type="hidden" data-package-field="sortOrder" />
+                            <label class="field package-name-field">
                                 Tên gói
                                 <input data-package-field="name" maxlength="80" required />
                             </label>
-                            <label class="field">
-                                Kiểu thời gian
-                                <select data-package-field="mode">
-                                    <option value="FIXED_TIME">Giờ cố định</option>
-                                    <option value="DURATION">Theo số phút (khách chọn giờ)</option>
-                                </select>
-                            </label>
-                            <label class="field" data-duration-field>
-                                Thời lượng (phút)
-                                <input
-                                    data-package-field="durationMinutes"
-                                    type="number"
-                                    min="30"
-                                    max="43200"
-                                    value="180"
-                                />
-                            </label>
-                            <label class="field" data-fixed-field hidden>
-                                Nhận phòng
-                                <input data-package-field="checkInTime" type="time" />
-                            </label>
-                            <label class="field" data-fixed-field hidden>
-                                Trả phòng
-                                <input data-package-field="checkOutTime" type="time" />
-                            </label>
-                            <label class="field">
-                                Giá gốc (đ)
-                                <input
-                                    data-package-field="price"
-                                    type="number"
-                                    min="0"
-                                    max="1000000000"
-                                    step="1000"
-                                    required
-                                />
-                            </label>
-                            <label class="grid gap-2 text-sm font-medium">
-                                Ưu đãi riêng (%)
-                                <input data-package-field="discountPercent" type="number" min="0" max="99" step="1" placeholder="Dùng mức chung" class="min-h-11 rounded-lg border border-stone-300 px-3 py-2 focus-visible:outline-2 focus-visible:outline-amber-800">
-                                <span class="text-xs font-normal text-stone-600">Để trống: mức chung. Nhập 0: không giảm.</span>
-                                <output data-package-discount-preview class="text-sm font-semibold text-amber-900" aria-live="polite"></output>
-                            </label>
-                            <label class="field">
-                                Thứ tự
-                                <input data-package-field="sortOrder" type="number" value="10" />
-                            </label>
+                            <div class="package-time-fields">
+                                <label class="field package-mode-field">
+                                    Kiểu thời gian
+                                    <select data-package-field="mode">
+                                        <option value="FIXED_TIME">Giờ cố định</option>
+                                        <option value="DURATION">Theo số phút (khách chọn giờ)</option>
+                                    </select>
+                                </label>
+                                <label class="field" data-duration-field>
+                                    Thời lượng (phút)
+                                    <input
+                                        data-package-field="durationMinutes"
+                                        type="number"
+                                        min="30"
+                                        max="43200"
+                                        value="180"
+                                    />
+                                </label>
+                                <label class="field" data-fixed-field hidden>
+                                    Nhận phòng
+                                    <input data-package-field="checkInTime" type="time" />
+                                </label>
+                                <label class="field" data-fixed-field hidden>
+                                    Trả phòng
+                                    <input data-package-field="checkOutTime" type="time" />
+                                </label>
+                            </div>
+                            <div class="package-price-fields">
+                                <label class="field">
+                                    Giá gốc (đ)
+                                    <input
+                                        data-package-field="price"
+                                        type="number"
+                                        min="0"
+                                        max="1000000000"
+                                        step="1000"
+                                        required
+                                    />
+                                </label>
+                                <label class="field">
+                                    Ưu đãi riêng (%)
+                                    <input data-package-field="discountPercent" type="number" min="0" max="99" step="1" placeholder="VD: 20">
+                                </label>
+                            </div>
                             <div class="package-row-actions">
-                                <button
-                                    class="icon-button package-remove"
-                                    type="button"
-                                    data-remove-package
-                                    aria-label="Xóa gói"
-                                >
-                                    <?= admin_icon('trash') ?>
-                                </button>
+                                <output data-package-discount-preview class="package-final-price" aria-live="polite"></output>
                                 <label class="package-visibility-switch">
                                     <span>Hiển thị</span>
                                     <input class="sr-only" data-package-field="enabled" type="checkbox" role="switch" checked />
                                     <span class="package-switch-track" aria-hidden="true"><span></span></span>
                                 </label>
+                                <button
+                                    class="icon-button package-remove"
+                                    type="button"
+                                    data-remove-package
+                                    aria-label="Xóa gói"
+                                    title="Xóa gói"
+                                >
+                                    <?= admin_icon('trash') ?>
+                                </button>
                             </div>
                         </div>
                     </template>

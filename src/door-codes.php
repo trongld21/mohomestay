@@ -46,9 +46,9 @@ function validate_door_code(array $body): array
     return ['code' => $code, 'period' => $period, 'status' => $status, 'starts_at' => $dates[0], 'ends_at' => $dates[1]];
 }
 
-function booking_door_codes(string $checkIn): array
+function booking_door_codes(string $checkIn, ?PDO $pdo = null): array
 {
-    $stmt = db()->prepare("SELECT code,period,status,starts_at,ends_at FROM door_codes WHERE status='ACTIVE' AND starts_at<=? AND ends_at>? ORDER BY created_at,id");
+    $stmt = ($pdo ?? db())->prepare("SELECT code,period,status,starts_at,ends_at FROM door_codes WHERE status='ACTIVE' AND starts_at<=? AND ends_at>? ORDER BY created_at,id");
     $stmt->execute([$checkIn, $checkIn]);
     return select_door_codes($stmt->fetchAll(), $checkIn);
 }
@@ -59,6 +59,20 @@ function delete_door_code(PDO $pdo, string $id): void
     $delete->execute([$id]);
     if ($delete->rowCount() === 0) {
         throw new BookingException('Không tìm thấy mã mở cửa.', 404);
+    }
+}
+
+function set_door_code_status(PDO $pdo, string $id, string $status): void
+{
+    if (!in_array($status, ['ACTIVE', 'DISABLED'], true)) {
+        throw new BookingException('Trạng thái sử dụng không hợp lệ.', 422);
+    }
+    $update = $pdo->prepare('UPDATE door_codes SET status=? WHERE id=?');
+    $update->execute([$status, $id]);
+    if ($update->rowCount() === 0) {
+        $find = $pdo->prepare('SELECT id FROM door_codes WHERE id=?');
+        $find->execute([$id]);
+        if (!$find->fetchColumn()) throw new BookingException('Không tìm thấy mã mở cửa.', 404);
     }
 }
 
@@ -82,7 +96,13 @@ function admin_door_codes_api(string $method, ?string $id = null): never
         delete_door_code(db(), $id);
         json_response(['ok' => true]);
     }
-    $row = validate_door_code(json_body());
+    $body = json_body();
+    if ($method === 'PATCH' && $id !== null && count($body) === 1 && isset($body['status'])) {
+        if (!is_string($body['status'])) throw new BookingException('Trạng thái sử dụng không hợp lệ.', 422);
+        set_door_code_status(db(), $id, $body['status']);
+        json_response(['id' => $id, 'status' => $body['status']]);
+    }
+    $row = validate_door_code($body);
     if ($method === 'POST') {
         $id = uuid();
         db()->prepare('INSERT INTO door_codes(id,code,period,status,starts_at,ends_at) VALUES(?,?,?,?,?,?)')

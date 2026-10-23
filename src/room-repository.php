@@ -84,7 +84,7 @@ final class RoomRepository
         try {
             $stmt = $this->pdo->prepare("INSERT INTO rooms(id,name,slug,price,max_guests,is_active,subtitle,description,tag,status,bedrooms,bathrooms,sort_order) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $minimumPrice = $this->minimumPrice($data['packages']);
-            $stmt->execute([$id,$data['name'],$data['slug'],$minimumPrice,$data['maxGuests'],$data['status']==='ACTIVE'?1:0,$data['subtitle'],$data['description'],'',$data['status'],$data['bedrooms'],$data['bathrooms'],$data['sortOrder']]);
+            $stmt->execute([$id,$data['name'],$data['slug'],$minimumPrice,$data['maxGuests'],$data['status']==='ACTIVE'?1:0,$data['subtitle'],$data['description'],$data['tag'] ?? '',$data['status'],$data['bedrooms'],$data['bathrooms'],$data['sortOrder']]);
             $this->saveHighlights($id, $data['highlights']);
             $this->pdo->prepare('UPDATE rooms SET discount_percent=? WHERE id=?')->execute([$data['discountPercent'], $id]);
             $this->replaceTags($id,$data['tags']); $this->replacePackages($id,$data['packages']);
@@ -103,8 +103,8 @@ final class RoomRepository
         try {
             $lock=$this->pdo->prepare('SELECT id FROM rooms WHERE id=? FOR UPDATE');$lock->execute([$id]);
             if(!$lock->fetch())throw new BookingException('Không tìm thấy phòng.',404);
-            $stmt=$this->pdo->prepare('UPDATE rooms SET name=?,slug=?,price=?,max_guests=?,is_active=?,subtitle=?,description=?,tag=?,status=?,bedrooms=?,bathrooms=?,sort_order=? WHERE id=?');
-            $stmt->execute([$data['name'],$data['slug'],$this->minimumPrice($data['packages']),$data['maxGuests'],$data['status']==='ACTIVE'?1:0,$data['subtitle'],$data['description'],'',$data['status'],$data['bedrooms'],$data['bathrooms'],$data['sortOrder'],$id]);
+            $stmt=$this->pdo->prepare('UPDATE rooms SET name=?,slug=?,price=?,max_guests=?,is_active=?,subtitle=?,description=?,tag=COALESCE(?,tag),status=?,bedrooms=?,bathrooms=?,sort_order=? WHERE id=?');
+            $stmt->execute([$data['name'],$data['slug'],$this->minimumPrice($data['packages']),$data['maxGuests'],$data['status']==='ACTIVE'?1:0,$data['subtitle'],$data['description'],$data['tag'],$data['status'],$data['bedrooms'],$data['bathrooms'],$data['sortOrder'],$id]);
             if (array_key_exists('highlights', $input)) {
                 $this->saveHighlights($id, $data['highlights']);
             }

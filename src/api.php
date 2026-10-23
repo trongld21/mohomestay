@@ -4,6 +4,10 @@ function handle_api(string $path, string $method): never
 {
     try {
         if ($path === '/api/health' && $method === 'GET') json_response(['status'=>'ok','service'=>'mo-home-php']);
+        if ($path === '/api/rooms/available-now' && $method === 'GET') {
+            require_once APP_ROOT . '/src/home-availability.php';
+            json_response(['roomIds' => home_available_room_ids(db())]);
+        }
         if ($path === '/api/rooms' && $method === 'GET') json_response(['rooms'=>array_values(room_repository()->publicRooms())]);
         if ($method === 'GET' && preg_match('#^/api/rooms/([a-z0-9-]+)$#', $path, $matches)) {
             $room = room_repository()->findPublicBySlug($matches[1]);
@@ -16,6 +20,8 @@ function handle_api(string $path, string $method): never
         if ($path === '/api/payments/webhook' && $method === 'POST') payment_webhook_api();
         if ($path === '/api/admin/manual-access' && $method === 'POST') admin_manual_access_api();
         if (preg_match('#^/api/admin/manual-access/([a-f0-9]{32})/retry$#', $path, $matches) && $method === 'POST') admin_manual_access_api($matches[1]);
+        if ($method === 'POST' && $path === '/api/dev/payments/create') mock_payment_api('create');
+        if ($method === 'POST' && $path === '/api/dev/payments/callback') mock_payment_api('callback');
         if ($path === '/api/admin/door-codes' && in_array($method, ['GET', 'POST'], true)) admin_door_codes_api($method);
         if (
             preg_match('#^/api/admin/door-codes/([a-f0-9]{32})$#', $path, $matches)
@@ -60,24 +66,15 @@ function handle_api(string $path, string $method): never
 
 function availability_api(): never
 {
-    $date = (string)($_GET['date'] ?? '');
-    $d = DateTimeImmutable::createFromFormat('!Y-m-d', $date, new DateTimeZone('Asia/Ho_Chi_Minh'));
-    if (!$d || $d->format('Y-m-d') !== $date) json_response(['error'=>'Ngày không hợp lệ.'], 400);
-    $start = mysql_datetime($d); $end = mysql_datetime($d->modify('+2 days'));
-    $stmt = db()->prepare("SELECT room_id,check_in,check_out,status FROM bookings WHERE check_in < ? AND check_out > ? AND (status IN ('CONFIRMED','CHECKED_IN') OR (status='PENDING' AND hold_expires_at>UTC_TIMESTAMP()))");
-    $stmt->execute([$end,$start]); $bookings = $stmt->fetchAll();
-    $blocks = db()->prepare('SELECT room_id,`date` FROM room_availability WHERE available=0 AND `date`>=? AND `date`<?');
-    $blocks->execute([$date,$d->modify('+2 days')->format('Y-m-d')]); $blocked = $blocks->fetchAll();
-    $inventory = db()->query('SELECT id,is_active FROM rooms')->fetchAll();
-    $result = [];
-    foreach (room_repository()->publicRooms() as $room) {
-        $intervals = [];
-        foreach ($bookings as $b) if ($b['room_id']===$room['id']) $intervals[]=['start'=>gmdate('c',strtotime($b['check_in'].' UTC')),'end'=>gmdate('c',strtotime($b['check_out'].' UTC')),'status'=>$b['status']];
-        foreach ($blocked as $b) if ($b['room_id']===$room['id']) { $s=new DateTimeImmutable($b['date'].' 00:00',new DateTimeZone('Asia/Ho_Chi_Minh')); $intervals[]=['start'=>$s->format(DATE_ATOM),'end'=>$s->modify('+1 day')->format(DATE_ATOM),'status'=>'BLOCKED']; }
-        $row = current(array_filter($inventory, fn($i)=>$i['id']===$room['id']));
-        $result[]=['id'=>$room['id'],'active'=>(bool)($row['is_active'] ?? false),'intervals'=>$intervals];
-    }
-    json_response(['connected'=>true,'onlineBooking'=>payment_enabled(),'overnight'=>['checkIn'=>config('overnight_check_in'),'checkOut'=>config('overnight_check_out')],'terms'=>config('booking_terms'),'rooms'=>$result]);
+    require_once APP_ROOT . '/src/availability.php';
+    $days = filter_var($_GET['days'] ?? 31, FILTER_VALIDATE_INT);
+    if ($days === false) throw new BookingException('Khoảng thời gian không hợp lệ.', 400);
+    $snapshot = availability_snapshot(db(), room_repository()->publicRooms(), (string)($_GET['date'] ?? ''), $days);
+    json_response($snapshot + [
+        'onlineBooking' => payment_enabled(),
+        'overnight' => ['checkIn' => config('overnight_check_in'), 'checkOut' => config('overnight_check_out')],
+        'terms' => config('booking_terms'),
+    ]);
 }
 
 function create_booking_api(): never
@@ -126,13 +123,42 @@ function lookup_booking_api(): never
     $where=$returnRecovery?'b.access_token=? AND b.order_code=?':'b.booking_code=? AND '.($token?'b.access_token=?':'b.guest_phone=?');
     $sql='SELECT b.*,r.name room_name,p.qr_code,p.checkout_url FROM bookings b JOIN rooms r ON r.id=b.room_id LEFT JOIN payments p ON p.booking_id=b.id WHERE '.$where.' LIMIT 1';
     $stmt=db()->prepare($sql);$stmt->execute($returnRecovery?[$token,$orderCode]:[$code,$token?:$phone]);$b=$stmt->fetch();if(!$b)json_response(['error'=>'Không tìm thấy đơn khớp với thông tin đã nhập.'],404);
-    if($b['status']==='CONFIRMED'&&in_array($b['confirmation_email_status']??'PENDING',['PENDING','FAILED'],true)){
+    if ($b['status'] === 'PENDING') {
+        refresh_payment_cancellation(db(), $b);
+        $stmt->execute($returnRecovery ? [$token, $orderCode] : [$code, $token ?: $phone]);
+        $b = $stmt->fetch();
+    }
+    if(empty($b['is_test'])&&$b['status']==='CONFIRMED'&&in_array($b['confirmation_email_status']??'PENDING',['PENDING','FAILED'],true)){
         dispatch_confirmation_email((string)$b['id']);
         $email=db()->prepare('SELECT confirmation_email_status FROM bookings WHERE id=?');$email->execute([$b['id']]);$b['confirmation_email_status']=$email->fetchColumn()?:'PENDING';
     }
     $b = booking_lifecycle($b);
     $expired=$b['status']==='PENDING'&&strtotime($b['hold_expires_at'].' UTC')<=time();
-    json_response(['bookingCode'=>$b['booking_code'],'room'=>$b['room_name'],'checkIn'=>gmdate('c',strtotime($b['check_in'].' UTC')),'checkOut'=>gmdate('c',strtotime($b['check_out'].' UTC')),'total'=>(int)$b['total_price'],'status'=>$expired?'EXPIRED':$b['status'],'paymentStatus'=>$b['payment_status'],'emailStatus'=>$b['confirmation_email_status']??'PENDING','expires'=>gmdate('c',strtotime($b['hold_expires_at'].' UTC')),'qrCode'=>$expired?null:$b['qr_code'],'checkoutUrl'=>$expired?null:$b['checkout_url']]);
+    if ($b['status'] !== 'PENDING' || $b['payment_status'] === 'PAID') {
+        $b['qr_code'] = null;
+        $b['checkout_url'] = null;
+    }
+    $response = [
+        'bookingCode' => $b['booking_code'],
+        'room' => $b['room_name'],
+        'roomImage' => room_repository()->allRooms()[$b['room_id']]['image'] ?? '',
+        'packageName' => $b['package_name_snapshot'] ?: $b['stay_package'],
+        'guests' => (int)$b['number_of_guests'],
+        'arrival' => $expired ? null : booking_arrival_details($b, db()),
+        'checkIn' => gmdate('c', strtotime($b['check_in'] . ' UTC')),
+        'checkOut' => gmdate('c', strtotime($b['check_out'] . ' UTC')),
+        'total' => (int)$b['total_price'],
+        'status' => $expired ? 'EXPIRED' : $b['status'],
+        'paymentStatus' => $b['payment_status'],
+        'emailStatus' => $b['confirmation_email_status'] ?? 'PENDING',
+        'expires' => gmdate('c', strtotime($b['hold_expires_at'] . ' UTC')),
+        'qrCode' => $expired ? null : $b['qr_code'],
+        'checkoutUrl' => $expired ? null : $b['checkout_url'],
+    ];
+    if (!empty($b['is_test']) && dev_reload_enabled() && env_value('APP_ENV') !== 'production' && is_admin()) {
+        $response['mockPayment'] = ['orderCode' => (string)$b['order_code'], 'amount' => (int)$b['total_price']];
+    }
+    json_response($response);
 }
 
 function payment_webhook_api(): never
@@ -141,11 +167,9 @@ function payment_webhook_api(): never
     if(!is_array($data)||!payos_verify($data,$signature))json_response(['error'=>'Invalid signature'],401);
     if(($data['code']??'')!=='00'||($data['currency']??'')!=='VND')json_response(['ok'=>true]);
     if(!isset($data['orderCode'],$data['amount'],$data['reference'])||!is_numeric($data['orderCode'])||!is_numeric($data['amount'])||!is_string($data['reference'])||$data['reference']==='')json_response(['error'=>'Invalid payment data'],400);
-    $pdo=db();$pdo->beginTransaction();
-    try{$stmt=$pdo->prepare('SELECT * FROM bookings WHERE order_code=? FOR UPDATE');$stmt->execute([(string)$data['orderCode']]);$b=$stmt->fetch();if(!$b){$pdo->commit();json_response(['ok'=>true]);}if((int)$data['amount']!==(int)$b['total_price'])throw new BookingException('Amount mismatch',400);
-        if($b['payment_status']!=='PAID'){$conf=$pdo->prepare("SELECT id FROM bookings WHERE id<>? AND room_id=? AND check_in<? AND check_out>? AND (status IN ('CONFIRMED','CHECKED_IN') OR (status='PENDING' AND hold_expires_at>UTC_TIMESTAMP())) LIMIT 1");$conf->execute([$b['id'],$b['room_id'],$b['check_out'],$b['check_in']]);$valid=$b['status']==='PENDING'&&strtotime($b['hold_expires_at'].' UTC')>time()&&!$conf->fetch();$status=$valid?'CONFIRMED':'CANCELLED';$reason=$valid?null:'Đã nhận tiền sau thời hạn hoặc đơn đã hủy. Cần đối soát/hoàn tiền.';$pdo->prepare('UPDATE bookings SET payment_status=\'PAID\',status=?,transaction_id=? WHERE id=?')->execute([$status,(string)$data['reference'],$b['id']]);$pdo->prepare("INSERT INTO payments(id,booking_id,amount,payment_method,status,transaction_id,paid_at,failure_reason) VALUES(?,?,?,'payos','PAID',?,UTC_TIMESTAMP(),?) ON DUPLICATE KEY UPDATE status='PAID',transaction_id=VALUES(transaction_id),paid_at=VALUES(paid_at),failure_reason=VALUES(failure_reason)")->execute([uuid(),$b['id'],(int)$data['amount'],(string)$data['reference'],$reason]);}
-        $pdo->commit();dispatch_confirmation_email((string)$b['id']);json_response(['ok'=>true]);
-    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+    $booking = apply_payment_callback(db(), $data);
+    if ($booking) dispatch_confirmation_email((string)$booking['id']);
+    json_response(['ok'=>true]);
 }
 
 function admin_bookings_api(): never

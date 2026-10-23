@@ -13,13 +13,13 @@
             .sort((a, b) => a - b);
     }
 
-    function create(dialog) {
-        const root = dialog.querySelector(".manual-time-picker");
-        const panel = dialog.querySelector("#manual-time-popover");
+    function create(dialog, options = {}) {
+        const root = options.root || dialog.querySelector(".manual-time-picker");
+        const panel = options.panel || dialog.querySelector("#manual-time-popover");
         const hourList = panel.querySelector("[data-time-hours]");
         const minuteList = panel.querySelector("[data-time-minutes]");
         const exact = panel.querySelector("[data-time-exact]");
-        const fields = dialog.querySelector("form").elements;
+        const fields = options.fields || dialog.querySelector("form").elements;
         const triggers = [...root.querySelectorAll("[data-time-trigger]")];
         let hour = 0;
         let minute = 0;
@@ -109,6 +109,9 @@
                 close(true);
             }
         });
+        exact.addEventListener("wheel", (event) => {
+            if (document.activeElement === exact) event.preventDefault();
+        }, { passive: false });
         exact.addEventListener("change", () => {
             if (disabled || exact.value === "" || !exact.reportValidity()) return;
             commit(`${pad(hour)}:${pad(Number(exact.value))}`);

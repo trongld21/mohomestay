@@ -10,7 +10,7 @@ function render_door_codes(): void
                 <h1>Mã mở cửa</h1>
                 <p class="muted">Quản lý mã cổng theo đơn và mã nhập thủ công tại Mơ.</p>
             </div>
-            <div class="flex flex-wrap items-center gap-3">
+            <div class="admin-heading-actions flex flex-wrap items-center gap-3">
                 <button type="button" class="button outline" data-door-refresh><?= admin_icon('refresh') ?> Làm mới</button>
                 <button type="button" class="button" data-manual-open><?= admin_icon('plus') ?> Tạo mã TTLock</button>
                 <button type="button" class="button outline" data-door-add><?= admin_icon('plus') ?> Lưu mã có sẵn</button>

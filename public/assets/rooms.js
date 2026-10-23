@@ -81,139 +81,6 @@
         };
     }
 
-    function initCalendar() {
-        const root = one("#calendar-app");
-        if (!root) return;
-        const query = params(),
-            roomSelect = one("[data-cal-room]", root),
-            packageSelect = one("[data-cal-package]", root),
-            time = one("[data-cal-time]", root),
-            grid = one("[data-calendar-grid]", root),
-            output = one("[data-availability]", root);
-        let date = /^\d{4}-\d{2}-\d{2}$/.test(query.date || "") ? query.date : LANG_HOME.today,
-            month = date.slice(0, 7),
-            availability = null;
-        if (activeRooms.some((room) => room.id === query.room)) roomSelect.value = query.room;
-        const selectedRoom = () =>
-            activeRooms.find((room) => room.id === roomSelect.value) || activeRooms[0];
-        const selectedPackage = () =>
-            selectedRoom()?.packages.find((pkg) => pkg.id === packageSelect.value);
-        function packages() {
-            const list = bookableSlots(selectedRoom());
-            packageSelect.innerHTML = list.length
-                ? list
-                      .map(
-                          (pkg) =>
-                              `<option value="${esc(pkg.id)}">${esc(pkg.name)} · ${esc(packageLabel(pkg))} · ${cash(pkg.price)}</option>`,
-                      )
-                      .join("")
-                : '<option value="">Chưa có gói đặt online</option>';
-            if (list.some((pkg) => pkg.id === query.package)) packageSelect.value = query.package;
-            updateTime();
-        }
-        function updateTime() {
-            const fixed = selectedPackage()?.mode === "FIXED_TIME";
-            time.closest("label").hidden = fixed;
-            time.disabled = fixed;
-            if (fixed) time.value = selectedPackage().checkInTime || "";
-            else if (!time.value) time.value = query.time || "";
-        }
-        function draw() {
-            const [year, number] = month.split("-").map(Number),
-                offset = (new Date(year, number - 1, 1).getDay() + 6) % 7,
-                days = new Date(year, number, 0).getDate(),
-                cells = Math.ceil((offset + days) / 7) * 7;
-            one("[data-month-title]", root).textContent = `Tháng ${number}, ${year}`;
-            one("[data-selected-title]", root).textContent =
-                "Ngày " + date.split("-").reverse().join("/");
-            grid.innerHTML =
-                ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "CN"]
-                    .map((day) => `<span class="weekday">${day}</span>`)
-                    .join("") +
-                Array.from({ length: cells }, (_, index) => {
-                    const day = index - offset + 1,
-                        cell = new Date(year, number - 1, day),
-                        value = `${cell.getFullYear()}-${String(cell.getMonth() + 1).padStart(2, "0")}-${String(cell.getDate()).padStart(2, "0")}`,
-                        disabled = day < 1 || day > days || value < LANG_HOME.today;
-                    return `<button type="button" class="day${value === date ? " selected" : ""}" data-date="${value}" aria-label="${cell.getDate()}/${cell.getMonth() + 1}/${cell.getFullYear()}" aria-pressed="${value === date}" ${disabled ? "disabled" : ""}><span>${cell.getDate()}</span>${disabled ? "" : '<i aria-hidden="true"></i>'}</button>`;
-                }).join("");
-        }
-        let loadVersion = 0;
-        async function load() {
-            const version = ++loadVersion,
-                requestedDate = date;
-            output.setAttribute("aria-busy", "true");
-            output.innerHTML = '<div class="skeleton" style="height:280px"></div>';
-            try {
-                const data = await request("/api/availability?date=" + requestedDate);
-                if (version !== loadVersion) return;
-                availability = data;
-                const room = selectedRoom(),
-                    pkg = selectedPackage(),
-                    window = packageWindow(pkg, date, time.value),
-                    info = availability.rooms.find((item) => item.id === room?.id),
-                    busy = !!(
-                        window && info?.intervals.some((interval) => overlaps(window, interval))
-                    ),
-                    past = !!(window && window.start <= new Date()),
-                    open = availability.onlineBooking && info?.active && window && !busy && !past;
-                const clock =
-                    '<svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 3"/></svg>';
-                const format = (value) =>
-                    value.toLocaleString("vi-VN", {
-                        timeZone: "Asia/Ho_Chi_Minh",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                    });
-                output.innerHTML = room
-                    ? `<article><div class="calendar-room-preview"><img src="${esc(room.image)}" alt="Phòng ${esc(room.name)}"><div><span class="status-chip ${open ? "free" : busy ? "busy" : ""}">${past ? "Đã qua giờ" : busy ? "Đã có lịch" : open ? "Còn trống" : "Liên hệ Mơ"}</span><h3>${esc(room.name)}</h3><p class="calendar-room-subtitle">${esc(room.subtitle || "")}</p><p class="calendar-package">${clock}<span>${esc(pkg?.name || "Chưa có gói đặt online")} ${pkg ? "· " + cash(pkg.price) : ""}</span></p></div></div>${window ? `<div class="calendar-time-summary">${clock}<div><span>Thời gian</span><p>${format(window.start)} → ${format(window.end)}</p></div></div>` : ""}${open ? `<a class="button calendar-book-button" href="/bookings?room=${encodeURIComponent(room.id)}&package=${encodeURIComponent(pkg.id)}&date=${date}&time=${time.value}"><span>Đặt khung giờ này</span><span aria-hidden="true">›</span></a>` : '<a class="button calendar-book-button" href="https://zalo.me/0357907153" target="_blank" rel="noopener noreferrer">Nhắn Mơ tư vấn ↗</a>'}</article>`
-                    : '<div class="empty-state">Chưa có phòng đang mở.</div>';
-            } catch (error) {
-                if (version !== loadVersion) return;
-                output.innerHTML = `<p class="notice error">${esc(error.message)} Bạn có thể nhấn nút tải lại phía trên.</p>`;
-                LangUI.toast({
-                    type: "error",
-                    title: "Chưa tải được lịch",
-                    message: error.message,
-                });
-            } finally {
-                if (version === loadVersion) output.setAttribute("aria-busy", "false");
-            }
-        }
-        function shiftMonth(delta) {
-            const [year, number] = month.split("-").map(Number),
-                value = new Date(year, number - 1 + delta, 1);
-            month = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
-            draw();
-        }
-        grid.onclick = (event) => {
-            const button = event.target.closest("[data-date]");
-            if (button && !button.disabled) {
-                date = button.dataset.date;
-                draw();
-                load();
-            }
-        };
-        one("[data-month-prev]", root).onclick = () => shiftMonth(-1);
-        one("[data-month-next]", root).onclick = () => shiftMonth(1);
-        one("[data-refresh]", root).onclick = load;
-        roomSelect.onchange = () => {
-            packages();
-            load();
-        };
-        packageSelect.onchange = () => {
-            updateTime();
-            load();
-        };
-        time.onchange = load;
-        packages();
-        draw();
-        load();
-    }
-
     function initBooking() {
         const root = one("#booking-app");
         if (!root || !window.MoBookingSlots) return;
@@ -230,7 +97,13 @@
         let availability = null,
             selectedId = "",
             durationTime = query.time || "";
-        if (activeRooms.some((room) => room.id === query.room)) roomSelect.value = query.room;
+        const testPayment = one("[data-test-payment]", form);
+        let testRequest = { payload: "", id: "" };
+        if (activeRooms.some((room) => room.id === query.room)) {
+            roomSelect.value = query.room;
+            // Notify the enhanced dropdown after applying the room from the URL.
+            roomSelect.dispatchEvent(new Event("change", { bubbles: true }));
+        }
         if (/^\d{4}-\d{2}-\d{2}$/.test(query.date || "")) form.date.value = query.date;
         if (!form.date.value) form.date.value = LANG_HOME.today;
         form.time.value = durationTime;
@@ -346,9 +219,9 @@
             const slot = selectedSlot(),
                 window = slotTools.slotWindow(slot, form.date.value, form.time.value),
                 state = window ? slotTools.slotState(window, info?.intervals || []) : "needs-time",
-                canSubmit = availability.onlineBooking && info?.active && state === "available";
+                canSubmit = (availability.onlineBooking || testPayment?.checked) && info?.active && state === "available";
             submit.disabled = !canSubmit;
-            submit.textContent = !availability.onlineBooking
+            submit.textContent = !availability.onlineBooking && !testPayment?.checked
                 ? "Đặt online chưa mở"
                 : !slot
                   ? "Chọn một gói để tiếp tục"
@@ -401,6 +274,10 @@
             syncGuests();
             loadAvailability();
         };
+        testPayment?.addEventListener("change", () => {
+            renderSlots();
+            renderSummary();
+        });
         form.date.onchange = loadAvailability;
         form.time.onchange = () => {
             durationTime = form.time.value;
@@ -418,13 +295,26 @@
             const data = Object.fromEntries(new FormData(form));
             data.numberOfGuests = Number(data.numberOfGuests);
             data.acceptTerms = !!data.acceptTerms;
+            const testing = !!testPayment?.checked;
+            if (testing) {
+                const payload = JSON.stringify(data);
+                if (payload !== testRequest.payload) {
+                    testRequest = { payload, id: crypto.randomUUID().replaceAll("-", "") };
+                }
+                data.requestId = testRequest.id;
+            }
             submit.disabled = true;
             submit.textContent = "Đang giữ khung giờ…";
             try {
-                const result = await request("/api/bookings", {
+                const result = await request(testing ? "/api/dev/payments/create" : "/api/bookings", {
                     method: "POST",
+                    ...(testing ? { headers: { "X-CSRF-Token": LANG_HOME.csrf } } : {}),
                     body: JSON.stringify(data),
                 });
+                if (testing) {
+                    location.href = result.paymentUrl;
+                    return;
+                }
                 try {
                     sessionStorage.setItem(
                         "mo-payment-" + result.orderCode,
@@ -457,6 +347,5 @@
         loadAvailability();
     }
     initHomeSearch();
-    initCalendar();
     initBooking();
 })();

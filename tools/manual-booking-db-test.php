@@ -157,6 +157,54 @@ try {
 
     $early = create_manual_booking($pdo, array_replace($base, ['requestId' => uuid(), 'date' => (new DateTimeImmutable('+21 days'))->format('Y-m-d')]));
     manual_db_conflict(fn() => update_booking_lifecycle($pdo, $early['id'], 'CHECKED_IN'), 'Early check-in must reject conflicts across the expanded stay window.');
+    $mockInput = array_replace($base, ['requestId' => uuid(), 'date' => (new DateTimeImmutable('+25 days'))->format('Y-m-d')]);
+    $mock = create_manual_booking($pdo, $mockInput, true);
+    manual_db_expect($mock['status'] === 'PENDING' && (int)$mock['is_test'] === 1, 'Mock orders must be pending and explicitly marked.');
+    $callback = ['orderCode' => $mock['order_code'], 'amount' => 123000, 'reference' => 'MOCK-' . $mock['order_code']];
+    try {
+        apply_payment_callback($pdo, array_replace($callback, ['amount' => 1]), true);
+        throw new RuntimeException('Mock callback accepted an incorrect amount.');
+    } catch (BookingException $error) {
+        manual_db_expect($error->httpStatus === 422, 'Wrong mock amounts must be rejected.');
+    }
+    $confirmed = apply_payment_callback($pdo, $callback, true);
+    manual_db_expect($confirmed['status'] === 'CONFIRMED' && $confirmed['payment_status'] === 'PAID', 'Valid callback must confirm the test order.');
+    apply_payment_callback($pdo, $callback, true);
+    $payments->execute([$mock['id']]);
+    manual_db_expect(count($payments->fetchAll()) === 1, 'Repeated mock callbacks must not duplicate payments.');
+    manual_db_expect(!booking_access_allowed($confirmed), 'Test callbacks must never authorize door access.');
+    manual_db_expect(!dispatch_confirmation_email($confirmed['id']), 'Test callbacks must not send confirmation email.');
+    try {
+        apply_payment_callback($pdo, $callback, false);
+        throw new RuntimeException('Real webhook accepted a test order.');
+    } catch (BookingException $error) {
+        manual_db_expect($error->httpStatus === 403, 'Real callbacks must reject test orders.');
+    }
+    $expiredMock = create_manual_booking($pdo, array_replace($mockInput, ['requestId' => uuid(), 'time' => '15:00']), true);
+    $pdo->prepare('UPDATE bookings SET hold_expires_at=? WHERE id=?')->execute([gmdate('Y-m-d H:i:s', time() - 60), $expiredMock['id']]);
+    $late = apply_payment_callback($pdo, ['orderCode' => $expiredMock['order_code'], 'amount' => 123000, 'reference' => 'MOCK-' . $expiredMock['order_code']], true);
+    manual_db_expect($late['status'] === 'CANCELLED', 'Expired test orders must not become confirmed.');
+    [$mockAnonymous] = manual_http('/api/dev/payments/callback', $callback);
+    manual_db_expect($mockAnonymous === 401, 'Mock API requires an admin session.');
+    [$mockCsrf] = manual_http('/api/dev/payments/callback', $callback, [$cookie]);
+    manual_db_expect($mockCsrf === 419, 'Mock API requires CSRF.');
+    [$mockStatus, $mockBody] = manual_http('/api/dev/payments/callback', $callback, [$cookie, 'X-CSRF-Token: ' . $csrf]);
+    manual_db_expect($mockStatus === 200 && $mockBody['test'] === true, 'Authenticated mock callback must work over HTTP.');
+    $httpMockInput = array_replace($mockInput, ['requestId' => uuid(), 'date' => (new DateTimeImmutable('+26 days'))->format('Y-m-d')]);
+    [$mockCreated, $mockCreatedBody] = manual_http('/api/dev/payments/create', $httpMockInput, [$cookie, 'X-CSRF-Token: ' . $csrf]);
+    manual_db_expect($mockCreated === 201 && $mockCreatedBody['test'] === true && str_starts_with($mockCreatedBody['paymentUrl'], '/payment?code='), 'Mock create must return a payment-page link.');
+    $lookupInput = ['code' => $mockCreatedBody['bookingCode'], 'phone' => $httpMockInput['guestPhone']];
+    [$lookupStatus, $lookupBody] = manual_http('/api/bookings/lookup', $lookupInput, [$cookie]);
+    manual_db_expect($lookupStatus === 200 && ($lookupBody['mockPayment']['orderCode'] ?? '') === $mockCreatedBody['orderCode'], 'A local admin must be able to simulate payment on the normal payment page.');
+    [$guestLookupStatus, $guestLookupBody] = manual_http('/api/bookings/lookup', $lookupInput);
+    manual_db_expect($guestLookupStatus === 200 && empty($guestLookupBody['mockPayment']), 'Guests must not receive mock payment controls.');
+    $pdo->prepare('UPDATE bookings SET order_code=? WHERE id=?')->execute([111111111111111, $booking['id']]);
+    try {
+        apply_payment_callback($pdo, ['orderCode' => '111111111111111', 'amount' => 123000, 'reference' => 'MOCK-real-denied'], true);
+        throw new RuntimeException('Mock callback accepted a real booking.');
+    } catch (BookingException $error) {
+        manual_db_expect($error->httpStatus === 403, 'Mock callback must reject real bookings.');
+    }
 } finally {
     if ($sessionId !== null) {
         session_id($sessionId);

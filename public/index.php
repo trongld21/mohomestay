@@ -29,6 +29,14 @@ if (str_starts_with($path, '/api/')) {
     handle_api($path, $method);
 }
 
+if ($path === '/dev/payments') {
+    if (!dev_reload_enabled() || env_value('APP_ENV') === 'production') { http_response_code(404); exit('Not Found'); }
+    if (!is_admin()) redirect('/auth/login');
+    require APP_ROOT . '/src/views.php';
+    require APP_ROOT . '/src/mock-payment-view.php';
+    render_page('Test thanh toán local', fn() => render_mock_payment_view(), ['robots' => false]);
+}
+
 if ($path === '/logout' && $method === 'POST') {
     require_csrf((string)($_POST['csrf'] ?? ''));
     $_SESSION = [];
@@ -63,6 +71,12 @@ elseif (preg_match('#^/admin/rooms/([a-zA-Z0-9_-]+)/preview$#', $path, $m)) {
 elseif ($path === '/calendar') render_page('Lịch phòng', fn() => render_calendar());
 elseif ($path === '/bookings') render_page('Đặt phòng', fn() => render_bookings());
 elseif ($path === '/payment') render_page('Thanh toán', fn() => render_payment());
+elseif (preg_match('#^/booking-success/((?:MO|LANG)-[A-F0-9]{10})$#', $path, $matches)) {
+    require_once APP_ROOT . '/src/booking-success-view.php';
+    header('Cache-Control: no-store');
+    header('Referrer-Policy: no-referrer');
+    render_page('Thông tin đặt phòng', fn() => render_booking_success($matches[1]), ['robots' => false]);
+}
 elseif ($path === '/auth/login') render_page('Đăng nhập quản lý', fn() => render_login($loginError ?? ''), ['robots' => false]);
 elseif ($path === '/admin/door-codes') {
     if (!is_admin()) redirect('/auth/login');
