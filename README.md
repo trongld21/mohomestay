@@ -311,3 +311,17 @@ Quyền `bookings.overview` (Xem tổng quan và thống kê) độc lập với
 `bookings.view` (Xem danh sách đặt phòng). Chỉ có quyền tổng quan thì chỉ nhận
 số liệu tổng hợp qua `/api/admin/booking-overview`, không nhận chi tiết đơn/khách.
 Quyền xem danh sách không tự cấp quyền tổng quan; Admin có thể chọn cả hai.
+
+### Lọc danh sách đặt phòng trong admin
+
+Nút Khoảng ngày lưu trú mở lịch hai tháng, lọc các đơn có thời gian lưu trú giao
+với khoảng ngày đã chọn theo giờ Việt Nam. Ngày kết thúc được tính hết ngày;
+đơn trả đúng 00:00 không chiếm ngày tiếp theo. Bỏ lọc ngày để xem mọi thời gian.
+Mặc định ẩn đơn đã kết thúc, đã hủy và hết hạn. Bật Hiện cả đơn đã xong hoặc
+chọn trạng thái cụ thể để xem lại. Đơn đã hủy nhưng đã thanh toán và đơn đã kết
+thúc nhưng chưa thu tiền vẫn hiển thị để đối soát. Bộ lọc chỉ thay đổi hiển thị,
+không xóa dữ liệu và không thay đổi các số liệu tổng quan.
+
+Màu nền và khung: vàng chờ thanh toán, xanh dương đã xác nhận, xanh lá đang lưu
+trú, đỏ cần đối soát, xám lịch sử. Trạng thái bằng chữ luôn được giữ kèm màu.
+Kiểm thử: `node tools/admin-booking-filters-test.cjs`.

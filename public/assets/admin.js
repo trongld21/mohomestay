@@ -79,7 +79,7 @@
     );
 
     let bookings = [];
-    const bookingFilters = { query: "", status: "all", room: "all" };
+    const bookingFilters = { query: "", status: "all", room: "all", from: "", to: "", showFinished: false };
     const statusNames = {
         PENDING: "Chờ thanh toán",
         CONFIRMED: "Đã xác nhận",
@@ -140,6 +140,26 @@
                           .map(([value, label]) => `<option value="${value}">${label}</option>`)
                           .join("")}</select></label>
                   </div>
+                  <div class="flex flex-wrap items-center gap-3 border-t border-stone-100 px-5 py-4">
+                      <button type="button" data-range-open class="button outline small" aria-haspopup="dialog">${icon('calendar')} <span data-range-label>Khoảng ngày lưu trú</span></button>
+                      <button type="button" data-range-clear class="button outline small">Bỏ lọc ngày</button>
+                      <label class="flex items-center gap-2 text-sm"><input type="checkbox" data-show-finished ${bookingFilters.showFinished ? 'checked' : ''}> Hiện cả đơn đã xong</label>
+                      <span data-filter-count class="text-sm text-stone-600" aria-live="polite"></span>
+                  </div>
+                  <dialog data-range-dialog aria-labelledby="booking-range-title" class="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-auto rounded-2xl border border-stone-200 bg-white p-5 text-stone-800 shadow-xl backdrop:bg-black/40">
+                      <h3 id="booking-range-title" class="text-lg font-semibold">Chọn khoảng ngày lưu trú</h3>
+                      <p data-range-selection class="my-3 text-sm" aria-live="polite"></p>
+                      <div class="flex items-center justify-between gap-3">
+                          <button type="button" data-range-prev class="button outline small" aria-label="Tháng trước">←</button>
+                          <span class="text-sm text-stone-500">Chọn ngày bắt đầu rồi ngày kết thúc</span>
+                          <button type="button" data-range-next class="button outline small" aria-label="Tháng sau">→</button>
+                      </div>
+                      <div data-range-months class="my-4 grid gap-5 sm:grid-cols-2"></div>
+                      <div class="flex flex-wrap justify-between gap-3 border-t border-stone-200 pt-4">
+                          <button type="button" data-range-today class="button outline small">Hôm nay</button>
+                          <div class="flex gap-2"><button type="button" data-range-cancel class="button outline small">Bỏ qua</button><button type="button" data-range-apply class="button small">Áp dụng</button></div>
+                      </div>
+                  </dialog>
                   <div data-booking-results></div>
               </section>`;
             one("[data-booking-room]").value = bookingFilters.room;
@@ -157,6 +177,12 @@
                     renderBookings();
                 });
             }
+            setupBookingRange();
+            one('[data-show-finished]').addEventListener('change', event => {
+                bookingFilters.showFinished = event.target.checked;
+                bookingPagination.reset();
+                renderBookings();
+            });
             renderBookings();
             bookingPanel.onclick = bookingAction;
         } catch (error) {
@@ -168,24 +194,90 @@
     const bookingPagination = MoPagination.create("bookings", renderBookings);
     const roomPagination = MoPagination.create("rooms", renderRooms, 9);
     function renderBookings() {
-        const query = bookingFilters.query.trim().toLocaleLowerCase("vi");
-        const filtered = bookings.filter(
-            (item) =>
-                (bookingFilters.status === "all" || item.status === bookingFilters.status) &&
-                (bookingFilters.room === "all" || item.room_name === bookingFilters.room) &&
-                [item.guest_name, item.guest_phone, item.booking_code]
-                    .join(" ")
-                    .toLocaleLowerCase("vi")
-                    .includes(query),
-        );
+        const filtered = bookings.filter(item => MoBookingFilters.matches(item, bookingFilters));
+        one('[data-filter-count]').textContent = `${filtered.length} / ${bookings.length} đơn`;
         const view = bookingPagination.slice(filtered);
         one("[data-booking-results]").innerHTML = filtered.length
-            ? `<div class="admin-table-scroll" tabindex="0" role="region" aria-label="Danh sách đặt phòng"><table class="admin-booking-table"><thead><tr><th scope="col">Ảnh phòng</th><th scope="col">Mã / Khách hàng</th><th scope="col">Phòng / Thời gian</th><th scope="col">Thanh toán</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th></tr></thead><tbody>${view.items
+            ? `<div class="admin-table-scroll" tabindex="0" role="region" aria-label="Danh sách đặt phòng"><table class="admin-booking-table booking-work-table"><thead><tr><th scope="col">Ảnh phòng</th><th scope="col">Mã / Khách hàng</th><th scope="col">Phòng / Thời gian</th><th scope="col">Thanh toán</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th></tr></thead><tbody>${view.items
                   .map(
                       (booking) => renderBookingRow(booking),
                   )
                   .join("")}</tbody></table></div>${bookingPagination.render(view, "đơn")}`
             : '<div class="empty-state" role="status">Chưa có đặt phòng phù hợp. Thử đổi bộ lọc hoặc làm mới danh sách.</div>';
+    }
+    function setupBookingRange() {
+        const dialog = one('[data-range-dialog]');
+        const open = one('[data-range-open]');
+        const today = new Intl.DateTimeFormat('sv-SE', {timeZone: 'Asia/Ho_Chi_Minh'}).format(new Date());
+        let first = '', last = '', month = new Date(today + 'T12:00:00Z');
+        const key = date => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+        const pretty = value => value ? value.split('-').reverse().join('/') : 'Chưa chọn';
+        function updateLabel() {
+            one('[data-range-label]').textContent = bookingFilters.from
+                ? `${pretty(bookingFilters.from)} – ${pretty(bookingFilters.to)}` : 'Khoảng ngày lưu trú';
+        }
+        function draw() {
+            one('[data-range-selection]').textContent = `Từ ${pretty(first)} · Đến ${pretty(last || first)}`;
+            one('[data-range-apply]').disabled = !first;
+            one('[data-range-months]').innerHTML = [0, 1].map(offset => {
+                const date = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + offset, 1));
+                const year = date.getUTCFullYear(), m = date.getUTCMonth();
+                const count = new Date(Date.UTC(year, m + 1, 0)).getUTCDate();
+                const blank = (date.getUTCDay() + 6) % 7;
+                let days = '<span></span>'.repeat(blank);
+                for (let d = 1; d <= count; d++) {
+                    const value = key(new Date(Date.UTC(year, m, d)));
+                    const selected = value === first || value === last;
+                    const inside = first && last && value > first && value < last;
+                    days += `<button type="button" data-range-day="${value}" aria-label="${pretty(value)}" aria-pressed="${selected}" class="min-h-10 rounded-lg text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800 ${selected ? 'bg-emerald-700 font-semibold text-white' : inside ? 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100' : 'text-stone-800 hover:bg-stone-100'}">${d}</button>`;
+                }
+                return `<section><h4 class="mb-3 text-center font-semibold">Tháng ${m + 1} ${year}</h4><div class="grid grid-cols-7 text-center text-xs text-stone-500" aria-hidden="true">${['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(day => `<span class="py-2">${day}</span>`).join('')}</div><div class="grid grid-cols-7 gap-1">${days}</div></section>`;
+            }).join('');
+        }
+        open.addEventListener('click', () => {
+            first = bookingFilters.from;
+            last = bookingFilters.to;
+            month = new Date((first || today) + 'T12:00:00Z');
+            draw();
+            dialog.showModal();
+        });
+        dialog.addEventListener('click', event => {
+            const day = event.target.closest('[data-range-day]');
+            if (!day) return;
+            const value = day.dataset.rangeDay;
+            if (!first || last) { first = value; last = ''; }
+            else { last = value < first ? first : value; first = value < first ? value : first; }
+            draw();
+            dialog.querySelector(`[data-range-day="${value}"]`)?.focus();
+        });
+        for (const [selector, offset] of [['[data-range-prev]', -1], ['[data-range-next]', 1]]) {
+            one(selector).addEventListener('click', () => {
+                month = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + offset, 1));
+                draw();
+            });
+        }
+        one('[data-range-today]').addEventListener('click', () => {
+            first = last = today;
+            month = new Date(today + 'T12:00:00Z');
+            draw();
+        });
+        one('[data-range-cancel]').addEventListener('click', () => dialog.close());
+        one('[data-range-apply]').addEventListener('click', () => {
+            bookingFilters.from = first;
+            bookingFilters.to = last || first;
+            updateLabel();
+            bookingPagination.reset();
+            renderBookings();
+            dialog.close();
+        });
+        one('[data-range-clear]').addEventListener('click', () => {
+            bookingFilters.from = bookingFilters.to = '';
+            updateLabel();
+            bookingPagination.reset();
+            renderBookings();
+        });
+        dialog.addEventListener('close', () => open.focus());
+        updateLabel();
     }
     function renderBookingRow(booking) {
         const source = { PHONE: "Điện thoại", ZALO: "Zalo", WEBSITE: "Website" }[booking.booking_source] || "Website";
@@ -203,7 +295,7 @@
         if (booking.status === "PENDING") actions = action("CANCELLED", "Hủy đơn", "x", true);
         if (booking.status === "CONFIRMED") actions = action("CHECKED_IN", "Nhận sớm", "key") + action("CANCELLED", "Hủy", "x", true);
         if (booking.status === "CHECKED_IN") actions = action("CHECKED_OUT", "Kết thúc sớm", "logout");
-        return `<tr>
+        return `<tr data-booking-tone="${MoBookingFilters.tone(booking)}">
             <td class="booking-photo-cell"><img class="booking-room-photo" src="${esc(booking.room_image || '/images/white-illustration.jpg')}" alt="Phòng ${esc(booking.room_name)}" width="104" height="78" loading="lazy"></td>
             <td class="booking-guest-cell"><div class="booking-cell">
                 <strong class="booking-code">${esc(booking.booking_code)}</strong>
@@ -230,7 +322,7 @@
                 ${canCollect ? `<button type="button" class="button outline small booking-collect" data-booking-payment="${esc(booking.id)}">${icon("wallet")} Xác nhận thu tiền</button>` : ""}
                 ${booking.failure_reason ? `<span class="admin-reconcile">${esc(booking.failure_reason)}</span>` : ""}
             </div></td>
-            <td class="booking-status-cell"><div class="booking-cell"><span class="admin-booking-status booking-status-label" data-status="${esc(booking.status)}"><span class="booking-status-dot" aria-hidden="true"></span>${esc(statusNames[booking.status] || booking.status)}</span><span class="booking-meta">${icon(booking.statusSource === "MANUAL" ? "user" : "clock")}${booking.statusSource === "MANUAL" ? "Admin cập nhật" : "Tự động theo giờ"}</span></div></td>
+            <td class="booking-status-cell"><div class="booking-cell"><span class="admin-booking-status booking-status-label" data-status="${esc(booking.status)}"><span class="booking-status-dot" aria-hidden="true"></span>${esc(statusNames[booking.status] || booking.status)}</span>${MoBookingFilters.needsAttention(booking) ? '<strong class="text-sm text-red-800">Cần đối soát thanh toán</strong>' : ''}<span class="booking-meta">${icon(booking.statusSource === "MANUAL" ? "user" : "clock")}${booking.statusSource === "MANUAL" ? "Admin cập nhật" : "Tự động theo giờ"}</span></div></td>
             <td class="booking-actions-cell"><div class="admin-actions">${actions || '<span class="booking-ended">Đã kết thúc</span>'}</div></td>
         </tr>`;
     }

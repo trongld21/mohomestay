@@ -2987,3 +2987,46 @@ html:has(> body.admin-page) {
 [data-permission-denied] {
     @apply hidden!;
 }
+
+/* Separate booking rows into readable status frames on desktop and mobile. */
+.admin-page .booking-work-table {
+    @apply border-separate border-spacing-x-0 border-spacing-y-3 px-3;
+}
+.admin-page .booking-work-table tbody td {
+    @apply border-y border-solid;
+    background: inherit;
+}
+.admin-page .booking-work-table tbody td:first-child {
+    @apply rounded-l-xl border-l-4;
+}
+.admin-page .booking-work-table tbody td:last-child {
+    @apply rounded-r-xl border-r;
+}
+.admin-page .booking-work-table tr[data-booking-tone="pending"] {
+    @apply border-amber-300 bg-amber-50;
+}
+.admin-page .booking-work-table tr[data-booking-tone="confirmed"] {
+    @apply border-sky-300 bg-sky-50;
+}
+.admin-page .booking-work-table tr[data-booking-tone="staying"] {
+    @apply border-emerald-300 bg-emerald-50;
+}
+.admin-page .booking-work-table tr[data-booking-tone="attention"] {
+    @apply border-red-300 bg-red-50;
+}
+.admin-page .booking-work-table tr[data-booking-tone="finished"] {
+    @apply border-stone-200 bg-stone-50;
+}
+.admin-page .booking-work-table tr[data-booking-tone] td {
+    border-color: inherit;
+}
+@media (max-width: 1100px) {
+    .admin-page .booking-work-table tbody td:first-child,
+    .admin-page .booking-work-table tbody td:last-child,
+    .admin-page .booking-work-table tbody td {
+        @apply rounded-none border-0;
+    }
+    .admin-page .booking-work-table tr[data-booking-tone] {
+        @apply border-l-4;
+    }
+}

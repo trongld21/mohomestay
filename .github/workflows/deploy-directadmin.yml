@@ -40,6 +40,8 @@ jobs:
           node --check public/assets/app.js
           node --check public/assets/ui.js
           node --check public/assets/admin.js
+          node --check public/assets/admin-booking-filters.js
+          node tools/admin-booking-filters-test.cjs
           node --check public/assets/rooms.js
           node --check public/assets/door-codes.js
       - name: Build DirectAdmin upload package

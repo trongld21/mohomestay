@@ -111,6 +111,7 @@ function render_contact_widget(): void
         <script defer src="<?= e(asset_url('/assets/admin-slug.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/room-image-draft.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-permissions.js')) ?>"></script>
+        <script defer src="<?= e(asset_url('/assets/admin-booking-filters.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-inputs.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-date-picker.js')) ?>"></script>
