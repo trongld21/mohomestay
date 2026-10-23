@@ -5,7 +5,8 @@
             || item.status === 'CHECKED_OUT' && ['UNPAID', 'PENDING', 'FAILED'].includes(item.payment_status);
     }
     function isFinished(item) {
-        return ['CHECKED_OUT', 'CANCELLED', 'EXPIRED'].includes(item.status) && !needsAttention(item);
+        return ['CANCELLED', 'EXPIRED'].includes(item.status)
+            || item.status === 'CHECKED_OUT' && !needsAttention(item);
     }
     function matches(item, filters) {
         if (!filters.showFinished && filters.status === 'all' && isFinished(item)) return false;

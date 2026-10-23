@@ -318,8 +318,9 @@ Nút Khoảng ngày lưu trú mở lịch hai tháng, lọc các đơn có thờ
 với khoảng ngày đã chọn theo giờ Việt Nam. Ngày kết thúc được tính hết ngày;
 đơn trả đúng 00:00 không chiếm ngày tiếp theo. Bỏ lọc ngày để xem mọi thời gian.
 Mặc định ẩn đơn đã kết thúc, đã hủy và hết hạn. Bật Hiện cả đơn đã xong hoặc
-chọn trạng thái cụ thể để xem lại. Đơn đã hủy nhưng đã thanh toán và đơn đã kết
-thúc nhưng chưa thu tiền vẫn hiển thị để đối soát. Bộ lọc chỉ thay đổi hiển thị,
+chọn trạng thái cụ thể để xem lại. Đơn đã hủy luôn được ẩn mặc định, kể cả đã thanh toán; khi xem lại vẫn được
+đánh dấu cần đối soát nếu đã nhận tiền. Đơn đã kết thúc nhưng chưa thu tiền
+vẫn hiển thị để đối soát. Bộ lọc chỉ thay đổi hiển thị,
 không xóa dữ liệu và không thay đổi các số liệu tổng quan.
 
 Màu nền và khung: vàng chờ thanh toán, xanh dương đã xác nhận, xanh lá đang lưu
