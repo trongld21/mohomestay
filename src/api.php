@@ -51,6 +51,10 @@ function handle_api(string $path, string $method): never
         if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)/images/([a-zA-Z0-9_-]+)$#',$path,$matches) && $method === 'DELETE') delete_room_image_api($matches[1],$matches[2]);
         if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)$#',$path,$matches) && $method === 'PATCH') update_room_api($matches[1]);
         if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)$#',$path,$matches) && $method === 'DELETE') delete_room_api($matches[1]);
+        if ($path === '/api/admin/booking-overview' && $method === 'GET') {
+            $rows = db()->query('SELECT status,payment_status,total_price,is_test,check_in,check_out FROM bookings')->fetchAll();
+            json_response(['overview' => booking_overview($rows)]);
+        }
         if ($path === '/api/admin/bookings' && $method === 'GET') admin_bookings_api();
         if ($path === '/api/admin/bookings' && $method === 'POST') {
             require_admin();

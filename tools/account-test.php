@@ -168,4 +168,27 @@ try {
 } catch (BookingException $error) {
     account_check($error->httpStatus === 422, 'Root-only management must not be grantable');
 }
+unset($_SESSION['account_id'], $_SESSION['account_version']);
+save_account(['id' => $id, 'permissions' => ['bookings.overview']], true);
+$_SESSION['account_id'] = $id;
+$_SESSION['account_version'] = 2;
+account_check(can_use('bookings.overview') && can_use('bookings') && !can_use('bookings.view'), 'Overview-only grant must not expose booking list');
+account_check(account_home() === '/admin#bookings', 'Overview-only user must be able to open dashboard');
+account_check(admin_api_permission('/api/admin/booking-overview', 'GET') === 'bookings.overview', 'Overview API must require its own permission');
+try {
+    require_permission(admin_api_permission('/api/admin/bookings', 'GET'));
+    throw new LogicException('Overview-only user could read booking list');
+} catch (RuntimeException $error) {
+    account_check($error->getMessage() === '403', 'Booking list must deny overview-only user');
+}
+unset($_SESSION['account_id'], $_SESSION['account_version']);
+save_account(['id' => $id, 'permissions' => ['bookings.view']], true);
+$_SESSION['account_id'] = $id;
+$_SESSION['account_version'] = 2;
+account_check(can_use('bookings.view') && !can_use('bookings.overview'), 'Booking list must not implicitly grant overview');
+$now = strtotime('2026-10-23 12:00:00 UTC');
+$row = ['status' => 'CONFIRMED', 'payment_status' => 'PAID', 'total_price' => 287000, 'is_test' => 0, 'check_in' => '2026-10-23 11:00:00', 'check_out' => '2026-10-23 13:00:00'];
+$summary = booking_overview([$row, array_replace($row, ['is_test' => 1]), array_replace($row, ['status' => 'CANCELLED', 'total_price' => 100000])], $now);
+account_check($summary === ['paid' => 387000, 'confirmed' => 0, 'staying' => 2, 'reconcile' => 1], 'Overview must retain lifecycle counts and exclude test payments');
+account_check(array_keys(booking_overview([])) === ['paid', 'confirmed', 'staying', 'reconcile'], 'Overview must return aggregates only');
 echo "Account authorization tests: OK\n";

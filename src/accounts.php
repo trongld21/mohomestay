@@ -38,6 +38,9 @@ function can_use(string $permission): bool
     if ($account['root']) {
         return true;
     }
+    if ($permission === 'bookings' && in_array('bookings.overview', expanded_account_permissions(json_decode($account['permissions'], true) ?: []), true)) {
+        return true;
+    }
     if (array_key_exists($permission, account_permissions())) {
         $permission .= '.view';
     }
@@ -104,6 +107,9 @@ function save_account(array $data, bool $permissionsOnly): void
             throw new BookingException('Danh sách quyền không hợp lệ.', 422);
         }
         foreach ($permissions as $permission) {
+            if ($permission === 'bookings.overview') {
+                continue;
+            }
             $permissions[] = explode('.', $permission)[0] . '.view';
         }
         $stmt = db()->prepare('UPDATE accounts SET permissions = ? WHERE id = ?');
@@ -150,7 +156,8 @@ function account_permission_groups(): array
 {
     return [
         'bookings' => [
-            'bookings.view' => 'Xem tổng quan và danh sách đặt phòng',
+            'bookings.overview' => 'Xem tổng quan và thống kê',
+            'bookings.view' => 'Xem danh sách đặt phòng',
             'bookings.create' => 'Tạo đơn đặt phòng',
             'bookings.update' => 'Nhận phòng, kết thúc sớm và hủy đơn',
             'bookings.payment' => 'Xác nhận thu tiền',
@@ -195,6 +202,7 @@ function admin_api_permission(string $path, string $method, array $body = []): s
 {
     $feature = explode('/', substr($path, strlen('/api/admin/')))[0];
     return match ($feature) {
+        'booking-overview' => 'bookings.overview',
         'booking-rooms' => 'bookings.create',
         'bookings' => match ($method) {
             'GET' => 'bookings.view',

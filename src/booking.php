@@ -171,3 +171,25 @@ function update_booking_lifecycle(PDO $pdo, string $id, string $status): void
         throw $error;
     }
 }
+
+function booking_overview(array $rows, ?int $now = null): array
+{
+    $now ??= time();
+    $overview = ['paid' => 0, 'confirmed' => 0, 'staying' => 0, 'reconcile' => 0];
+    foreach ($rows as $row) {
+        $booking = booking_lifecycle($row, $now);
+        if ($booking['payment_status'] === 'PAID' && empty($booking['is_test'])) {
+            $overview['paid'] += (int)$booking['total_price'];
+        }
+        if ($booking['status'] === 'CONFIRMED') {
+            $overview['confirmed']++;
+        }
+        if ($booking['status'] === 'CHECKED_IN') {
+            $overview['staying']++;
+        }
+        if ($booking['status'] === 'CANCELLED' && $booking['payment_status'] === 'PAID') {
+            $overview['reconcile']++;
+        }
+    }
+    return $overview;
+}

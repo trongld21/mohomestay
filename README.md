@@ -306,3 +306,8 @@ quyền sửa mã không thay đổi trạng thái bật/tắt. Tạo đơn đã
 xác nhận thu tiền. API vẫn chặn thao tác không có quyền dù gọi trực tiếp.
 Các quyền tổng quát đã lưu trước đây được hiểu là đầy đủ các quyền trong nhóm;
 Admin có thể bỏ bớt từng quyền rồi lưu, không cần migration mới.
+
+Quyền `bookings.overview` (Xem tổng quan và thống kê) độc lập với
+`bookings.view` (Xem danh sách đặt phòng). Chỉ có quyền tổng quan thì chỉ nhận
+số liệu tổng hợp qua `/api/admin/booking-overview`, không nhận chi tiết đơn/khách.
+Quyền xem danh sách không tự cấp quyền tổng quan; Admin có thể chọn cả hai.

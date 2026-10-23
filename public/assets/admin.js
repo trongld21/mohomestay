@@ -107,36 +107,28 @@
         if (!bookingPanel) return;
         bookingPanel.setAttribute("aria-busy", "true");
         try {
+            let overviewHtml = "";
+            if (LANG_HOME.abilities.includes("bookings.overview")) {
+                const { overview } = await request("/api/admin/booking-overview");
+                const stats = [
+                    ["Đã thu", cash(overview.paid), "Tổng tiền các đơn đã thanh toán"],
+                    ["Đã xác nhận", overview.confirmed, "Sẵn sàng đón khách"],
+                    ["Trong giờ lưu trú", overview.staying, "Theo giờ đặt hoặc xác nhận của admin"],
+                    ["Cần đối soát", overview.reconcile, "Đơn đã hủy nhưng đã nhận tiền"],
+                ];
+                overviewHtml = `<div class="admin-stats">${stats.map(([label, value, hint]) => `<div class="panel"><p>${esc(label)}</p><h2>${esc(value)}</h2><small>${esc(hint)}</small></div>`).join("")}</div>`;
+            }
+            if (!LANG_HOME.abilities.includes("bookings.view")) {
+                bookingPanel.innerHTML = overviewHtml;
+                return;
+            }
             const data = await request("/api/admin/bookings");
             if (!Array.isArray(data.bookings)) {
                 throw new Error("Không nhận được danh sách đặt phòng từ máy chủ.");
             }
             bookings = data.bookings;
-            const paid = bookings
-                .filter((item) => item.payment_status === "PAID" && !Number(item.is_test))
-                .reduce((sum, item) => sum + Number(item.total_price), 0);
-            const stats = [
-                ["Đã thu", cash(paid), "Tổng tiền các đơn đã thanh toán"],
-                [
-                    "Đã xác nhận",
-                    bookings.filter((item) => item.status === "CONFIRMED").length,
-                    "Sẵn sàng đón khách",
-                ],
-                [
-                    "Trong giờ lưu trú",
-                    bookings.filter((item) => item.status === "CHECKED_IN").length,
-                    "Theo giờ đặt hoặc xác nhận của admin",
-                ],
-                [
-                    "Cần đối soát",
-                    bookings.filter(
-                        (item) => item.payment_status === "PAID" && item.status === "CANCELLED",
-                    ).length,
-                    "Đơn đã hủy nhưng đã nhận tiền",
-                ],
-            ];
             const roomNames = [...new Set(bookings.map((item) => item.room_name))];
-            bookingPanel.innerHTML = `<div class="admin-stats">${stats.map(([label, value, hint]) => `<div class="panel"><p>${esc(label)}</p><h2>${esc(value)}</h2><small>${esc(hint)}</small></div>`).join("")}</div>
+            bookingPanel.innerHTML = `${overviewHtml}
               <section class="admin-booking-panel" aria-labelledby="booking-list-title">
                   <div class="admin-table-heading"><div><h2 id="booking-list-title">Danh sách đặt phòng <span class="admin-count">${bookings.length}</span></h2><p>Thông tin và trạng thái từng lượt lưu trú.</p></div><span>${bookings.length} đơn</span></div>
                   <div class="admin-filters">
