@@ -9,6 +9,23 @@ function handle_api(string $path, string $method): never
             $permission = admin_api_permission($path, $method, $body);
             require_permission($permission);
         }
+        if ($path === '/api/admin/staff-email/test' && $method === 'POST') {
+            require_csrf();
+            if (empty(current_account()['root'])) throw new BookingException('Chỉ Super Admin được gửi email thử.', 403);
+            $body = json_body();
+            $event = (string)($body['event'] ?? 'BOOKED');
+            if (!in_array($event, ['BOOKED', 'CHECKED_OUT', 'SURCHARGE'], true)) {
+                throw new BookingException('Loại email thử không hợp lệ.', 422);
+            }
+            if ((int)($_SESSION['staff_mail_test_at'] ?? 0) > time() - 60) {
+                throw new BookingException('Vui lòng chờ 60 giây giữa các lần gửi email thử.', 429);
+            }
+            $_SESSION['staff_mail_test_at'] = time();
+            if (!send_staff_test_email($event)) {
+                throw new BookingException('Mail server từ chối gửi. Kiểm tra MAIL_FROM và log mail hosting.', 503);
+            }
+            json_response(['message' => 'Mail server đã nhận email thử gửi tới mohomestay01@gmail.com. Kiểm tra Hộp thư đến và Spam.']);
+        }
         if ($path === '/api/health' && $method === 'GET') json_response(['status'=>'ok','service'=>'mo-home-php']);
         if ($path === '/api/rooms/available-now' && $method === 'GET') {
             require_once APP_ROOT . '/src/home-availability.php';

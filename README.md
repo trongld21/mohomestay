@@ -400,3 +400,7 @@ Dùng cấu hình `MAIL_FROM` và mail server hiện có của hosting. Sự ki�
 php /duong-dan/domain/src/staff-notifications-worker.php
 ```
 Kiểm thử không gửi mail thật: `php tools/staff-notifications-test.php`. PHP mail trả thành công chỉ xác nhận mail server nhận xử lý, cần kiểm tra hộp thư/spam để xác minh giao thư thực tế.
+
+Khi chưa nhận được thư, chạy `php src/staff-notifications-worker.php --check` (hoặc thêm `--check` vào cron tạm thời) để kiểm tra cấu hình, DB, số thư theo trạng thái và 5 sự kiện mới nhất; lệnh không gửi mail và không in dữ liệu khách. `SENT` là mail server đã nhận xử lý, chưa đảm bảo Gmail đã nhận; `FAILED` là gửi lỗi; không có bản ghi thì kiểm tra migration 014, code đã deploy và sự kiện xác nhận sau deploy.
+
+Super Admin có nút **Gửi email thử** ở thanh trên cùng trang admin: chọn mẫu đặt phòng/trả phòng/phụ thu và gửi trực tiếp tới `mohomestay01@gmail.com`. Mẫu ghi rõ EMAIL THỬ, không tạo đơn, không gọi callback hoặc đổi trạng thái thanh toán, không cần cron hay chuyển khoản. Mỗi phiên được gửi tối đa 1 lần/phút. Kết quả thành công chỉ xác nhận mail server nhận thư; kiểm tra Gmail/Spam để xác minh giao thư.

@@ -52,6 +52,14 @@ queue_staff_notification($pdo, array_replace($booking, ['id' => 'retry']), 'BOOK
 staff_expect(dispatch_staff_notifications($pdo, 'retry', static fn(): bool => false) === 0, 'Transport failure stays retryable.');
 $pdo->exec("UPDATE staff_email_notifications SET last_attempt_at='2020-01-01 00:00:00' WHERE booking_id='retry'");
 staff_expect(dispatch_staff_notifications($pdo, 'retry', $transport) === 1, 'Retry must send a failed event.');
+$before = (int)$pdo->query('SELECT COUNT(*) FROM staff_email_notifications')->fetchColumn();
+foreach (['BOOKED', 'CHECKED_OUT', 'SURCHARGE'] as $event) {
+    staff_expect(send_staff_test_email($event, $transport), 'Email test must work without a real booking.');
+}
+staff_expect(count($sent) === 7, 'Each email test must use the same injected mail transport.');
+staff_expect((int)$pdo->query('SELECT COUNT(*) FROM staff_email_notifications')->fetchColumn() === $before, 'Sending sample emails must not create queue or booking records.');
+staff_expect(str_contains($sent[6]['html'], 'EMAIL THỬ') && str_contains($sent[6]['html'], '50.000đ'), 'Test surcharge email must be clearly marked and show sample amount.');
+staff_expect(admin_api_permission('/api/admin/staff-email/test', 'POST') === 'accounts', 'Email test must require root-only permission.');
 $_ENV['MAIL_FROM'] = '';
 queue_staff_notification($pdo, array_replace($booking, ['id' => 'unconfigured']), 'BOOKED');
 staff_expect(dispatch_staff_notifications($pdo, null, $transport) === 0, 'Missing sender configuration must retain pending events.');

@@ -71,6 +71,48 @@ function build_staff_notification_email(string $event, array $payload): array
     return ['subject' => 'Mơ Home · ' . $title . ' · ' . $payload['code'], 'html' => $html];
 }
 
+function send_staff_notification_message(array $message, string $recipient, ?callable $transport = null, ?string $messageId = null): bool
+{
+    $from = trim((string)config('mail.from', ''));
+    if (!filter_var($from, FILTER_VALIDATE_EMAIL)) {
+        throw new BookingException('Chưa cấu hình MAIL_FROM hợp lệ trên hosting.', 422);
+    }
+    if ($transport === null && !function_exists('mail')) {
+        throw new BookingException('Hosting chưa bật hàm PHP mail().', 503);
+    }
+    $headers = [
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=UTF-8',
+        'From: Mơ Home <' . $from . '>',
+        'Message-ID: <mo-staff-' . ($messageId ?? bin2hex(random_bytes(16))) . '@' . substr(strrchr($from, '@'), 1) . '>',
+    ];
+    $send = $transport ?? static fn($to, $subject, $html, $headers): bool => mail($to, $subject, $html, implode("
+", $headers));
+    return (bool)$send($recipient, mb_encode_mimeheader($message['subject'], 'UTF-8'), $message['html'], $headers);
+}
+
+function send_staff_test_email(string $event, ?callable $transport = null): bool
+{
+    $now = time();
+    $payload = [
+        'code' => 'DEMO-' . gmdate('YmdHis', $now),
+        'room' => 'Phòng minh họa',
+        'guest' => 'Khách minh họa · không phải đơn thật',
+        'phone' => '0900 000 000',
+        'checkIn' => gmdate('Y-m-d H:i:s', $now - 10800),
+        'checkOut' => gmdate('Y-m-d H:i:s', $now - 4200),
+        'total' => 200000,
+        'paymentStatus' => 'PAID',
+        'actualCheckout' => $event === 'BOOKED' ? null : gmdate('Y-m-d H:i:s', $now),
+        'surcharge' => $event === 'SURCHARGE' ? 50000 : 0,
+        'billableHours' => $event === 'SURCHARGE' ? 1 : 0,
+    ];
+    $message = build_staff_notification_email($event, $payload);
+    $message['subject'] = '[THỬ EMAIL] ' . $message['subject'];
+    $message['html'] = str_replace('<h2>', '<p><strong>EMAIL THỬ · Không phát sinh đặt phòng hoặc thanh toán.</strong></p><h2>', $message['html']);
+    return send_staff_notification_message($message, 'mohomestay01@gmail.com', $transport);
+}
+
 function dispatch_staff_notifications(PDO $pdo, ?string $bookingId = null, ?callable $transport = null): int
 {
     $from = trim((string)config('mail.from', ''));
@@ -98,18 +140,12 @@ function dispatch_staff_notifications(PDO $pdo, ?string $bookingId = null, ?call
                 $notification['event_type'],
                 json_decode($notification['payload'], true, 512, JSON_THROW_ON_ERROR)
             );
-            $subject = mb_encode_mimeheader($message['subject'], 'UTF-8');
-            $headers = [
-                'MIME-Version: 1.0',
-                'Content-Type: text/html; charset=UTF-8',
-                'From: Mơ Home <' . $from . '>',
-                'Message-ID: <mo-staff-' . $notification['id'] . '@' . substr(strrchr($from, '@'), 1) . '>',
-            ];
-            $send = $transport ?? static fn($to, $subject, $html, $headers): bool => mail($to, $subject, $html, implode("
-", $headers));
-            $ok = (bool)$send($notification['recipient'], $subject, $message['html'], $headers);
-        } catch (Throwable) {
-            // Do not log guest details or message bodies.
+            $ok = send_staff_notification_message($message, $notification['recipient'], $transport, $notification['id']);
+        } catch (Throwable $error) {
+            error_log('Staff notification preparation/transport failed; error type: ' . get_class($error));
+        }
+        if (!$ok) {
+            error_log('Staff notification not accepted by mail transport; queued for retry.');
         }
         $pdo->prepare('UPDATE staff_email_notifications SET status=?,sent_at=? WHERE id=?')
             ->execute([$ok ? 'SENT' : 'FAILED', $ok ? $now : null, $notification['id']]);
