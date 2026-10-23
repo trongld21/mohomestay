@@ -19,7 +19,7 @@
         });
     }
 
-    function create(dialog) {
+    function create(dialog, options = {}) {
         const field = dialog.querySelector(".manual-date-field");
         const input = dialog.querySelector('[name="date"]');
         const trigger = field.querySelector(".manual-date-trigger");
@@ -158,16 +158,16 @@
         });
         document.addEventListener("pointerdown", (event) => {
             if (opened && !field.contains(event.target) && !panel.contains(event.target)) close();
-        });
+        }, { signal: options.signal });
         document.addEventListener("scroll", (event) => {
             if (!opened || panel.contains(event.target)) return;
             const rect = trigger.getBoundingClientRect();
             const height = window.visualViewport?.height || window.innerHeight;
             if (rect.bottom < 0 || rect.top > height) close();
             else position();
-        }, { capture: true, passive: true });
-        window.addEventListener("resize", position);
-        window.visualViewport?.addEventListener("resize", position);
+        }, { capture: true, passive: true, signal: options.signal });
+        window.addEventListener("resize", position, { signal: options.signal });
+        window.visualViewport?.addEventListener("resize", position, { signal: options.signal });
         dialog.addEventListener("close", () => close());
         return { refresh, close };
     }

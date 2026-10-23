@@ -79,6 +79,7 @@
     );
 
     let bookings = [];
+    document.addEventListener("mo:booking-stay-saved", () => loadBookings());
     const bookingFilters = { query: "", status: "all", room: "all", from: "", to: "", showFinished: false };
     const statusNames = {
         PENDING: "Chờ thanh toán",
@@ -130,7 +131,7 @@
             const roomNames = [...new Set(bookings.map((item) => item.room_name))];
             bookingPanel.innerHTML = `${overviewHtml}
               <section class="admin-booking-panel" aria-labelledby="booking-list-title">
-                  <div class="admin-table-heading"><div><h2 id="booking-list-title">Danh sách đặt phòng <span class="admin-count">${bookings.length}</span></h2><p>Thông tin và trạng thái từng lượt lưu trú.</p></div><span>${bookings.length} đơn</span></div>
+                  <div class="admin-table-heading"><div><h2 id="booking-list-title">Danh sách đặt phòng <span class="admin-count">${bookings.length}</span></h2></div><span>${bookings.length} đơn</span></div>
                   <div class="admin-filters">
                       <label class="admin-search">Tìm đặt phòng<input type="search" data-booking-search placeholder="Tên không dấu, một phần SĐT, mã đơn, tên phòng…" value="${esc(bookingFilters.query)}"></label>
                       <label>Phòng<select data-booking-room><option value="all">Tất cả phòng</option>${roomNames.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join("")}</select></label>
@@ -139,9 +140,10 @@
                       )
                           .map(([value, label]) => `<option value="${value}">${label}</option>`)
                           .join("")}</select></label>
+                      <button type="button" data-booking-refresh class="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-[#d2bda7] bg-white text-[#70432c] enabled:hover:bg-[#eee4d6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:cursor-wait disabled:opacity-50" aria-label="Làm mới danh sách đặt phòng" title="Làm mới danh sách đặt phòng">${icon("refresh")}</button>
                   </div>
                   <div class="flex flex-wrap items-center gap-3 border-t border-stone-100 px-5 py-4">
-                      <button type="button" data-range-open class="button outline small" aria-haspopup="dialog">${icon('calendar')} <span data-range-label>Khoảng ngày lưu trú</span></button>
+                      <button type="button" data-range-open class="button outline small gap-2" aria-haspopup="dialog">${icon('calendar')} <span data-range-label>Khoảng ngày lưu trú</span></button>
                       <button type="button" data-range-clear class="button outline small">Bỏ lọc ngày</button>
                       <label class="flex items-center gap-2 text-sm"><input type="checkbox" data-show-finished ${bookingFilters.showFinished ? 'checked' : ''}> Hiện cả đơn đã xong</label>
                       <span data-filter-count class="text-sm text-stone-600" aria-live="polite"></span>
@@ -186,9 +188,17 @@
             renderBookings();
             bookingPanel.onclick = bookingAction;
         } catch (error) {
-            bookingPanel.innerHTML = `<div class="notice error" role="alert">${esc(error.message)} Hãy kiểm tra kết nối và chọn Làm mới.</div>`;
+            bookingPanel.innerHTML = `<div class="notice error" role="alert">${esc(error.message)} Hãy kiểm tra kết nối và chọn Làm mới.</div><button type="button" data-booking-refresh class="timeline-button gap-2">${icon("refresh")} Làm mới danh sách</button>`;
         } finally {
             bookingPanel.setAttribute("aria-busy", "false");
+            one("[data-booking-refresh]", bookingPanel)?.addEventListener("click", async (event) => {
+                const button = event.currentTarget;
+                if (button.disabled) return;
+                button.disabled = true;
+                button.setAttribute("aria-busy", "true");
+                await loadBookings();
+                one("[data-booking-refresh]", bookingPanel)?.focus({ preventScroll: true });
+            });
         }
     }
     const bookingPagination = MoPagination.create("bookings", renderBookings);
@@ -279,7 +289,14 @@
         dialog.addEventListener('close', () => open.focus());
         updateLabel();
     }
+    function bookingSuccessLink(booking) {
+        if (!["CONFIRMED", "CHECKED_IN", "CHECKED_OUT"].includes(booking.status)
+            || !/^(?:MO|LANG)-[A-F0-9]{10}$/.test(booking.booking_code || "")
+            || !/^[a-f0-9]{64}$/.test(booking.access_token || "")) return "";
+        return `${location.origin}/booking-success/${booking.booking_code}#${booking.access_token}`;
+    }
     function renderBookingRow(booking) {
+        const successLink = bookingSuccessLink(booking);
         const source = { PHONE: "Điện thoại", ZALO: "Zalo", WEBSITE: "Website" }[booking.booking_source] || "Website";
         const payment = {
             UNPAID: "Chưa thanh toán", PENDING: "Chờ thanh toán", PAID: "Đã thanh toán",
@@ -295,7 +312,10 @@
         if (booking.status === "PENDING") actions = action("CANCELLED", "Hủy đơn", "x", true);
         if (booking.status === "CONFIRMED") actions = action("CHECKED_IN", "Nhận sớm", "key") + action("CANCELLED", "Hủy", "x", true);
         if (booking.status === "CHECKED_IN" && LANG_HOME.abilities.includes("availability.checkout")) {
-            actions = '<a class="timeline-button" href="/admin/availability">Trả phòng & phụ thu</a>';
+            actions = `<a class="timeline-button" href="/admin/availability#booking-${encodeURIComponent(booking.id)}">Trả phòng & phụ thu</a>`;
+        }
+        if (LANG_HOME.manualDateOverride === true && ["PENDING", "CONFIRMED", "CHECKED_IN"].includes(booking.status)) {
+            actions += `<button type="button" class="timeline-button" data-booking-stay="${esc(booking.id)}">Đổi phòng / sửa lịch</button>`;
         }
         if (LANG_HOME.isSuperAdmin === true && ["CHECKED_IN", "CHECKED_OUT", "EXPIRED"].includes(booking.status)) {
             actions += action("CANCELLED", "Hủy đơn", "x", true);
@@ -316,6 +336,15 @@
                     <span class="booking-source">${icon(booking.booking_source === "PHONE" ? "phone" : "message-circle")} ${source}</span>
                 </div>
                 ${identity}
+                ${successLink ? `<div class="mt-2 grid min-w-0 gap-2 rounded-lg border border-[#d9c9b7] bg-white/80 p-2">
+                    <label class="grid gap-1 text-xs font-medium text-[#79543e]">Link xác nhận đặt phòng
+                        <input type="text" readonly value="${esc(successLink)}" aria-label="Link xác nhận đơn ${esc(booking.booking_code)}" class="min-h-10 w-full min-w-0 rounded-md border border-[#ddd5ca] bg-white px-2 py-2 text-xs text-[#5c5148] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e]">
+                    </label>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" data-copy-booking-link="${esc(booking.id)}" class="min-h-10 rounded-lg border border-[#d2bda7] bg-white px-3 py-2 text-xs font-medium text-[#70432c] enabled:hover:bg-[#eee4d6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:opacity-50">Sao chép link</button>
+                        <a href="${esc(successLink)}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 items-center rounded-lg px-2 text-xs font-medium text-[#70432c] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e]">Mở trang ↗</a>
+                    </div>
+                </div>` : ""}
                 ${booking.guest_note ? `<details class="booking-note"><summary>Ghi chú khách</summary><p>${esc(booking.guest_note)}</p></details>` : ""}
             </div></td>
             <td class="booking-stay-cell"><div class="booking-cell">
@@ -338,6 +367,31 @@
         </tr>`;
     }
     async function bookingAction(event) {
+        const copyLinkButton = event.target.closest("[data-copy-booking-link]");
+        if (copyLinkButton) {
+            const booking = bookings.find((item) => item.id === copyLinkButton.dataset.copyBookingLink);
+            const link = booking && bookingSuccessLink(booking);
+            if (!link) return;
+            copyLinkButton.disabled = true;
+            try {
+                await navigator.clipboard.writeText(link);
+                LangUI.toast({ type: "success", title: "Đã sao chép link", message: "Bạn có thể dán vào Zalo để gửi riêng cho khách của đơn này." });
+            } catch {
+                const input = copyLinkButton.closest("td").querySelector("input[readonly]");
+                input?.focus();
+                input?.select();
+                LangUI.toast({ type: "info", title: "Chọn link để sao chép", message: "Nhấn Ctrl+C hoặc chạm giữ để sao chép link đã chọn." });
+            } finally {
+                copyLinkButton.disabled = false;
+            }
+            return;
+        }
+        const stayButton = event.target.closest("[data-booking-stay]");
+        if (stayButton && LANG_HOME.manualDateOverride === true) {
+            const booking = bookings.find((item) => item.id === stayButton.dataset.bookingStay);
+            if (booking) document.dispatchEvent(new CustomEvent("mo:edit-booking-stay", { detail: { booking, trigger: stayButton } }));
+            return;
+        }
         const identityButton = event.target.closest('[data-view-identity]');
         if (identityButton) {
             const id = identityButton.dataset.viewIdentity;

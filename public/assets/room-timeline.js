@@ -64,11 +64,40 @@
         let currentCharge = null;
         let mutating = false;
         let returnFocus = null;
+        let pendingBookingId = /^#booking-([a-f0-9]{32})$/.exec(location.hash)?.[1] || "";
         dateInput.value = localStamp(Date.now()).slice(0, 10);
         if (search) {
             const rounded = Math.ceil(Date.now() / 3600000) * 3600000;
             search.elements.from.value = localStamp(rounded);
             search.elements.to.value = localStamp(rounded + 3 * 3600000);
+            // This script precedes the shared picker scripts in the page; initialize
+            // after all deferred scripts have loaded.
+            document.addEventListener("DOMContentLoaded", () => {
+                for (const section of search.querySelectorAll("[data-timeline-datetime]")) {
+                    const output = search.elements[section.dataset.timelineDatetime];
+                    const date = section.querySelector('[name="date"]');
+                    const time = section.querySelector("[data-datetime-time]");
+                    date.value = output.value.slice(0, 10);
+                    const datePicker = MoAdminDatePicker.create(section);
+                    datePicker.refresh();
+                    const timePicker = MoTimePicker.create(root, {
+                        root: section.querySelector(".manual-time-picker"),
+                        panel: section.querySelector(".manual-time-popover"),
+                        fields: {
+                            time,
+                            arrivalHour: section.querySelector("[data-datetime-hour]"),
+                            arrivalMinute: section.querySelector("[data-datetime-minute]"),
+                        },
+                    });
+                    timePicker.set(output.value.slice(11, 16));
+                    const sync = () => {
+                        output.value = `${date.value}T${time.value}`;
+                        output.dispatchEvent(new Event("input", { bubbles: true }));
+                    };
+                    date.addEventListener("change", sync);
+                    time.addEventListener("change", sync);
+                }
+            }, { once: true });
         }
 
         async function request(url, method = "GET", data = null, signal = undefined) {
@@ -100,17 +129,24 @@
             }
             const rooms = snapshot.rooms.filter((r) => r.active);
             const free = rooms.filter((r) => !r.intervals.some((i) => searchOverlaps(start, end, i)));
-            results.innerHTML = `<p class="text-sm font-semibold sm:col-span-2 xl:col-span-3">${free.length} phòng trống toàn bộ khung giờ ${escape(dateTime(start))} – ${escape(dateTime(end))}</p>`
+            results.innerHTML = `<p class="col-span-full text-sm font-semibold">${free.length} phòng trống toàn bộ khung giờ ${escape(dateTime(start))} – ${escape(dateTime(end))}</p>`
                 + rooms.map((room) => {
                     const available = free.includes(room);
                     const windows = freeWindows(room, start, end);
-                    return `<article class="rounded-xl border border-[#e5dacb] p-3">
-                        <h3 class="font-semibold">${escape(room.name)}</h3>
-                        <p class="mt-1 text-sm ${available ? "text-emerald-800" : "text-red-800"}">${available ? "Còn trống khung giờ này" : "Không trống toàn bộ khung giờ"}</p>
-                        ${!available && windows.length ? `<p class="mt-2 text-xs text-[#736b61]">Khoảng trống trong thời gian chọn:<br>${windows.map(([a, b]) => `${escape(dateTime(a))} – ${escape(dateTime(b))}`).join("<br>")}</p>` : ""}
-                        <a class="timeline-button mt-3" href="/rooms/${escape(room.slug)}">Xem phòng</a>
+                    return `<article class="availability-room-card">
+                        <img class="availability-room-image" src="${escape(room.image)}" alt="" loading="lazy" decoding="async">
+                        <div class="availability-room-shade" aria-hidden="true"></div>
+                        <div class="availability-room-content">
+                            <h3>${escape(room.name)}</h3>
+                            <p class="availability-room-status" data-available="${available}">${available ? "Còn trống khung giờ này" : "Không trống toàn bộ khung giờ"}</p>
+                            ${!available && windows.length ? `<p class="availability-room-windows">Khoảng trống trong thời gian chọn:<br>${windows.map(([a, b]) => `${escape(dateTime(a))} – ${escape(dateTime(b))}`).join("<br>")}</p>` : ""}
+                            <a class="timeline-button availability-room-link" href="/rooms/${escape(room.slug)}" aria-label="Xem phòng ${escape(room.name)}">Xem phòng <span aria-hidden="true">↗</span></a>
+                        </div>
                     </article>`;
                 }).join("");
+            results.querySelectorAll(".availability-room-image").forEach((image) => {
+                image.addEventListener("error", () => image.remove(), { once: true });
+            });
         }
 
         function renderGrid() {
@@ -150,7 +186,7 @@
             one("[data-timeline-stays]").innerHTML = bookings.map((b) => {
                 const locked = b.emergency_lock_id && !b.ended_at;
                 const unpaidSurcharge = Number(b.surcharge_amount) > 0 && ["DUE", "PENDING"].includes(b.surcharge_status);
-                return `<article class="rounded-xl border p-3 ${b.isOverdue || unpaidSurcharge ? 'border-red-400 bg-red-50' : 'border-[#e5dacb]'}">
+                return `<article id="booking-${escape(b.id)}" class="rounded-xl border p-3 ${b.isOverdue || unpaidSurcharge ? 'border-red-400 bg-red-50' : 'border-[#e5dacb]'}">
                     <h4 class="font-semibold">${escape(b.room_name)} · ${escape(b.booking_code)}</h4>
                     <p class="mt-1 text-sm">Giờ trả dự kiến: ${escape(dateTime(utc(b.check_out)))}</p>
                     <p class="mt-1 text-sm ${b.isOverdue ? "text-red-800" : "text-[#736b61]"}">${b.status === "CHECKED_OUT" ? "Đã xác nhận trả phòng" : locked ? "Đang khóa khẩn cấp · khách chưa rời phòng" : b.isOverdue ? "Đã quá giờ · cần kiểm tra khách" : "Trong giờ lưu trú"}</p>
@@ -184,6 +220,7 @@
             grid.innerHTML = "";
             grid.setAttribute("aria-busy", "true");
             if (search) one("[data-timeline-results]").innerHTML = "";
+            status.hidden = false;
             status.textContent = "Đang kết nối lịch phòng…";
             try {
                 const query = new URLSearchParams({ date: dateInput.value, days: daysInput.value });
@@ -194,14 +231,31 @@
                     const info = window.LANG_HOME?.rooms?.find((item) => item.id === r.id);
                     r.name = r.name || info?.name || r.id;
                     r.slug = r.slug || info?.slug || r.id;
+                    r.image = info?.image || "/images/white-illustration.jpg";
                 });
                 snapshot = result;
                 renderGrid();
                 showResults();
                 renderStays();
-                status.textContent = `Cập nhật ${dateTime(result.serverTime)} · Cuộn ngang để xem các giờ.`;
+                status.textContent = staff ? "" : `Cập nhật ${dateTime(result.serverTime)} · Cuộn ngang để xem các giờ.`;
+                status.hidden = staff;
+                if (staff && pendingBookingId) {
+                    const id = pendingBookingId;
+                    pendingBookingId = "";
+                    const card = document.getElementById(`booking-${id}`);
+                    const button = card?.querySelector("[data-checkout-booking], [data-charge-booking]");
+                    if (card && root.contains(card) && button) {
+                        card.classList.add("ring-2", "ring-[#79543e]", "ring-offset-2", "scroll-mt-24");
+                        button.focus({ preventScroll: true });
+                        card.scrollIntoView({ block: "center", behavior: "instant" });
+                    } else {
+                        status.hidden = false;
+                        status.textContent = "Đơn này không còn trong danh sách khách đang ở hoặc bạn chưa có quyền trả phòng. Vui lòng kiểm tra lại trạng thái đơn.";
+                    }
+                }
             } catch (error) {
                 if (error.name === "AbortError") return;
+                status.hidden = false;
                 status.textContent = "Chưa tải được lịch thực tế: " + error.message;
                 one("[data-timeline-stays]").innerHTML = "";
             } finally {

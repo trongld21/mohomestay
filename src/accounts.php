@@ -223,7 +223,8 @@ function admin_api_permission(string $path, string $method, array $body = []): s
         'booking-rooms' => 'bookings.create',
         'bookings' => match ($method) {
             'GET' => str_contains($path, '/identity/') ? 'bookings.identity' : 'bookings.view',
-            'POST' => str_ends_with($path, '/payment') ? 'bookings.payment' : 'bookings.create',
+            'POST' => str_ends_with($path, '/stay') ? 'accounts'
+                : (str_ends_with($path, '/payment') ? 'bookings.payment' : 'bookings.create'),
             'PATCH' => ($body['status'] ?? '') === 'CHECKED_OUT' ? 'availability.checkout' : 'bookings.update',
             default => 'accounts',
         },

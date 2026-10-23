@@ -173,12 +173,12 @@
         });
         document.addEventListener("pointerdown", (event) => {
             if (opened && !root.contains(event.target) && !panel.contains(event.target)) close();
-        });
-        window.addEventListener("resize", position);
-        window.visualViewport?.addEventListener("resize", position);
+        }, { signal: options.signal });
+        window.addEventListener("resize", position, { signal: options.signal });
+        window.visualViewport?.addEventListener("resize", position, { signal: options.signal });
         document.addEventListener("scroll", (event) => {
             if (opened && !panel.contains(event.target)) position();
-        }, { capture: true, passive: true });
+        }, { capture: true, passive: true, signal: options.signal });
         dialog.addEventListener("close", () => close());
         render();
         if (options.getDate) {
