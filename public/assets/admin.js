@@ -33,7 +33,13 @@
         } catch {
             throw new Error("Máy chủ trả về dữ liệu không hợp lệ. Vui lòng kiểm tra lỗi PHP hoặc liên hệ người quản trị.");
         }
-        if (!response.ok) throw new Error(data.error || "Không thể kết nối máy chủ.");
+        if (!response.ok) {
+            const error = new Error(response.status === 401
+                ? "Phiên đăng nhập đã hết hạn hoặc không còn hợp lệ. Vui lòng đăng nhập lại."
+                : data.error || "Không thể kết nối máy chủ.");
+            error.status = response.status;
+            throw error;
+        }
         return data;
     }
     const mutation = (method, body) => ({
@@ -188,7 +194,12 @@
             renderBookings();
             bookingPanel.onclick = bookingAction;
         } catch (error) {
-            bookingPanel.innerHTML = `<div class="notice error" role="alert">${esc(error.message)} Hãy kiểm tra kết nối và chọn Làm mới.</div><button type="button" data-booking-refresh class="timeline-button gap-2">${icon("refresh")} Làm mới danh sách</button>`;
+            const authError = error.status === 401;
+            const guidance = authError || error.status === 403 ? "" : " Hãy kiểm tra kết nối và chọn Làm mới.";
+            const action = authError
+                ? '<a class="timeline-button" href="/auth/login">Đăng nhập lại</a>'
+                : `<button type="button" data-booking-refresh class="timeline-button gap-2">${icon("refresh")} Làm mới danh sách</button>`;
+            bookingPanel.innerHTML = `<div class="notice error" role="alert">${esc(error.message)}${guidance}</div>${action}`;
         } finally {
             bookingPanel.setAttribute("aria-busy", "false");
             one("[data-booking-refresh]", bookingPanel)?.addEventListener("click", async (event) => {

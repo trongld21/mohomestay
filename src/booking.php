@@ -78,16 +78,9 @@ function bookable_package_window(array $package, string $date, string $time, ?Da
 {
     [$start, $end] = package_window($package, $date, $time);
     $now ??= new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
-    $localNow = $now->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'));
-    if (($package['mode'] ?? '') === 'FIXED_TIME'
-        && $package['checkOutTime'] < $package['checkInTime']
-        && $date === $localNow->format('Y-m-d')
-        && $localNow < $end->modify('-1 day')) {
-        // Before morning checkout, today also belongs to the ongoing overnight stay.
-        $start = $start->modify('-1 day');
-        $end = $end->modify('-1 day');
-    }
-    if (($package['mode'] ?? '') === 'FIXED_TIME' && $start <= $now && $end > $now) {
+    $overnight = ($package['mode'] ?? '') === 'FIXED_TIME'
+        && $package['checkOutTime'] < $package['checkInTime'];
+    if (($package['mode'] ?? '') === 'FIXED_TIME' && !$overnight && $start <= $now && $end > $now) {
         // Late arrivals keep the original checkout and full package price.
         $start = $now->setTimestamp((int)(ceil($now->getTimestamp() / 60) * 60));
     }
