@@ -627,6 +627,40 @@
         dirty = value;
         one("[data-dirty-indicator]").hidden = !dirty;
     }
+    let packageTimeSequence = 0;
+    const packageTimeEvents = new Map();
+    function initPackageTimes(row) {
+        const events = new AbortController();
+        packageTimeEvents.set(row, events);
+        for (const key of ["checkInTime", "checkOutTime"]) {
+            const input = one(`[data-package-field="${key}"]`, row);
+            const label = key === "checkInTime" ? "Nhận phòng" : "Trả phòng";
+            const id = `package-time-${++packageTimeSequence}`;
+            const field = document.createElement("div");
+            field.className = "field manual-time-field";
+            field.dataset.fixedField = "";
+            field.innerHTML = `<span>${label} · 24 giờ</span>
+                <div class="manual-time-picker">
+                    <button type="button" data-time-trigger="hour" aria-label="${label}: chọn giờ" aria-haspopup="dialog" aria-controls="${id}" aria-expanded="false"><span data-time-hour-label>Chọn giờ</span><span class="manual-time-chevron" aria-hidden="true"></span></button>
+                    <span aria-hidden="true">:</span>
+                    <button type="button" data-time-trigger="minute" aria-label="${label}: chọn phút" aria-haspopup="dialog" aria-controls="${id}" aria-expanded="false"><span data-time-minute-label>Phút</span><span class="manual-time-chevron" aria-hidden="true"></span></button>
+                </div>
+                <div id="${id}" class="manual-time-popover" popover="auto" role="dialog" aria-label="${label}: chọn giờ 24 giờ">
+                    <section class="manual-time-column"><h4 id="${id}-hours">Chọn giờ</h4><div class="manual-hour-options" role="listbox" aria-labelledby="${id}-hours" data-time-hours></div></section>
+                    <section class="manual-time-column manual-minute-column"><h4 id="${id}-minutes">Chọn phút</h4><div class="manual-minute-options" role="listbox" aria-labelledby="${id}-minutes" data-time-minutes></div><label class="manual-exact-minute">Phút chính xác<input type="number" min="0" max="59" step="1" inputmode="numeric" data-time-exact></label></section>
+                </div>`;
+            input.closest("label").replaceWith(field);
+            input.type = "hidden";
+            field.prepend(input);
+            const picker = MoTimePicker.create(field, {
+                root: one(".manual-time-picker", field),
+                panel: one(".manual-time-popover", field),
+                fields: { time: input, arrivalHour: { value: "" }, arrivalMinute: { value: "" } },
+                signal: events.signal,
+            });
+            if (input.value) picker.set(input.value);
+        }
+    }
     function addPackage(pkg = {}) {
         pkg = { ...pkg, price: pkg.basePrice ?? pkg.price };
         const row = one("[data-package-template]").content.firstElementChild.cloneNode(true);
@@ -637,8 +671,9 @@
                 input.value =
                     pkg[key] ?? (key === "sortOrder" ? (packageList.children.length + 1) * 10 : "");
         }
-        togglePackageMode(row);
         packageList.append(row);
+        initPackageTimes(row);
+        togglePackageMode(row);
         updateDiscountPreviews();
     }
     function updateDiscountPreviews() {
@@ -717,6 +752,8 @@
         imageDraft.reset(room?.images || []);
         one("[data-image-status]").textContent = "";
         form.reset();
+        packageTimeEvents.forEach((events) => events.abort());
+        packageTimeEvents.clear();
         packageList.innerHTML = "";
         form.elements.id.value = room?.id || "";
         for (const key of [
@@ -1067,7 +1104,10 @@
                 tone: "danger",
             }))
         ) {
-            button.closest(".package-row").remove();
+            const row = button.closest(".package-row");
+            packageTimeEvents.get(row)?.abort();
+            packageTimeEvents.delete(row);
+            row.remove();
             setDirty();
         }
     };

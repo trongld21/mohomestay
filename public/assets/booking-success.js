@@ -85,6 +85,7 @@
                 : `<p class="mt-2 font-medium text-[#79543e]">${info.isTest
                     ? "Chưa có mã cổng phù hợp. Kiểm tra mã đang Bật và thời gian hiệu lực trong trang quản trị."
                     : "Mã mở cổng chưa sẵn sàng. Vui lòng liên hệ Mơ trước khi đến."}</p>`}
+            ${doorCodes.length ? '<p class="mt-2 text-sm text-[#79543e]">Mã dùng được nhiều lần trong thời gian hiệu lực, bạn có thể ra ngoài rồi vào lại.</p>' : ""}
             <div class="mt-3 border-t border-[#e8ded0] pt-2">
                 <h3 class="mb-1 text-sm font-semibold">Wi-Fi tại Mơ</h3>
             ${info.wifiName ? `<dl class="booking-arrival-wifi">

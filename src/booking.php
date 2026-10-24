@@ -80,6 +80,10 @@ function bookable_package_window(array $package, string $date, string $time, ?Da
     $now ??= new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
     $overnight = ($package['mode'] ?? '') === 'FIXED_TIME'
         && $package['checkOutTime'] < $package['checkInTime'];
+    $localNow = $now->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'));
+    if (!$overnight && $date === $localNow->format('Y-m-d') && $localNow->format('H:i') >= '21:00') {
+        throw new BookingException('Hiện đã từ 21:00, hôm nay chỉ nhận gói qua đêm. Vui lòng chọn gói qua đêm hoặc ngày khác.', 422);
+    }
     if (($package['mode'] ?? '') === 'FIXED_TIME' && !$overnight && $start <= $now && $end > $now) {
         // Late arrivals keep the original checkout and full package price.
         $start = $now->setTimestamp((int)(ceil($now->getTimestamp() / 60) * 60));
@@ -87,6 +91,9 @@ function bookable_package_window(array $package, string $date, string $time, ?Da
     if ($end <= $now || $end <= $start) throw new BookingException('Gói lưu trú này đã hết giờ. Vui lòng chọn gói khác.');
     if ($start <= $now && ($package['mode'] ?? '') !== 'FIXED_TIME') {
         throw new BookingException('Vui lòng chọn giờ nhận phòng trong tương lai.');
+    }
+    if (!$overnight && $start->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'))->format('H:i') >= '21:00') {
+        throw new BookingException('Từ 21:00 chỉ nhận gói qua đêm. Vui lòng chọn gói qua đêm hoặc giờ nhận trước 21:00.', 422);
     }
     return [$start, $end];
 }

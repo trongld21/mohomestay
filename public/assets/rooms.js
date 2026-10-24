@@ -202,15 +202,22 @@
                                   ? form.time.value
                                   : "",
                         window = slotTools.slotWindow(slot, form.date.value, time),
+                        clockRestricted = slotTools.currentTimeRestricted(slot, form.date.value),
+                        dayState = clockRestricted ? "restricted" : slot.mode === "DURATION"
+                            ? slotTools.durationDayState(slot, form.date.value, info?.intervals || [])
+                            : "available",
+                        fullyBlocked = dayState !== "available",
                         baseState = window
                             ? slotTools.slotState(window, info?.intervals || [])
-                            : "available",
+                            : dayState,
                         pastDuration = previousDate && slot.mode === "DURATION",
-                        state = !info?.active ? "closed" : pastDuration ? "past" : baseState,
+                        state = !info?.active ? "closed" : clockRestricted ? "restricted" : pastDuration ? "past" : baseState,
                         selected =
-                            !pastDuration && (state === "available" || slot.mode === "DURATION") && isSelected;
+                            !pastDuration && !fullyBlocked && (state === "available" || slot.mode === "DURATION") && isSelected;
                     const label =
-                        state === "booked"
+                        state === "restricted"
+                            ? "Từ 21h chỉ nhận qua đêm"
+                            : state === "booked"
                             ? "Đã được đặt"
                             : state === "past"
                               ? "Đã qua giờ"
@@ -223,7 +230,7 @@
                         slot.mode === "FIXED_TIME"
                             ? `<b>${esc(window ? clockLabel(window.start) : slot.checkInTime)}</b><i aria-hidden="true"></i><b>${esc(window ? clockLabel(window.end) : slot.checkOutTime)}</b>`
                             : `<b>${esc(packageLabel(slot))}</b><i aria-hidden="true"></i><b>${selected && form.time.value ? "Từ " + esc(form.time.value) : "Tự chọn giờ"}</b>`;
-                    return `<button class="booking-slot-card is-${state}${selected ? " is-selected" : ""}" type="button" data-slot-id="${esc(slot.id)}" ${state !== "available" && (pastDuration || slot.mode !== "DURATION" || state === "closed") ? "disabled" : ""} aria-pressed="${selected}" style="--slot-index:${index}"><span class="slot-card-top"><strong>${esc(slot.name)}</strong><span class="slot-state">${label}</span></span><span class="slot-time">${timeLabel}</span><span class="slot-price"><small>Trọn gói</small><strong>${cash(slot.price)}</strong></span></button>`;
+                    return `<button class="booking-slot-card is-${state}${selected ? " is-selected" : ""}" type="button" data-slot-id="${esc(slot.id)}" ${state !== "available" && (pastDuration || fullyBlocked || slot.mode !== "DURATION" || state === "closed") ? "disabled" : ""} aria-pressed="${selected}" style="--slot-index:${index}"><span class="slot-card-top"><strong>${esc(slot.name)}</strong><span class="slot-state">${label}</span></span><span class="slot-time">${timeLabel}</span><span class="slot-price"><small>Trọn gói</small><strong>${cash(slot.price)}</strong></span></button>`;
                 })
                 .join("");
             if (
@@ -244,6 +251,8 @@
                     ? "Chọn giờ nhận phòng"
                     : state === "booked"
                       ? "Khung giờ đã được đặt"
+                      : state === "restricted"
+                        ? "Chọn giờ trước 21:00 hoặc gói qua đêm"
                       : state === "past"
                         ? "Khung giờ đã qua"
                         : "Tiếp tục thanh toán →";
@@ -364,6 +373,17 @@
         };
         syncGuests();
         loadAvailability();
+        setInterval(() => {
+            if (!availability || document.hidden) return;
+            renderSlots();
+            renderSummary();
+        }, 15000);
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden && availability) {
+                renderSlots();
+                renderSummary();
+            }
+        });
     }
     initHomeSearch();
     initBooking();

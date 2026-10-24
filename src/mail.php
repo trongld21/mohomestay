@@ -51,7 +51,7 @@ function build_booking_confirmation_email(array $booking): array
         .'<h2 style="margin:10px 0 6px;font-size:16px">Wi-Fi tại Mơ</h2>'
         .'<p style="margin:6px 0">Tên Wi-Fi: <strong>Mơ Home</strong></p>'
         .'<p style="margin:6px 0 10px">Mật khẩu: <strong style="font-family:Arial,sans-serif;letter-spacing:1px">82828282</strong></p>'
-        .(!empty($booking['generated_door_code']) ? '<p style="margin:8px 0;font-size:12px">Dùng mã lần đầu trong 24 giờ từ lúc nhận phòng. Nhập mã rồi nhấn #.</p>' : '<p style="margin:8px 0;font-size:12px">Nhập mã rồi nhấn #. Giữ riêng mã cổng trong thời gian lưu trú.</p>')
+        .(!empty($booking['generated_door_code']) ? '<p style="margin:8px 0;font-size:12px">Mã dùng được nhiều lần trong thời gian hiệu lực, bạn có thể ra ngoài rồi vào lại. Cần dùng lần đầu trong 24 giờ từ lúc mã bắt đầu hiệu lực để kích hoạt. Nhập mã rồi nhấn #.</p>' : '<p style="margin:8px 0;font-size:12px">Mã dùng được nhiều lần trong thời gian hiệu lực, bạn có thể ra ngoài rồi vào lại. Nhập mã rồi nhấn #. Giữ riêng mã cổng trong thời gian lưu trú.</p>')
         .'<p style="margin:10px 0 0;padding:10px;font-size:13px;line-height:1.5;background:#edf4e9;border-radius:8px">Mơ sẽ liên hệ riêng để hướng dẫn nhận phòng. Cần hỗ trợ, gọi <a href="tel:0357907153" style="color:#70432c">0357 907 153</a>.</p>'
         .'</div></div></body></html>';
     return ['subject'=>$subject,'html'=>$html];
