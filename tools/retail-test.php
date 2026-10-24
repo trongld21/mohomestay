@@ -20,7 +20,8 @@ function retail_reject(callable $operation, int $status): void
 }
 $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
 $pdo->exec("CREATE TABLE retail_products (id TEXT PRIMARY KEY,name TEXT,price INTEGER,is_active INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT);
-CREATE TABLE retail_sales (id TEXT PRIMARY KEY,request_id TEXT UNIQUE,request_hash TEXT,sale_code TEXT UNIQUE,total INTEGER,listed_total INTEGER,status TEXT DEFAULT 'PENDING',order_code INTEGER UNIQUE,created_by TEXT,qr_code TEXT,checkout_url TEXT,payment_link_id TEXT,transaction_reference TEXT UNIQUE,paid_at TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE rooms (id TEXT PRIMARY KEY,name TEXT,status TEXT);
+CREATE TABLE retail_sales (room_id TEXT,room_name_snapshot TEXT,id TEXT PRIMARY KEY,request_id TEXT UNIQUE,request_hash TEXT,sale_code TEXT UNIQUE,total INTEGER,listed_total INTEGER,status TEXT DEFAULT 'PENDING',order_code INTEGER UNIQUE,created_by TEXT,qr_code TEXT,checkout_url TEXT,payment_link_id TEXT,transaction_reference TEXT UNIQUE,paid_at TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE retail_sale_items (sale_id TEXT,product_id TEXT,product_name TEXT,unit_price INTEGER,quantity INTEGER,PRIMARY KEY(sale_id,product_id));");
 $product = retail_save_product($pdo, ['name' => 'Nước suối', 'price' => 15000, 'isActive' => true]);
 $input = ['requestId' => str_repeat('a', 32), 'items' => [['productId' => $product['id'], 'quantity' => 2]], 'total' => 30000];
@@ -64,4 +65,13 @@ retail_check(retail_sale($pdo, $discount['id'])['status'] === 'PENDING', 'Provid
 retail_check(retail_revenue($pdo) === 30000, 'Unpaid price override must not increase revenue.');
 retail_reject(fn() => retail_save_product($pdo, ['name' => '', 'price' => 10]), 422);
 retail_reject(fn() => retail_save_product($pdo, ['name' => 'Bad', 'price' => -1]), 422);
-echo "Retail pricing, permissions, snapshots, idempotency, QR and revenue: OK\n";
+$pdo->exec("INSERT INTO rooms VALUES ('pink','Pink','ACTIVE'),('hidden','Hidden','HIDDEN')");
+$roomInput = array_replace($input, ['requestId' => str_repeat('f', 32), 'roomId' => 'pink', 'total' => 40000]);
+$roomSale = retail_create_sale($pdo, $roomInput, 'staff', false);
+retail_check($roomSale['room_id'] === 'pink' && $roomSale['room_name_snapshot'] === 'Pink', 'Sale must store the selected room.');
+$pdo->exec("UPDATE rooms SET name='Renamed' WHERE id='pink'");
+retail_check(retail_sale($pdo, $roomSale['id'])['room_name_snapshot'] === 'Pink', 'History must preserve the room name at sale time.');
+retail_reject(fn() => retail_create_sale($pdo, array_replace($roomInput, ['roomId' => 'hidden']), 'staff', false), 409);
+retail_reject(fn() => retail_create_sale($pdo, array_replace($roomInput, ['requestId' => str_repeat('1', 32), 'roomId' => 'missing']), 'staff', false), 422);
+retail_reject(fn() => retail_create_sale($pdo, array_replace($roomInput, ['requestId' => str_repeat('2', 32), 'roomId' => 'hidden']), 'staff', false), 422);
+echo "Retail pricing, permissions, snapshots, idempotency, QR, revenue and rooms: OK\n";

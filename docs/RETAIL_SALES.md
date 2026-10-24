@@ -17,3 +17,5 @@ Trong Phân quyền tài khoản có nhóm Bán hàng và Quản lý sản phẩ
 Chạy migration `017_retail_sales.sql` bằng công cụ migration hiện có trước khi dùng màn bán hàng. QR dùng payOS và webhook đã xác minh chữ ký; mã đơn bán hàng dùng dải order code riêng. Migration không đổi dữ liệu đặt phòng hoặc các khoản thu cũ.
 
 Nút nhập phụ thu tên/giá trên đơn phòng đã ngừng sử dụng. Các khoản cũ và QR đã chốt giữ lại để đối soát; phụ thu giờ và giờ phát sinh của đặt phòng giữ nguyên.
+
+Có thể chọn phòng liên quan khi tạo đơn (hoặc Không gắn phòng). Lịch sử và chi tiết đơn giữ tên phòng tại lúc chốt, hỗ trợ tra theo tên phòng/mã đơn. Chạy thêm migration `018_retail_sale_room.sql` khi triển khai. Phòng đang ẩn không nằm trong danh sách chọn.

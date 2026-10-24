@@ -1,0 +1,2 @@
+ALTER TABLE retail_sales ADD COLUMN IF NOT EXISTS room_id VARCHAR(64) NULL;
+ALTER TABLE retail_sales ADD COLUMN IF NOT EXISTS room_name_snapshot VARCHAR(150) NULL;

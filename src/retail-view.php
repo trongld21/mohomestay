@@ -30,7 +30,9 @@ function render_retail_page(bool $products): void
             <?php if (can_use('sales.create')): ?>
                 <div class="grid items-start gap-5 lg:grid-cols-[1.3fr_1fr]">
                     <section class="retail-panel"><h2 class="font-sans text-lg font-semibold">Chọn sản phẩm</h2><label class="mt-3 grid gap-1 text-sm">Tìm sản phẩm<input type="search" class="timeline-input" data-retail-search placeholder="Nhập tên sản phẩm…"></label><div class="mt-4 grid gap-3 sm:grid-cols-2" data-products></div></section>
-                    <section class="retail-panel grid gap-4"><h2 class="font-sans text-lg font-semibold">Đơn bán hàng</h2><div class="grid gap-3" data-cart></div>
+                    <section class="retail-panel grid gap-4"><h2 class="font-sans text-lg font-semibold">Đơn bán hàng</h2>
+                        <label class="grid gap-1 text-sm">Phòng liên quan (không bắt buộc)<select class="timeline-input" data-sale-room><option value="">Không gắn phòng</option></select></label>
+                        <div class="grid gap-3" data-cart></div>
                         <p class="text-sm" data-cart-listed>Tổng theo bảng giá: 0đ</p>
                         <label class="grid gap-1 text-sm">Giá chốt (đ)<input class="timeline-input" data-cart-total type="number" min="1" max="100000000" step="1" <?= !can_use('sales.price') ? 'readonly' : '' ?>></label>
                         <p class="text-xs text-stone-600"><?= can_use('sales.price') ? 'Bạn có quyền điều chỉnh giá chốt của cả đơn.' : 'Giá chốt tự tính theo sản phẩm và số lượng.' ?></p>
@@ -40,7 +42,7 @@ function render_retail_page(bool $products): void
                 </div>
             <?php endif ?>
             <?php if (can_use('sales.view')): ?>
-                <section class="retail-panel grid gap-4"><div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-sans text-lg font-semibold">Lịch sử bán hàng</h2><p class="font-semibold text-[#79543e]" data-sales-revenue></p></div><div class="overflow-x-auto" data-sales-history></div><div class="flex items-center gap-3"><button type="button" class="timeline-button" data-sales-prev>Trước</button><span class="text-sm" data-sales-page></span><button type="button" class="timeline-button" data-sales-next>Sau</button></div></section>
+                <section class="retail-panel grid gap-4"><div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-sans text-lg font-semibold">Lịch sử bán hàng</h2><p class="font-semibold text-[#79543e]" data-sales-revenue></p></div><label class="grid gap-1 text-sm">Tra theo phòng hoặc mã đơn<input type="search" class="timeline-input" data-sales-filter maxlength="150" placeholder="Tên phòng hoặc mã BH…"></label><div class="overflow-x-auto" data-sales-history></div><div class="flex items-center gap-3"><button type="button" class="timeline-button" data-sales-prev>Trước</button><span class="text-sm" data-sales-page></span><button type="button" class="timeline-button" data-sales-next>Sau</button></div></section>
             <?php endif ?>
         <?php endif ?>
         <dialog class="timeline-dialog" data-sale-dialog aria-label="Đơn bán hàng và QR thanh toán"><div class="flex items-start justify-between gap-3 border-b border-[#e5dacb] p-4"><h2 class="font-sans text-lg font-semibold">Đơn bán hàng</h2><button type="button" class="timeline-button" data-sale-close>Đóng</button></div><div class="grid gap-3 p-4" data-sale-detail></div></dialog>

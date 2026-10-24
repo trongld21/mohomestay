@@ -9,7 +9,10 @@ function retail_api(string $path, string $method): never
     header('Cache-Control: no-store');
     $pdo = db();
     if ($path === '/api/admin/sales/catalog' && $method === 'GET') {
-        json_response(['products' => $pdo->query('SELECT id,name,price,is_active FROM retail_products WHERE is_active=1 ORDER BY name,id')->fetchAll()]);
+        json_response([
+            'products' => $pdo->query('SELECT id,name,price,is_active FROM retail_products WHERE is_active=1 ORDER BY name,id')->fetchAll(),
+            'rooms' => $pdo->query("SELECT id,name FROM rooms WHERE status='ACTIVE' AND is_active=1 ORDER BY sort_order,name,id")->fetchAll(),
+        ]);
     }
     if ($path === '/api/admin/products' && $method === 'GET') {
         json_response(['products' => $pdo->query('SELECT id,name,price,is_active FROM retail_products ORDER BY name,id')->fetchAll()]);
@@ -24,8 +27,17 @@ function retail_api(string $path, string $method): never
     if ($path === '/api/admin/sales' && $method === 'GET') {
         $page = max(1, min(100000, (int)($_GET['page'] ?? 1)));
         $offset = ($page - 1) * 30;
-        $total = (int)$pdo->query('SELECT COUNT(*) FROM retail_sales')->fetchColumn();
-        $rows = $pdo->query('SELECT id,sale_code,total,listed_total,status,created_by,created_at,paid_at FROM retail_sales ORDER BY created_at DESC,id DESC LIMIT 30 OFFSET ' . $offset)->fetchAll();
+        $search = trim((string)($_GET['q'] ?? ''));
+        if (mb_strlen($search) > 150) throw new BookingException('Từ khóa tối đa 150 ký tự.', 422);
+        $where = $search !== '' ? ' WHERE (room_name_snapshot LIKE ? OR sale_code LIKE ?)' : '';
+        $params = $search !== '' ? ['%' . $search . '%', '%' . $search . '%'] : [];
+        $count = $pdo->prepare('SELECT COUNT(*) FROM retail_sales' . $where);
+        $count->execute($params);
+        $total = (int)$count->fetchColumn();
+        $query = $pdo->prepare('SELECT id,sale_code,total,listed_total,status,created_by,created_at,paid_at,room_id,room_name_snapshot FROM retail_sales'
+            . $where . ' ORDER BY created_at DESC,id DESC LIMIT 30 OFFSET ' . $offset);
+        $query->execute($params);
+        $rows = $query->fetchAll();
         json_response(['sales' => $rows, 'revenue' => retail_revenue($pdo), 'count' => $total, 'page' => $page]);
     }
     if ($path === '/api/admin/sales' && $method === 'POST') {

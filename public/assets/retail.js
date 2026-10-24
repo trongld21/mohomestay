@@ -67,14 +67,16 @@
         one("[data-cart-listed]").textContent = "Tổng theo bảng giá: " + cash(total);
         if (resetTotal || !can("sales.price") || cart.size === 0) one("[data-cart-total]").value = total || "";
         one("[data-cart-total]").disabled = busy || loading;
+        one("[data-sale-room]").disabled = busy || loading;
         one("[data-sale-create]").disabled = busy || loading || cart.size === 0;
     }
     async function loadHistory() {
         if (!can("sales.view") || productMode) return;
-        const result = await request("sales?page=" + page);
-        one("[data-sales-revenue]").textContent = "Doanh thu đã thu: " + cash(result.revenue);
-        one("[data-sales-history]").innerHTML = result.sales.length ? `<table><thead><tr><th>Mã đơn</th><th>Ngày tạo</th><th>Giá chốt</th><th>Thanh toán</th><th>Thao tác</th></tr></thead><tbody>${result.sales.map((item) => `<tr>
-            <td class="font-semibold">${escape(item.sale_code)}</td><td>${escape(dateTime(item.created_at))}</td>
+        const query = new URLSearchParams({ page: String(page), q: one("[data-sales-filter]")?.value.trim() || "" });
+        const result = await request("sales?" + query);
+        one("[data-sales-revenue]").textContent = "Doanh thu đã thu (tất cả): " + cash(result.revenue);
+        one("[data-sales-history]").innerHTML = result.sales.length ? `<table><thead><tr><th>Mã đơn</th><th>Phòng</th><th>Ngày tạo</th><th>Giá chốt</th><th>Thanh toán</th><th>Thao tác</th></tr></thead><tbody>${result.sales.map((item) => `<tr>
+            <td class="font-semibold">${escape(item.sale_code)}</td><td>${escape(item.room_name_snapshot || "Không gắn phòng")}</td><td>${escape(dateTime(item.created_at))}</td>
             <td>${cash(item.total)}</td><td>${item.status === "PAID" ? "Đã thanh toán" : "Chờ thanh toán"}</td>
             <td><button class="timeline-button" type="button" data-sale-open="${escape(item.id)}">Xem đơn / QR</button></td>
         </tr>`).join("")}</tbody></table>` : '<p class="text-sm text-stone-500">Chưa có đơn bán hàng.</p>';
@@ -90,6 +92,13 @@
             if (productMode || can("sales.create")) {
                 const result = await request(productMode ? "products" : "sales/catalog");
                 products = result.products;
+                const roomSelect = one("[data-sale-room]");
+                if (roomSelect) {
+                    const previousRoom = roomSelect.value;
+                    roomSelect.innerHTML = '<option value="">Không gắn phòng</option>'
+                        + (result.rooms || []).map((room) => `<option value="${escape(room.id)}">${escape(room.name)}</option>`).join("");
+                    if ((result.rooms || []).some((room) => room.id === previousRoom)) roomSelect.value = previousRoom;
+                }
                 cart = new Map();
                 renderProducts();
                 renderCart();
@@ -108,6 +117,7 @@
         const paid = sale.status === "PAID";
         const safeLink = typeof sale.checkout_url === "string" && /^https:\/\/pay\.payos\.vn\//.test(sale.checkout_url);
         detail.innerHTML = `<p class="text-lg font-semibold">${escape(sale.sale_code)}</p>
+            <p class="text-sm font-semibold">Phòng: ${escape(sale.room_name_snapshot || "Không gắn phòng")}</p>
             <p class="text-sm">${escape(dateTime(sale.created_at))} · ${paid ? "Đã thanh toán" : "Chờ thanh toán"}</p>
             ${sale.items.map((item) => `<p class="flex justify-between gap-3 text-sm"><span>${escape(item.product_name)} × ${Number(item.quantity)}</span><strong>${cash(Number(item.unit_price) * Number(item.quantity))}</strong></p>`).join("")}
             <p class="text-sm">Theo bảng giá: ${cash(sale.listed_total)}</p><p class="text-xl font-semibold">Giá chốt: ${cash(sale.total)}</p>
@@ -150,6 +160,7 @@
         }
     });
     one("[data-retail-search]")?.addEventListener("input", renderProducts);
+    one("[data-sales-filter]")?.addEventListener("change", () => { if (!busy && !loading) { page = 1; historyPage(); } });
     one("[data-retail-refresh]").addEventListener("click", load);
     one("[data-product-reset]")?.addEventListener("click", () => { if (!busy) resetForm(); });
     root.addEventListener("change", (event) => {
@@ -200,7 +211,7 @@
             }
         } else if (event.target.closest("[data-sale-create]")) {
             if (!cart.size || !one("[data-cart-total]").reportValidity()) return;
-            const data = { items: [...cart.values()].map(({ product, quantity }) => ({ productId: product.id, quantity })), total: Number(one("[data-cart-total]").value) };
+            const data = { roomId: one("[data-sale-room]").value || "", items: [...cart.values()].map(({ product, quantity }) => ({ productId: product.id, quantity })), total: Number(one("[data-cart-total]").value) };
             const signature = JSON.stringify(data);
             if (requestSignature !== signature || !requestId) {
                 requestId = crypto.randomUUID().replaceAll("-", "");

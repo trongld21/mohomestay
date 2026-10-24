@@ -64,7 +64,14 @@ function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPr
     }
     ksort($items);
     $totalRequested = isset($input['total']) ? retail_integer($input['total'], 1, 100000000) : null;
-    $hash = hash('sha256', json_encode([$items, $totalRequested], JSON_THROW_ON_ERROR));
+    $roomId = $input['roomId'] ?? '';
+    if (!is_string($roomId) || ($roomId !== '' && !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $roomId))) {
+        throw new BookingException('Phòng liên quan không hợp lệ.', 422);
+    }
+    // Preserve retry identities for older clients sending an unassigned sale.
+    $identity = [$items, $totalRequested];
+    if ($roomId !== '') $identity[] = $roomId;
+    $hash = hash('sha256', json_encode($identity, JSON_THROW_ON_ERROR));
     $pdo->beginTransaction();
     try {
         $query = $pdo->prepare('SELECT id,request_hash,created_by FROM retail_sales WHERE request_id=?' . room_operation_lock_suffix($pdo));
@@ -75,6 +82,16 @@ function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPr
             }
             $pdo->commit();
             return retail_sale($pdo, $existing['id']);
+        }
+        $roomName = null;
+        if ($roomId !== '') {
+            $query = $pdo->prepare('SELECT name,status FROM rooms WHERE id=?' . room_operation_lock_suffix($pdo));
+            $query->execute([$roomId]);
+            $room = $query->fetch();
+            if (!$room || $room['status'] !== 'ACTIVE') {
+                throw new BookingException('Phòng không tồn tại hoặc đang ẩn/ngừng nhận khách.', 422);
+            }
+            $roomName = (string)$room['name'];
         }
         $snapshots = [];
         $listed = 0;
@@ -92,8 +109,8 @@ function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPr
         $id = uuid();
         $code = 'BH-' . strtoupper(bin2hex(random_bytes(5)));
         $orderCode = random_int(700000000000000, 799999999999999);
-        $pdo->prepare('INSERT INTO retail_sales (id,request_id,request_hash,sale_code,total,listed_total,order_code,created_by) VALUES (?,?,?,?,?,?,?,?)')
-            ->execute([$id, $requestId, $hash, $code, $total, $listed, $orderCode, $actor]);
+        $pdo->prepare('INSERT INTO retail_sales (id,request_id,request_hash,sale_code,total,listed_total,order_code,created_by,room_id,room_name_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?)')
+            ->execute([$id, $requestId, $hash, $code, $total, $listed, $orderCode, $actor, $roomId !== '' ? $roomId : null, $roomName]);
         $insert = $pdo->prepare('INSERT INTO retail_sale_items (sale_id,product_id,product_name,unit_price,quantity) VALUES (?,?,?,?,?)');
         foreach ($snapshots as $snapshot) $insert->execute([$id, ...$snapshot]);
         $pdo->commit();
