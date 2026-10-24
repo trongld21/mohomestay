@@ -263,6 +263,7 @@
         delete payload.arrivalHour;
         delete payload.arrivalMinute;
         payload.requestId = requestId;
+        payload.guestCheckout = fields.guestCheckout?.checked === true;
         saving = true;
         timePicker.close();
         datePicker.close();
@@ -273,6 +274,10 @@
         try {
             const data = await request("/api/admin/bookings", payload);
             dirty = false;
+            if (data.guestUrl) {
+                window.location.assign(data.guestUrl);
+                return;
+            }
             closeDialog();
             window.dispatchEvent(new CustomEvent("mo:booking-created"));
             LangUI.toast({ type: "success", title: "Đã tạo đơn " + data.bookingCode, message: "Đơn đã xác nhận và giữ lịch phòng." });

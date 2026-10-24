@@ -102,7 +102,15 @@ function handle_api(string $path, string $method): never
             $input = json_body();
             if (($input['paymentStatus'] ?? '') === 'PAID') require_permission('bookings.payment');
             $booking = create_booking_continuation(db(), $matches[1], $input);
-            json_response(['bookingCode' => $booking['booking_code']], 201);
+            $result = ['bookingCode' => $booking['booking_code']];
+            if (($body['guestCheckout'] ?? false) === true) {
+                try {
+                    $result['guestUrl'] = prepare_manual_guest_checkout(db(), $booking);
+                } catch (Throwable $error) {
+                    throw new BookingException('Đơn ' . $booking['booking_code'] . ' đã lưu nhưng chưa tạo được QR/mã cổng. Thử lại cùng form để không tạo trùng đơn.', 502);
+                }
+            }
+            json_response($result, 201);
         }
         if ($path === '/api/admin/bookings' && $method === 'GET') admin_bookings_api();
         if ($method === 'POST' && preg_match('#^/api/admin/bookings/([a-f0-9]{32})/stay$#', $path, $matches)) {
@@ -119,7 +127,15 @@ function handle_api(string $path, string $method): never
             }
             $booking = create_manual_booking(db(), $body);
             try_dispatch_staff_notifications(db(), $booking['id']);
-            json_response(['bookingCode' => $booking['booking_code']], 201);
+            $result = ['bookingCode' => $booking['booking_code']];
+            if (($body['guestCheckout'] ?? false) === true) {
+                try {
+                    $result['guestUrl'] = prepare_manual_guest_checkout(db(), $booking);
+                } catch (Throwable $error) {
+                    throw new BookingException('Đơn ' . $booking['booking_code'] . ' đã lưu nhưng chưa tạo được QR/mã cổng. Thử lại cùng form để không tạo trùng đơn.', 502);
+                }
+            }
+            json_response($result, 201);
         }
         if ($method === 'POST' && preg_match('#^/api/admin/bookings/([a-f0-9]{32})/payment$#', $path, $matches)) {
             require_admin();

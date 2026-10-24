@@ -33,7 +33,14 @@ function quote_manual_booking(array $room, array $input, bool $allowAnyDate = fa
         }
         $quote['total'] = (int)$price;
     }
-    return $quote + compact('source', 'paymentStatus', 'paymentMethod', 'requestId');
+    $guestCheckout = $input['guestCheckout'] ?? false;
+    if (!is_bool($guestCheckout)) {
+        throw new BookingException('Lựa chọn tạo mã cổng và QR không hợp lệ.', 422);
+    }
+    if ($guestCheckout && $paymentStatus !== 'PAID' && $quote['total'] < 1) {
+        throw new BookingException('Đơn tạo QR phải có giá lớn hơn 0đ.', 422);
+    }
+    return $quote + compact('source', 'paymentStatus', 'paymentMethod', 'requestId', 'guestCheckout');
 }
 
 function quote_manual_custom_booking(array $room, array $input, ?DateTimeImmutable $now = null, bool $allowAnyDate = false): array
@@ -150,6 +157,16 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false): arra
             $values['extra_hours'] = $quote['extraHours'];
             $values['extra_hours_amount'] = $quote['extraHoursAmount'];
         }
+        if (!$test && $quote['guestCheckout'] && $quote['paymentStatus'] !== 'PAID') {
+            if (!payment_enabled()) {
+                throw new BookingException('Thanh toán trực tuyến chưa được cấu hình.', 422);
+            }
+            $values['status'] = 'PENDING';
+            $values['payment_status'] = 'PENDING';
+            $values['payment_method'] = 'payos';
+            $values['order_code'] = (int)(floor(microtime(true) * 1000) * 1000 + random_int(0, 999));
+            $values['hold_expires_at'] = gmdate('Y-m-d H:i:s', time() + 900);
+        }
         if ($test) {
             $values['is_test'] = 1;
             $values['status'] = 'PENDING';
@@ -167,7 +184,7 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false): arra
         if (!$test && $quote['paymentStatus'] === 'PAID') {
             record_manual_payment($pdo, $values['id'], $quote['total'], $quote['paymentMethod']);
         }
-        if (!$test) queue_staff_notification($pdo, $values, 'BOOKED');
+        if (!$test && $values['status'] === 'CONFIRMED') queue_staff_notification($pdo, $values, 'BOOKED');
         $pdo->commit();
         return $values;
     } catch (Throwable $error) {
@@ -222,4 +239,31 @@ function confirm_manual_payment(PDO $pdo, string $bookingId, string $method): vo
         }
         throw $error;
     }
+}
+
+// Reuse the public checkout and access provisioning; never issue a PIN before payment.
+function prepare_manual_guest_checkout(PDO $pdo, array $booking, ?callable $createPayment = null): string
+{
+    if ($booking['payment_status'] === 'PAID') {
+        sync_booking_access((string)$booking['id']);
+        dispatch_confirmation_email((string)$booking['id']);
+    } elseif ($booking['status'] === 'PENDING' && $booking['payment_method'] === 'payos') {
+        if (strtotime($booking['hold_expires_at'] . ' UTC') <= time()) {
+            throw new BookingException('Đơn đã hết thời gian giữ phòng. Kiểm tra đơn trước khi tạo lại.', 409);
+        }
+        $find = $pdo->prepare('SELECT qr_code FROM payments WHERE booking_id=?');
+        $find->execute([$booking['id']]);
+        if (!$find->fetchColumn()) {
+            $createPayment ??= 'create_payment';
+            $payment = $createPayment([
+                'bookingCode' => $booking['booking_code'],
+                'orderCode' => $booking['order_code'],
+                'holdExpiresAt' => $booking['hold_expires_at'],
+                'totalPrice' => $booking['total_price'],
+            ]);
+            $pdo->prepare("INSERT INTO payments(id,booking_id,amount,payment_method,status,qr_code,checkout_url) VALUES(?,?,?,'payos','PENDING',?,?) ON DUPLICATE KEY UPDATE qr_code=VALUES(qr_code),checkout_url=VALUES(checkout_url)")
+                ->execute([uuid(), $booking['id'], $booking['total_price'], $payment['qrCode'], $payment['checkoutUrl']]);
+        }
+    }
+    return '/payment?code=' . rawurlencode($booking['booking_code']) . '#' . $booking['access_token'];
 }

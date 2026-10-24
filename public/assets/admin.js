@@ -337,6 +337,9 @@
             && !booking.continued_to_booking_id) {
             actions += action("CANCELLED", "Hủy đơn", "x", true);
         }
+        if (successLink) {
+            actions += `<button type="button" data-copy-booking-link="${esc(booking.id)}" class="timeline-button gap-2" title="Sao chép link xác nhận đặt phòng" aria-label="Sao chép link xác nhận đơn ${esc(booking.booking_code)}">${icon("copy")} Sao chép link</button>`;
+        }
         const identity = Number(booking.identity_image_count) === 2
             ? (LANG_HOME.abilities.includes('bookings.identity')
                 ? `<button type="button" data-view-identity="${esc(booking.id)}" class="min-h-10 rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Xem CCCD</button>`
@@ -353,15 +356,6 @@
                     <span class="booking-source">${icon(booking.booking_source === "PHONE" ? "phone" : "message-circle")} ${source}</span>
                 </div>
                 ${identity}
-                ${successLink ? `<div class="mt-2 grid min-w-0 gap-2 rounded-lg border border-[#d9c9b7] bg-white/80 p-2">
-                    <label class="grid gap-1 text-xs font-medium text-[#79543e]">Link xác nhận đặt phòng
-                        <input type="text" readonly value="${esc(successLink)}" aria-label="Link xác nhận đơn ${esc(booking.booking_code)}" class="min-h-10 w-full min-w-0 rounded-md border border-[#ddd5ca] bg-white px-2 py-2 text-xs text-[#5c5148] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e]">
-                    </label>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <button type="button" data-copy-booking-link="${esc(booking.id)}" class="min-h-10 rounded-lg border border-[#d2bda7] bg-white px-3 py-2 text-xs font-medium text-[#70432c] enabled:hover:bg-[#eee4d6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:opacity-50">Sao chép link</button>
-                        <a href="${esc(successLink)}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 items-center rounded-lg px-2 text-xs font-medium text-[#70432c] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e]">Mở trang ↗</a>
-                    </div>
-                </div>` : ""}
                 ${booking.guest_note ? `<details class="booking-note"><summary>Ghi chú khách</summary><p>${esc(booking.guest_note)}</p></details>` : ""}
             </div></td>
             <td class="booking-stay-cell"><div class="booking-cell">
@@ -394,10 +388,21 @@
                 await navigator.clipboard.writeText(link);
                 LangUI.toast({ type: "success", title: "Đã sao chép link", message: "Bạn có thể dán vào Zalo để gửi riêng cho khách của đơn này." });
             } catch {
-                const input = copyLinkButton.closest("td").querySelector("input[readonly]");
-                input?.focus();
-                input?.select();
-                LangUI.toast({ type: "info", title: "Chọn link để sao chép", message: "Nhấn Ctrl+C hoặc chạm giữ để sao chép link đã chọn." });
+                const input = document.createElement("textarea");
+                input.value = link;
+                input.className = "fixed -left-full top-0";
+                input.setAttribute("readonly", "");
+                document.body.append(input);
+                try {
+                    input.select();
+                    if (!document.execCommand("copy")) throw new Error("Clipboard unavailable");
+                    LangUI.toast({ type: "success", title: "Đã sao chép link", message: "Bạn có thể dán vào Zalo để gửi riêng cho khách của đơn này." });
+                } catch {
+                    LangUI.toast({ type: "error", title: "Chưa sao chép được", message: "Trình duyệt đang chặn sao chép. Vui lòng cho phép quyền bộ nhớ tạm rồi thử lại." });
+                } finally {
+                    input.remove();
+                    copyLinkButton.focus();
+                }
             } finally {
                 copyLinkButton.disabled = false;
             }

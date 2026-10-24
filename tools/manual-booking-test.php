@@ -12,6 +12,26 @@ function manual_expect(bool $condition, string $message): void
     }
 }
 
+$checkoutDb = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+$checkoutDb->exec('CREATE TABLE payments (booking_id TEXT,qr_code TEXT)');
+$checkoutBooking = [
+    'id' => 'checkout-test', 'booking_code' => 'MO-CHECKOUT', 'access_token' => 'secret-token',
+    'status' => 'PENDING', 'payment_status' => 'PENDING', 'payment_method' => 'payos',
+    'hold_expires_at' => gmdate('Y-m-d H:i:s', time() + 900), 'order_code' => 1234567890123,
+    'total_price' => 159000,
+];
+$checkoutDb->exec("INSERT INTO payments VALUES ('checkout-test','cached-qr')");
+$guestUrl = prepare_manual_guest_checkout($checkoutDb, $checkoutBooking, static function (): never {
+    throw new RuntimeException('A retry must reuse the existing QR.');
+});
+manual_expect($guestUrl === '/payment?code=MO-CHECKOUT#secret-token', 'Guest checkout must use the public payment page with a fragment token.');
+try {
+    prepare_manual_guest_checkout($checkoutDb, array_replace($checkoutBooking, ['hold_expires_at' => gmdate('Y-m-d H:i:s', time() - 1)]));
+    throw new RuntimeException('Expired holds must not generate a QR.');
+} catch (BookingException $error) {
+    manual_expect($error->httpStatus === 409, 'Expired checkout must return a conflict.');
+}
+
 $room = fallback_rooms()['pink'];
 $input = [
     'packageId' => 'pink-3h',
@@ -24,6 +44,17 @@ $input = [
     'requestId' => str_repeat('a', 32),
 ];
 $quote = quote_manual_booking($room, $input);
+manual_expect(quote_manual_booking($room, $input + ['guestCheckout' => true])['guestCheckout'] === true, 'Guest checkout must be an explicit option.');
+manual_expect($quote['guestCheckout'] === false, 'Normal manual bookings must remain the default.');
+foreach ([['guestCheckout' => 'true'], ['guestCheckout' => true, 'agreedPrice' => 0]] as $invalidCheckout) {
+    try {
+        quote_manual_booking($room, array_replace($input, $invalidCheckout));
+        throw new RuntimeException('Invalid guest checkout accepted.');
+    } catch (BookingException $error) {
+        manual_expect($error->httpStatus === 422, 'Invalid checkout options must return 422.');
+    }
+}
+
 manual_expect(quote_manual_booking($room, $input + ['agreedPrice' => 175000])['total'] === 175000, 'Admins must be able to set an agreed price.');
 manual_expect(quote_manual_booking($room, $input + ['agreedPrice' => 0])['total'] === 0, 'An explicit zero price must be supported.');
 manual_expect($quote['email'] === '', 'Email must be optional for telephone bookings.');
@@ -135,7 +166,7 @@ require_once APP_ROOT . '/src/manual-booking-view.php';
 ob_start();
 render_manual_booking_dialog();
 $form = (string)ob_get_clean();
-foreach (['<dialog', 'data-manual-booking-form', 'name="roomId"', 'name="packageId"', 'name="timingMode"', 'name="startNow"', 'name="endDate"', 'name="endHour"', 'name="guestPhone"', 'name="bookingSource"', 'value="UNPAID"', 'data-manual-error', 'data-manual-discard'] as $contract) {
+foreach (['<dialog', 'data-manual-booking-form', 'name="roomId"', 'name="packageId"', 'name="timingMode"', 'name="startNow"', 'name="endDate"', 'name="endHour"', 'name="guestCheckout"', 'name="guestPhone"', 'name="bookingSource"', 'value="UNPAID"', 'data-manual-error', 'data-manual-discard'] as $contract) {
     manual_expect(str_contains($form, $contract), 'Manual booking form is missing: ' . $contract);
 }
 manual_expect(str_contains($form, 'name="arrivalHour"') && str_contains($form, 'name="arrivalMinute"'), 'Arrival time must have separate hour and minute controls.');

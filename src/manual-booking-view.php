@@ -117,6 +117,10 @@ function render_manual_booking_dialog(): void
                 <label class="field">Phương thức thanh toán *
                     <select name="paymentMethod" required data-native-select><option value="cash">Tiền mặt</option><option value="bank_transfer">Chuyển khoản</option></select>
                 </label>
+                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-[#dfcdbc] bg-[#faf7f2] p-4 sm:col-span-2">
+                    <input type="checkbox" name="guestCheckout" class="mt-1 h-4 w-4 accent-[#75472f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#75472f]">
+                    <span><strong>Tạo mã cổng & QR như khách tự đặt</strong><span class="mt-1 block text-sm text-[#786b60]">Chưa thanh toán: tạo QR, giữ phòng 15 phút; mã cổng được cấp sau thanh toán. Đã thanh toán: cấp mã cổng và mở trang xác nhận.</span></span>
+                </label>
                 <p class="door-form-error sm:col-span-2" data-manual-error role="alert" hidden></p>
                 <div class="door-discard sm:col-span-2" data-manual-discard hidden>
                     <strong>Bỏ thông tin đang nhập?</strong>
