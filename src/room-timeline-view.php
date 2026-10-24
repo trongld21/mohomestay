@@ -44,7 +44,7 @@ function render_room_timeline(?array $room = null): void
         </div>
         <div class="mb-3 flex flex-wrap gap-x-4 gap-y-2 text-xs" aria-label="Chú thích lịch">
             <span class="flex items-center gap-2"><i class="size-3 rounded border border-emerald-700 bg-emerald-50" aria-hidden="true"></i>Trống</span>
-            <span class="flex items-center gap-2"><i class="size-3 rounded bg-amber-200" aria-hidden="true"></i>Đã đặt / dọn phòng</span>
+            <span class="flex items-center gap-2"><i class="size-3 rounded bg-amber-200" aria-hidden="true"></i>Đã đặt / bận</span>
             <span class="flex items-center gap-2"><i class="size-3 rounded bg-red-200" aria-hidden="true"></i>Đang khóa</span>
             <span class="flex items-center gap-2"><i class="size-3 rounded bg-sky-200" aria-hidden="true"></i>Đang giữ báo giá</span>
             <span class="flex items-center gap-2"><i class="size-3 rounded bg-stone-200" aria-hidden="true"></i>Đã qua / ngưng nhận</span>
@@ -61,13 +61,13 @@ function render_room_timeline(?array $room = null): void
             <p class="mt-2 text-sm text-stone-700" data-timeline-holds-status role="status"></p>
             <div class="mt-3 grid gap-3 sm:grid-cols-2" data-timeline-holds></div>
         </section>
-        <section class="mt-4 rounded-xl border border-[#d2bda7] bg-[#faf5ed] p-4" data-timeline-booking hidden aria-label="Chọn gói đặt phòng">
-            <h3 class="text-lg font-semibold" data-timeline-package-title>Chọn gói khả dụng</h3>
+        <section class="timeline-package-popup" data-timeline-booking popover="manual" role="dialog" tabindex="-1" hidden aria-label="Chọn gói đặt phòng">
+            <h3 class="text-sm font-semibold" data-timeline-package-title>Chọn gói khả dụng</h3>
             <p class="mt-2 text-sm text-[#736b61]" data-timeline-package-status role="status"></p>
-            <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-timeline-packages></div>
+            <div class="mt-3 grid gap-2" data-timeline-packages></div>
             <p class="mt-3 text-sm font-semibold" data-timeline-booking-summary hidden></p>
             <div class="mt-4 flex flex-wrap gap-3">
-                <button class="timeline-button timeline-primary" type="button" data-timeline-booking-confirm hidden>Xác nhận khung giờ · Nhập thông tin</button>
+                <button class="timeline-button timeline-primary" type="button" data-timeline-booking-confirm hidden>Xác nhận · Nhập thông tin</button>
                 <button class="timeline-button" type="button" data-timeline-booking-cancel>Hủy chọn</button>
             </div>
         </section>

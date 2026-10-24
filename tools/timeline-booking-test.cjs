@@ -14,9 +14,13 @@ let cells = [];
 let currentOptions = options;
 let deferred = null;
 let released = false;
+let popupOpen = false;
 function node() {
     return {
-        value: "1", hidden: false, disabled: false, dataset: {}, textContent: "", innerHTML: "",
+        value: "1", hidden: false, disabled: false, dataset: {}, style: {}, textContent: "", innerHTML: "",
+        showPopover() { popupOpen = true; },
+        hidePopover() { popupOpen = false; },
+        getBoundingClientRect: () => ({ left: 200, right: 280, top: 100, bottom: 144, width: 80, height: 44 }),
         setAttribute() {}, addEventListener() {}, append() {}, focus() {}, scrollIntoView() {},
         insertAdjacentHTML(position, html) { this.innerHTML += html; },
         querySelector: () => null,
@@ -40,7 +44,7 @@ const root = { dataset: { staff: "false", roomId: "r" }, querySelector(selector)
 }, addEventListener(name, fn) { listeners[name] = fn; } };
 const location = { hash: "", href: "" };
 const context = vm.createContext({
-    window: { LANG_HOME: { rooms: [room], abilities: ["availability.hold"], csrf: "test-token" } },
+    window: { innerWidth: 1000, innerHeight: 800, addEventListener() {}, LANG_HOME: { rooms: [room], abilities: ["availability.hold"], csrf: "test-token" } },
     document: { querySelectorAll: () => [root], addEventListener() {}, createElement: node },
     location, Intl, Date, URLSearchParams, AbortController, setInterval() {},
     fetch: async (url, config = {}) => {
@@ -79,13 +83,15 @@ async function openHour(at = 13) {
 (async () => {
     await settle();
     assert.match(grid.innerHTML, /10:00–11:00/, "Column headers must show the whole occupied hour");
-    assert.match(grid.innerHTML, />Dọn phòng<\/button>/, "Cleaning must be labeled explicitly");
+    assert.match(grid.innerHTML, /data-state="cleaning"[^>]*>Bận<\/button>/, "Cleaning cells must use the busy label");
     assert.equal(element("[data-timeline-holds-section]").hidden, false);
     assert.match(element("[data-timeline-holds]").innerHTML, /data-release-hold="hold"/, "Room page must show an unlock action with hold permission alone");
     await click("[data-release-hold]", { dataset: { releaseHold: "hold" }, disabled: false });
     assert.equal(released, true);
     assert.equal(element("[data-timeline-holds]").innerHTML, "", "Unlock must refresh the room calendar and remove the hold card");
     await openHour();
+    assert.equal(popupOpen, true, "Package choices must open in an anchored popup");
+    assert.equal(element("[data-timeline-booking]").style.top, "152px");
     assert.match(element("[data-timeline-packages]").innerHTML, /data-timeline-package="short"/);
     assert.equal(element("[data-timeline-booking-confirm]").hidden, true);
     await click("[data-timeline-package]", { dataset: { timelinePackage: "short" } });
@@ -118,6 +124,7 @@ async function openHour(at = 13) {
     assert.equal(cells.filter((cell) => cell.dataset.selected === "true").length, 12, "Overnight selection must expand and highlight the next day");
     await click("[data-timeline-booking-cancel]", {});
     assert.equal(element("[data-timeline-booking]").hidden, true);
+    assert.equal(popupOpen, false);
     assert.equal(cells.filter((cell) => cell.dataset.selected === "true").length, 0);
     console.log("Timeline booking choices, highlights, handoff, revalidation, stale responses and overnight expansion: OK");
 })().catch((error) => { console.error(error); process.exitCode = 1; });

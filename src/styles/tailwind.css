@@ -3296,3 +3296,13 @@ a.timeline-primary:hover {
 .timeline-package[aria-pressed="true"] {
     @apply border-[#79543e] bg-[#eee4d6] ring-2 ring-[#79543e];
 }
+
+.timeline-package-popup {
+    @apply fixed inset-auto m-0 w-[min(22rem,calc(100vw-1rem))] max-h-[min(32rem,calc(100dvh-1rem))] overflow-y-auto rounded-xl border border-[#d2bda7] bg-[#fffdf9] p-3 text-[#45382f] shadow-xl;
+}
+.timeline-package-popup .timeline-package {
+    @apply gap-1 p-3;
+}
+.timeline-package-popup::backdrop {
+    @apply bg-transparent;
+}

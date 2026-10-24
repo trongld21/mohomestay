@@ -41,7 +41,7 @@
     }
 
     window.MoRoomTimeline = { freeWindows, cellState, overlaps };
-    const labels = { free: "Trống", booked: "Đã đặt", blocked: "Đang khóa", past: "Đã qua", inactive: "Ngưng nhận", cleaning: "Dọn phòng", held: "Đang giữ" };
+    const labels = { free: "Trống", booked: "Đã đặt", blocked: "Đang khóa", past: "Đã qua", inactive: "Ngưng nhận", cleaning: "Bận", held: "Đang giữ" };
     document.querySelectorAll("[data-room-timeline]").forEach((root) => {
         const one = (s) => root.querySelector(s);
         const staff = root.dataset.staff === "true";
@@ -168,11 +168,33 @@
             });
         }
 
+        function bookingAnchor() {
+            if (!bookingChoice) return null;
+            return [...grid.querySelectorAll("[data-slot-start]")].find((cell) =>
+                Number(cell.dataset.slotStart) === bookingChoice.start
+                && cell.dataset.slotRoom === bookingChoice.room.id);
+        }
+
+        function positionBookingPopup() {
+            if (!bookingChoice || bookingPanel.hidden) return;
+            const anchor = bookingAnchor();
+            if (!anchor) return;
+            const rect = anchor.getBoundingClientRect();
+            const popup = bookingPanel.getBoundingClientRect();
+            const left = Math.max(8, Math.min(rect.left, window.innerWidth - popup.width - 8));
+            const below = rect.bottom + 8;
+            const top = below + popup.height <= window.innerHeight - 8
+                ? below : Math.max(8, rect.top - popup.height - 8);
+            bookingPanel.style.left = left + "px";
+            bookingPanel.style.top = top + "px";
+        }
+
         function clearBookingChoice() {
             choiceController?.abort();
             choiceController = null;
             bookingChoice = null;
             packageOptions = [];
+            bookingPanel.hidePopover();
             bookingPanel.hidden = true;
             packageList.innerHTML = "";
             bookingSummary.hidden = true;
@@ -235,7 +257,8 @@
             }
             if (bookingChoice !== choice || choice.selected !== option) return;
             bookingConfirm.hidden = false;
-            packageStatus.textContent = "Các ô màu nâu là thời gian lưu trú đã chọn. Lịch sẽ được kiểm tra lại khi xác nhận.";
+            packageStatus.textContent = "Các ô màu nâu là thời gian lưu trú đã chọn.";
+            positionBookingPopup();
         }
 
         async function chooseBookingHour(room, start) {
@@ -245,7 +268,9 @@
             const local = localStamp(start);
             bookingChoice = { room, start, date: local.slice(0, 10), time: local.slice(11, 16), selected: null };
             bookingPanel.hidden = false;
-            bookingPanel.scrollIntoView({ block: "nearest", behavior: "instant" });
+            bookingPanel.showPopover();
+            positionBookingPopup();
+            bookingPanel.focus({ preventScroll: true });
             one("[data-timeline-package-title]").textContent = `${room.name} · ${dateTime(start)} · Chọn gói khả dụng`;
             packageStatus.textContent = "Đang kiểm tra các gói và toàn bộ lịch lưu trú…";
             try {
@@ -257,9 +282,11 @@
                 packageStatus.textContent = packageOptions.length
                     ? "Chọn một gói để xem khung giờ trên lịch. Giá hiển thị là giá trọn gói."
                     : "Không có gói khả dụng bắt đầu trong ô giờ này. Vui lòng chọn giờ hoặc phòng khác.";
+                positionBookingPopup();
             } catch (error) {
                 if (active.signal.aborted || choiceController !== active) return;
                 packageStatus.textContent = "Chưa xác minh được gói khả dụng: " + error.message;
+                positionBookingPopup();
             }
         }
 
@@ -317,7 +344,7 @@
                         const state = cellState(room, a, a + 3600000, now);
                         const hour = `${String(slot).padStart(2, "0")}:00–${String(slot + 1).padStart(2, "0")}:00`;
                         const label = `${room.name} · ${date} ${hour} · ${labels[state]}`;
-                        rows += `<td><button type="button" class="timeline-cell" data-state="${state}" data-slot-start="${a}" data-slot-room="${escape(room.id)}" aria-label="${escape(label)}" title="${escape(label)}">${state === "free" ? "Trống" : state === "booked" ? "Bận" : state === "blocked" ? "Khóa" : state === "cleaning" ? "Dọn phòng" : state === "held" ? "Giữ" : "—"}</button></td>`;
+                        rows += `<td><button type="button" class="timeline-cell" data-state="${state}" data-slot-start="${a}" data-slot-room="${escape(room.id)}" aria-label="${escape(label)}" title="${escape(label)}">${state === "free" ? "Trống" : state === "booked" ? "Bận" : state === "blocked" ? "Khóa" : state === "cleaning" ? "Bận" : state === "held" ? "Giữ" : "—"}</button></td>`;
                     }
                     rows += "</tr>";
                 });
@@ -480,7 +507,9 @@
                 return;
             }
             if (event.target.closest("[data-timeline-booking-cancel]")) {
+                const anchor = bookingAnchor();
                 clearBookingChoice();
+                anchor?.focus({ preventScroll: true });
                 return;
             }
             const slot = event.target.closest("[data-slot-start]");
@@ -490,7 +519,7 @@
                 const room = snapshot.rooms.find((r) => r.id === slot.dataset.slotRoom);
                 const intervals = room.intervals.filter((i) => overlaps(a, a + 3600000, i));
                 one("[data-timeline-selection]").textContent = `${room.name} · ${dateTime(a)}: `
-                    + (intervals.length ? intervals.map((i) => `${i.status === "BLOCKED" ? "Đang khóa" : i.status === "CLEANING" ? "Dọn phòng" : i.status === "HELD" ? "Đang giữ" : "Đã đặt"} ${dateTime(i.start)} – ${dateTime(i.end)}`).join("; ")
+                    + (intervals.length ? intervals.map((i) => `${i.status === "BLOCKED" ? "Đang khóa" : i.status === "CLEANING" ? "Bận" : i.status === "HELD" ? "Đang giữ" : "Đã đặt"} ${dateTime(i.start)} – ${dateTime(i.end)}`).join("; ")
                         : labels[cellState(room, a, a + 3600000, timestamp(snapshot.serverTime))]);
                 if (cellState(room, a, a + 3600000, timestamp(snapshot.serverTime)) === "free") {
                     await chooseBookingHour(room, a);
@@ -613,6 +642,21 @@
                 mutating = false;
             }
         });
+
+        document.addEventListener("pointerdown", (event) => {
+            if (bookingPanel.hidden || bookingPanel.contains(event.target)) return;
+            if (event.target.closest("[data-slot-start]")) return;
+            clearBookingChoice();
+        });
+        bookingPanel.addEventListener("keydown", (event) => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            const anchor = bookingAnchor();
+            clearBookingChoice();
+            anchor?.focus({ preventScroll: true });
+        });
+        window.addEventListener("resize", positionBookingPopup);
+        document.addEventListener("scroll", positionBookingPopup, { capture: true, passive: true });
 
         one("[data-checkout-close]").addEventListener("click", closeDialog);
         dialog.addEventListener("cancel", (event) => {
