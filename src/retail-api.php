@@ -8,6 +8,21 @@ function retail_api(string $path, string $method): never
 {
     header('Cache-Control: no-store');
     $pdo = db();
+    if ($path === '/api/admin/inventory' && $method === 'GET') {
+        $page = max(1, min(100000, (int)($_GET['page'] ?? 1)));
+        $offset = ($page - 1) * 30;
+        $count = (int)$pdo->query('SELECT COUNT(*) FROM retail_stock_movements')->fetchColumn();
+        json_response([
+            'products' => $pdo->query('SELECT id,name,is_active,stock_quantity,track_stock FROM retail_products ORDER BY name,id')->fetchAll(),
+            'movements' => $pdo->query('SELECT * FROM retail_stock_movements ORDER BY created_at DESC,id DESC LIMIT 30 OFFSET ' . $offset)->fetchAll(),
+            'page' => $page, 'count' => $count,
+        ]);
+    }
+    if ($path === '/api/admin/inventory' && $method === 'POST') {
+        require_csrf();
+        retail_receive_stock($pdo, json_body(), (string)current_account()['id']);
+        json_response(['ok' => true]);
+    }
     if ($path === '/api/admin/sales/catalog' && $method === 'GET') {
         $rooms = $pdo->query("SELECT id,name FROM rooms WHERE status='ACTIVE' AND is_active=1 ORDER BY sort_order,name,id")->fetchAll();
         foreach ($rooms as &$room) {
@@ -15,12 +30,12 @@ function retail_api(string $path, string $method): never
         }
         unset($room);
         json_response([
-            'products' => $pdo->query('SELECT id,name,price,is_active FROM retail_products WHERE is_active=1 ORDER BY name,id')->fetchAll(),
+            'products' => $pdo->query('SELECT id,name,price,is_active,stock_quantity,track_stock FROM retail_products WHERE is_active=1 ORDER BY name,id')->fetchAll(),
             'rooms' => $rooms,
         ]);
     }
     if ($path === '/api/admin/products' && $method === 'GET') {
-        json_response(['products' => $pdo->query('SELECT id,name,price,is_active FROM retail_products ORDER BY name,id')->fetchAll()]);
+        json_response(['products' => $pdo->query('SELECT id,name,price,is_active,stock_quantity,track_stock FROM retail_products ORDER BY name,id')->fetchAll()]);
     }
     if ($path === '/api/admin/products' && in_array($method, ['POST', 'PATCH'], true)) {
         require_csrf();

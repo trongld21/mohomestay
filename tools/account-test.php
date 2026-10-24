@@ -156,7 +156,7 @@ foreach ([
     }
 }
 unset($_SESSION['account_id'], $_SESSION['account_version']);
-save_account(['id' => $id, 'permissions' => ['rooms.view', 'bookings.view', 'door-codes.view', 'availability.view', 'sales.view', 'products.view']], true);
+save_account(['id' => $id, 'permissions' => ['rooms.view', 'bookings.view', 'door-codes.view', 'availability.view', 'sales.view', 'products.view', 'inventory.view']], true);
 $_SESSION['account_id'] = $id;
 $_SESSION['account_version'] = 2;
 foreach (array_keys(account_permission_labels()) as $permission) {
@@ -198,4 +198,6 @@ account_check(admin_api_permission('/api/admin/sales', 'GET') === 'sales.view', 
 account_check(admin_api_permission('/api/admin/sales', 'POST') === 'sales.create', 'Creating sale must require create permission');
 account_check(admin_api_permission('/api/admin/products', 'PATCH') === 'products.edit', 'Editing product must require edit permission');
 account_check(admin_api_permission('/api/admin/products', 'POST') === 'products.create', 'Creating product must require create permission');
+account_check(admin_api_permission('/api/admin/inventory', 'GET') === 'inventory.view', 'Stock viewing needs inventory view grant');
+account_check(admin_api_permission('/api/admin/inventory', 'POST') === 'inventory.receive', 'Receiving stock needs receive grant');
 echo "Account authorization tests: OK\n";

@@ -11,6 +11,7 @@ function account_permissions(): array
         'door-codes' => 'Quản lý mã mở cửa',
         'sales' => 'Bán hàng',
         'products' => 'Quản lý sản phẩm',
+        'inventory' => 'Nhập kho & tồn kho',
     ];
 }
 
@@ -88,7 +89,7 @@ function account_home(): string
     foreach (account_permissions() as $key => $label) {
         if (can_use($key)) {
             if ($key === 'sales' && !can_use('sales.create')) return '/admin/sales/history';
-            return in_array($key, ['door-codes', 'availability', 'sales', 'products'], true) ? '/admin/' . $key : '/admin#' . $key;
+            return in_array($key, ['door-codes', 'availability', 'sales', 'products', 'inventory'], true) ? '/admin/' . $key : '/admin#' . $key;
         }
     }
     if (can_use('sales.create')) return '/admin/sales';
@@ -161,6 +162,10 @@ function save_account(array $data, bool $permissionsOnly): void
 function account_permission_groups(): array
 {
     return [
+        'inventory' => [
+            'inventory.view' => 'Xem tồn kho và lịch sử nhập/bán',
+            'inventory.receive' => 'Nhập hàng vào kho',
+        ],
         'sales' => [
             'sales.view' => 'Xem lịch sử bán hàng và doanh thu',
             'sales.create' => 'Tạo đơn bán hàng, tạo QR và kiểm tra thanh toán',
@@ -229,6 +234,7 @@ function admin_api_permission(string $path, string $method, array $body = []): s
 {
     $feature = explode('/', substr($path, strlen('/api/admin/')))[0];
     return match ($feature) {
+        'inventory' => $method === 'GET' ? 'inventory.view' : 'inventory.receive',
         'sales' => $path === '/api/admin/sales/catalog' ? 'sales.create' : ($method === 'GET' ? 'sales.view' : 'sales.create'),
         'products' => match ($method) {
             'GET' => 'products.view',

@@ -12,6 +12,11 @@
     const dateTime = (value) => value ? new Date(value.replace(" ", "T") + "Z").toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }) : "—";
     const status = one("[data-retail-status]");
     const productMode = root.dataset.mode === "products";
+    const inventoryMode = root.dataset.mode === "inventory";
+    const stockForm = one("[data-stock-form]");
+    let stockPage = 1;
+    let stockRequestId = "";
+    let stockSignature = "";
     const historyMode = root.dataset.mode === "history";
     const form = one("[data-product-form]");
     const dialog = one("[data-sale-dialog]");
@@ -47,10 +52,11 @@
         target.innerHTML = visible.map((product) => `<article class="rounded-xl border border-[#e5dacb] bg-white p-4">
             <h3 class="font-sans text-base font-semibold">${escape(product.name)}</h3>
             <p class="mt-2 font-semibold text-[#79543e]">${cash(product.price)}</p>
+            <p class="mt-1 text-sm ${Number(product.stock_quantity) > 0 || !Number(product.track_stock) ? 'text-emerald-800' : 'text-red-800'}">${Number(product.track_stock) ? `Còn ${Number(product.stock_quantity)} sản phẩm` : "Dịch vụ · Không quản lý tồn"}</p>
             ${productMode ? `<p class="mt-1 text-xs text-stone-500">${Number(product.is_active) ? "Đang bán" : "Ngừng bán"}</p>` : ""}
             ${productMode
                 ? (can("products.edit") ? `<button class="timeline-button mt-3" type="button" data-edit-product="${escape(product.id)}">Sửa sản phẩm</button>` : "")
-                : `<button class="timeline-button mt-3" type="button" data-add-product="${escape(product.id)}">Thêm vào đơn</button>`}
+                : `<button class="timeline-button mt-3" type="button" data-add-product="${escape(product.id)}" ${Number(product.track_stock) && Number(product.stock_quantity) <= 0 ? "disabled" : ""}>${Number(product.track_stock) && Number(product.stock_quantity) <= 0 ? "Hết hàng" : "Thêm vào đơn"}</button>`}
         </article>`).join("") || '<p class="text-sm text-stone-500">Chưa có sản phẩm phù hợp. Thêm và bật sản phẩm trong Quản lý sản phẩm.</p>';
     }
     function renderCart(resetTotal = true) {
@@ -62,7 +68,7 @@
             return `<div class="grid grid-cols-[1fr_auto] items-center gap-2 border-b border-[#e5dacb] pb-3">
                 <div><strong class="text-sm">${escape(product.name)}</strong><p class="mt-1 text-xs text-stone-500">${cash(product.price)} / sản phẩm</p></div>
                 <button class="timeline-button" type="button" data-remove-product="${escape(product.id)}" aria-label="Bỏ ${escape(product.name)}">Bỏ</button>
-                <label class="grid gap-1 text-xs">Số lượng<input class="timeline-input max-w-24" type="number" min="1" max="999" step="1" value="${quantity}" data-quantity="${escape(product.id)}"></label>
+                <label class="grid gap-1 text-xs">Số lượng<input class="timeline-input max-w-24" type="number" min="1" max="${Number(product.track_stock) ? Math.min(999, Number(product.stock_quantity)) : 999}" step="1" value="${quantity}" data-quantity="${escape(product.id)}"></label>
                 <strong class="text-sm">${cash(Number(product.price) * quantity)}</strong>
             </div>`;
         }).join("") || '<p class="text-sm text-stone-500">Chọn sản phẩm bên trái để bắt đầu.</p>';
@@ -86,12 +92,36 @@
         one("[data-sales-prev]").disabled = page <= 1;
         one("[data-sales-next]").disabled = page * 30 >= result.count;
     }
+    async function loadInventory() {
+        const result = await request("inventory?page=" + stockPage);
+        products = result.products;
+        if (stockForm) {
+            const previous = stockForm.elements.productId.value;
+            const tracked = products.filter((product) => Number(product.track_stock));
+            stockForm.elements.productId.innerHTML = '<option value="">Chọn sản phẩm</option>'
+                + tracked.map((product) => `<option value="${escape(product.id)}">${escape(product.name)} · Còn ${Number(product.stock_quantity)}</option>`).join("");
+            if (tracked.some((product) => product.id === previous)) stockForm.elements.productId.value = previous;
+        }
+        one("[data-stock-products]").innerHTML = products.map((product) => `<article class="rounded-xl border border-[#e5dacb] p-3">
+            <h3>${escape(product.name)}</h3><p class="mt-2 font-semibold">${Number(product.track_stock) ? `Tồn: ${Number(product.stock_quantity)}` : "Dịch vụ · Không theo dõi tồn"}</p>
+            <p class="mt-1 text-xs text-stone-500">${Number(product.is_active) ? "Đang bán" : "Ngừng bán"}</p>
+        </article>`).join("") || '<p class="text-sm">Chưa có sản phẩm. Thêm sản phẩm trước khi nhập kho.</p>';
+        one("[data-stock-history]").innerHTML = result.movements.length ? `<table><thead><tr><th>Thời gian</th><th>Sản phẩm</th><th>Loại</th><th>Thay đổi</th><th>Tồn sau</th><th>Ghi chú / Mã đơn</th><th>Nhân viên</th></tr></thead><tbody>${result.movements.map((move) => `<tr>
+            <td>${escape(dateTime(move.created_at))}</td><td>${escape(move.product_name)}</td><td>${move.movement_type === "IN" ? "Nhập kho" : "Bán hàng"}</td>
+            <td>${Number(move.quantity_change) > 0 ? "+" : ""}${Number(move.quantity_change)}</td><td>${Number(move.stock_after)}</td><td>${escape(move.note)}</td><td>${escape(move.created_by)}</td>
+        </tr>`).join("")}</tbody></table>` : '<p class="text-sm">Chưa có biến động kho.</p>';
+        one("[data-stock-page]").textContent = `Trang ${result.page} · ${result.count} biến động`;
+        one("[data-stock-prev]").disabled = stockPage <= 1;
+        one("[data-stock-next]").disabled = stockPage * 30 >= result.count;
+    }
     async function load() {
         if (loading || busy) return;
         loading = true;
         status.textContent = "Đang tải…";
         try {
-            if (productMode || (!historyMode && can("sales.create"))) {
+            if (inventoryMode) {
+                await loadInventory();
+            } else if (productMode || (!historyMode && can("sales.create"))) {
                 const result = await request(productMode ? "products" : "sales/catalog");
                 products = result.products;
                 saleRooms = result.rooms || [];
@@ -142,7 +172,7 @@
     form?.addEventListener("submit", async (event) => {
         event.preventDefault();
         if (busy || !form.reportValidity()) return;
-        const data = { id: form.elements.id.value, name: form.elements.name.value.trim(), price: Number(form.elements.price.value), isActive: form.elements.isActive.checked };
+        const data = { id: form.elements.id.value, name: form.elements.name.value.trim(), price: Number(form.elements.price.value), isActive: form.elements.isActive.checked, trackStock: form.elements.trackStock.checked };
         busy = true;
         let saved = false;
         const submit = form.querySelector('[type="submit"]');
@@ -163,6 +193,37 @@
             status.textContent = "Đã lưu sản phẩm.";
         }
     });
+    stockForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (busy || loading || !stockForm.reportValidity()) return;
+        const data = { productId: stockForm.elements.productId.value, quantity: Number(stockForm.elements.quantity.value), note: stockForm.elements.note.value.trim() };
+        const signature = JSON.stringify(data);
+        if (stockSignature !== signature || !stockRequestId) {
+            stockRequestId = crypto.randomUUID().replaceAll("-", "");
+            stockSignature = signature;
+        }
+        busy = true;
+        const submit = stockForm.querySelector('[type="submit"]');
+        submit.disabled = true;
+        let saved = false;
+        try {
+            await request("inventory", "POST", { ...data, requestId: stockRequestId });
+            saved = true;
+            stockRequestId = "";
+            stockSignature = "";
+            stockForm.reset();
+            stockPage = 1;
+        } catch (error) {
+            status.textContent = error.message;
+        } finally {
+            busy = false;
+            submit.disabled = false;
+        }
+        if (saved) {
+            await load();
+            status.textContent = "Đã nhập kho và lưu lịch sử.";
+        }
+    });
     one("[data-retail-search]")?.addEventListener("input", renderProducts);
     one("[data-sales-filter]")?.addEventListener("change", () => { if (!busy && !loading) { page = 1; historyPage(); } });
     one("[data-retail-refresh]").addEventListener("click", load);
@@ -171,8 +232,10 @@
         const input = event.target.closest("[data-quantity]");
         if (!input || busy) return;
         const quantity = Number(input.value);
-        if (!Number.isInteger(quantity) || quantity < 1 || quantity > 999) {
-            status.textContent = "Số lượng phải từ 1 đến 999.";
+        const entry = cart.get(input.dataset.quantity);
+        const max = Number(entry.product.track_stock) ? Math.min(999, Number(entry.product.stock_quantity)) : 999;
+        if (!Number.isInteger(quantity) || quantity < 1 || quantity > max) {
+            status.textContent = "Số lượng vượt tồn kho hoặc không hợp lệ.";
             renderCart(false);
             return;
         }
@@ -189,7 +252,12 @@
         if (add) {
             const product = products.find((item) => item.id === add.dataset.addProduct);
             const current = cart.get(product.id);
-            cart.set(product.id, { product, quantity: Math.min(999, (current?.quantity || 0) + 1) });
+            const max = Number(product.track_stock) ? Math.min(999, Number(product.stock_quantity)) : 999;
+            if (max <= 0 || (current?.quantity || 0) >= max) {
+                status.textContent = "Không đủ tồn kho để thêm sản phẩm.";
+                return;
+            }
+            cart.set(product.id, { product, quantity: (current?.quantity || 0) + 1 });
             renderCart();
         } else if (remove) {
             cart.delete(remove.dataset.removeProduct);
@@ -201,6 +269,7 @@
             form.elements.name.value = product.name;
             form.elements.price.value = product.price;
             form.elements.isActive.checked = !!Number(product.is_active);
+            form.elements.trackStock.checked = !!Number(product.track_stock);
             form.elements.name.focus();
         } else if (open) {
             trigger = open;
@@ -230,7 +299,11 @@
             try {
                 const result = await request("sales", "POST", { ...data, requestId });
                 showSale(result.sale, result.paymentError || "");
+                for (const entry of cart.values()) {
+                    if (Number(entry.product.track_stock)) entry.product.stock_quantity = Math.max(0, Number(entry.product.stock_quantity) - entry.quantity);
+                }
                 cart.clear();
+                renderProducts();
                 requestId = "";
                 requestSignature = "";
                 status.textContent = "Đã lưu đơn bán hàng.";
@@ -254,6 +327,9 @@
                 busy = false;
                 if (action.isConnected) action.disabled = false;
             }
+        } else if (event.target.closest("[data-stock-prev]") || event.target.closest("[data-stock-next]")) {
+            stockPage = Math.max(1, stockPage + (event.target.closest("[data-stock-prev]") ? -1 : 1));
+            await load();
         } else if (event.target.closest("[data-sales-prev]")) {
             page = Math.max(1, page - 1);
             await historyPage();

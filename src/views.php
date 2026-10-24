@@ -77,7 +77,7 @@ function render_google_analytics(string $path, string $host): void
             {
                 $fullTitle = e($title) . ' | Mơ Home';
                 $adminPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-                $adminLayout = in_array($adminPath, ['/admin', '/admin/availability', '/admin/door-codes', '/admin/accounts', '/admin/permissions', '/admin/no-access', '/admin/sales', '/admin/sales/history', '/admin/products'], true);
+                $adminLayout = in_array($adminPath, ['/admin', '/admin/availability', '/admin/door-codes', '/admin/accounts', '/admin/permissions', '/admin/no-access', '/admin/sales', '/admin/sales/history', '/admin/products', '/admin/inventory'], true);
                 if ($adminLayout) require_once APP_ROOT . '/src/admin-layout.php';
                 $robots = ($options['robots'] ?? true) ? 'index,follow' : 'noindex,nofollow';
                 ?>

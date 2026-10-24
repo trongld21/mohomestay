@@ -22,17 +22,58 @@ function retail_save_product(PDO $pdo, array $input): array
     }
     $price = retail_integer($input['price'] ?? null, 1, 100000000);
     $active = ($input['isActive'] ?? true) ? 1 : 0;
+    if (!is_bool($input['trackStock'] ?? true)) throw new BookingException('Trạng thái quản lý tồn không hợp lệ.', 422);
+    $track = ($input['trackStock'] ?? true) ? 1 : 0;
     $id = (string)($input['id'] ?? '');
     if ($id === '') {
         $id = uuid();
-        $pdo->prepare('INSERT INTO retail_products (id,name,price,is_active) VALUES (?,?,?,?)')->execute([$id, $name, $price, $active]);
+        $pdo->prepare('INSERT INTO retail_products (id,name,price,is_active,track_stock) VALUES (?,?,?,?,?)')->execute([$id, $name, $price, $active, $track]);
     } else {
         $query = $pdo->prepare('SELECT id FROM retail_products WHERE id=?');
         $query->execute([$id]);
         if (!$query->fetchColumn()) throw new BookingException('Không tìm thấy sản phẩm.', 404);
-        $pdo->prepare('UPDATE retail_products SET name=?,price=?,is_active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')->execute([$name, $price, $active, $id]);
+        $pdo->prepare('UPDATE retail_products SET name=?,price=?,is_active=?,track_stock=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')->execute([$name, $price, $active, $track, $id]);
     }
-    return ['id' => $id, 'name' => $name, 'price' => $price, 'is_active' => $active];
+    return ['id' => $id, 'name' => $name, 'price' => $price, 'is_active' => $active, 'track_stock' => $track];
+}
+
+function retail_receive_stock(PDO $pdo, array $input, string $actor): void
+{
+    $id = $input['requestId'] ?? '';
+    $productId = $input['productId'] ?? '';
+    $note = is_string($input['note'] ?? '') ? trim($input['note'] ?? '') : '';
+    if (!is_string($id) || !preg_match('/^[a-f0-9]{32}$/D', $id)
+        || !is_string($productId) || !preg_match('/^[a-f0-9]{32}$/D', $productId) || mb_strlen($note) > 255) {
+        throw new BookingException('Thông tin phiếu nhập kho không hợp lệ.', 422);
+    }
+    $quantity = retail_integer($input['quantity'] ?? null, 1, 1000000);
+    $pdo->beginTransaction();
+    try {
+        $query = $pdo->prepare('SELECT * FROM retail_products WHERE id=?' . room_operation_lock_suffix($pdo));
+        $query->execute([$productId]);
+        $product = $query->fetch();
+        if (!$product) throw new BookingException('Không tìm thấy sản phẩm.', 404);
+        $existing = $pdo->prepare('SELECT * FROM retail_stock_movements WHERE id=?');
+        $existing->execute([$id]);
+        if ($row = $existing->fetch()) {
+            if ($row['movement_type'] !== 'IN' || $row['product_id'] !== $productId || (int)$row['quantity_change'] !== $quantity
+                || $row['created_by'] !== $actor || $row['note'] !== $note) {
+                throw new BookingException('Mã phiếu nhập đã được sử dụng.', 409);
+            }
+            $pdo->commit();
+            return;
+        }
+        if (!(bool)$product['track_stock']) throw new BookingException('Sản phẩm dịch vụ không quản lý tồn kho.', 422);
+        $after = (int)$product['stock_quantity'] + $quantity;
+        if ($after > 1000000000) throw new BookingException('Tồn kho vượt giới hạn.', 422);
+        $pdo->prepare('UPDATE retail_products SET stock_quantity=? WHERE id=?')->execute([$after, $productId]);
+        $pdo->prepare("INSERT INTO retail_stock_movements (id,product_id,product_name,movement_type,quantity_change,stock_after,reference_id,note,created_by) VALUES (?,?,?,'IN',?,?,?,?,?)")
+            ->execute([$id, $productId, $product['name'], $quantity, $after, $id, $note, $actor]);
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $error;
+    }
 }
 
 function retail_sale(PDO $pdo, string $id): array
@@ -125,6 +166,9 @@ function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPr
             $query->execute([$productId]);
             $product = $query->fetch();
             if (!$product || !(bool)$product['is_active']) throw new BookingException('Sản phẩm vừa ngừng bán. Vui lòng chọn lại.', 409);
+            if ((bool)$product['track_stock'] && (int)$product['stock_quantity'] < $quantity) {
+                throw new BookingException('Không đủ tồn kho cho ' . $product['name'] . '. Còn ' . (int)$product['stock_quantity'] . '.', 409);
+            }
             $listed += (int)$product['price'] * $quantity;
             if ($listed > 100000000) throw new BookingException('Tổng đơn tối đa 100.000.000đ.', 422);
             $snapshots[] = [$productId, $product['name'], (int)$product['price'], $quantity];
@@ -138,6 +182,17 @@ function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPr
             ->execute([$id, $requestId, $hash, $code, $total, $listed, $orderCode, $actor, $roomId !== '' ? $roomId : null, $roomName, $activeBooking['id'] ?? null, $activeBooking['booking_code'] ?? null]);
         $insert = $pdo->prepare('INSERT INTO retail_sale_items (sale_id,product_id,product_name,unit_price,quantity) VALUES (?,?,?,?,?)');
         foreach ($snapshots as $snapshot) $insert->execute([$id, ...$snapshot]);
+        foreach ($items as $productId => $quantity) {
+            $query = $pdo->prepare('SELECT name,track_stock,stock_quantity FROM retail_products WHERE id=?');
+            $query->execute([$productId]);
+            $product = $query->fetch();
+            if (!(bool)$product['track_stock']) continue;
+            $update = $pdo->prepare('UPDATE retail_products SET stock_quantity=stock_quantity-? WHERE id=? AND stock_quantity>=?');
+            $update->execute([$quantity, $productId, $quantity]);
+            if ($update->rowCount() !== 1) throw new BookingException('Tồn kho vừa thay đổi. Vui lòng kiểm tra lại.', 409);
+            $pdo->prepare("INSERT INTO retail_stock_movements (id,product_id,product_name,movement_type,quantity_change,stock_after,reference_id,note,created_by) VALUES (?,?,?,'SALE',?,?,?,?,?)")
+                ->execute([uuid(), $productId, $product['name'], -$quantity, (int)$product['stock_quantity'] - $quantity, $id, $code, $actor]);
+        }
         $pdo->commit();
         return retail_sale($pdo, $id);
     } catch (Throwable $error) {

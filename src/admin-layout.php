@@ -23,7 +23,7 @@ function render_admin_navigation(string $path): void
         <nav class="admin-navigation" aria-label="Khu vực quản lý">
             <?php foreach (account_permissions() as $key => $label): ?>
                 <?php
-                if (in_array($key, ['sales', 'products'], true) || !can_use($key)) {
+                if (in_array($key, ['sales', 'products', 'inventory'], true) || !can_use($key)) {
                     continue;
                 }
                 $shortLabel = match ($key) {
@@ -48,8 +48,8 @@ function render_admin_navigation(string $path): void
                     </a>
                 <?php endif ?>
             <?php endforeach ?>
-            <?php if (can_use('sales.view') || can_use('sales.create') || can_use('products.view')): ?>
-                <details class="rounded-lg border border-[#e5dacb]" <?= in_array($path, ['/admin/sales', '/admin/sales/history', '/admin/products'], true) ? 'open' : '' ?>>
+            <?php if (can_use('sales.view') || can_use('sales.create') || can_use('products.view') || can_use('inventory.view')): ?>
+                <details class="rounded-lg border border-[#e5dacb]" <?= in_array($path, ['/admin/sales', '/admin/sales/history', '/admin/products', '/admin/inventory'], true) ? 'open' : '' ?>>
                     <summary class="<?= $link ?> cursor-pointer">Bán hàng</summary>
                     <div class="grid gap-1 px-2 pb-2">
                         <?php if (can_use('sales.create')): ?>
@@ -57,6 +57,9 @@ function render_admin_navigation(string $path): void
                         <?php endif ?>
                         <?php if (can_use('sales.view')): ?>
                             <a class="<?= $link ?>" href="/admin/sales/history" <?= $path === '/admin/sales/history' ? 'aria-current="page"' : '' ?>>Lịch sử bán hàng</a>
+                        <?php endif ?>
+                        <?php if (can_use('inventory.view')): ?>
+                            <a class="<?= $link ?>" href="/admin/inventory" <?= $path === '/admin/inventory' ? 'aria-current="page"' : '' ?>>Nhập kho & tồn kho</a>
                         <?php endif ?>
                         <?php if (can_use('products.view')): ?>
                             <a class="<?= $link ?>" href="/admin/products" <?= $path === '/admin/products' ? 'aria-current="page"' : '' ?>>Quản lý sản phẩm</a>
@@ -104,6 +107,7 @@ function render_admin_topbar(): void
         '/admin/sales' => 'Bán hàng',
         '/admin/sales/history' => 'Lịch sử bán hàng',
         '/admin/products' => 'Quản lý sản phẩm',
+        '/admin/inventory' => 'Nhập kho & tồn kho',
         '/admin/accounts' => 'Quản lý tài khoản',
         '/admin/permissions' => 'Phân quyền tài khoản',
         default => 'Không gian quản lý',

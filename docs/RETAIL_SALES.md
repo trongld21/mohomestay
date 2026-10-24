@@ -6,7 +6,7 @@ Trong sidebar, mở nhóm **Bán hàng** rồi chọn **Bán hàng** hoặc **Qu
 - Bán hàng: chọn sản phẩm, nhập số lượng, kiểm tra giá chốt, bấm **Chốt đơn & tạo QR**. Mở mã QR trên trang thanh toán payOS để khách chuyển khoản.
 - Nếu tạo QR lỗi, đơn vẫn lưu. Bấm **Tạo lại QR** trong đơn hoặc lịch sử; không tạo đơn mới cho cùng giao dịch.
 - Lịch sử hiển thị chi tiết, trạng thái thanh toán và doanh thu bán hàng. Chỉ đơn được payOS xác nhận trả tiền mới cộng doanh thu; doanh thu này cũng cộng vào tổng quan quản trị.
-- Chưa có quản lý tồn kho hoặc thanh toán tiền mặt trong màn này.
+- Thanh toán tiền mặt chưa được hỗ trợ trong màn này.
 
 ## Quyền
 
@@ -23,3 +23,13 @@ Có thể chọn phòng liên quan khi tạo đơn (hoặc Không gắn phòng).
 Danh s?ch ch?n ph?ng hi?n th? th?m m? ??n ?ang l?u tr?. ??n b?n l?u booking_id v? m? ??t ph?ng t?i l?c ch?t, cho ph?p tra l?ch s? b?ng m? MO. Migration: `019_retail_sale_booking.sql`. N?u kh?ch c?a ph?ng thay ??i trong l?c t?o ??n, h? th?ng y?u c?u l?m m?i ?? tr?nh g?n nh?m.
 
 Lịch sử bán hàng được tách riêng tại `/admin/sales/history`, cùng nhóm Bán hàng trên sidebar. Trang bán hàng chỉ chứa giỏ hàng và chốt đơn; trang lịch sử giữ tra cứu, phân trang, doanh thu và xem lại đơn/QR. Quyền `sales.view` mở lịch sử, `sales.create` mở bán hàng.
+
+## Nhập kho và tồn kho
+
+Chạy migration `020_retail_inventory.sql`. Sản phẩm có tồn ban đầu bằng 0; nhập số lượng thực tế trong **Nhập kho & tồn kho** trước khi bán. Migration không trừ lại các đơn lịch sử.
+
+- Nhập kho: chọn sản phẩm, số lượng nhập và ghi chú lô hàng; hệ thống lưu phiếu và người nhập. Gửi lại cùng phiếu không cộng tồn thêm lần nữa.
+- Tồn giảm khi chốt đơn bán hàng, gồm cả đơn đang chờ thanh toán hoặc chưa tạo được QR. Tạo lại QR/callback thanh toán không trừ thêm. Không tự hoàn tồn khi QR gặp lỗi vì đơn vẫn có thể được thanh toán.
+- Bán quá số lượng còn lại bị chặn trên cả UI và server; kiểm tra/trừ/lưu đơn trong cùng transaction.
+- Quản lý sản phẩm có cờ Quản lý tồn kho: tắt cho mục dịch vụ như phụ thu giờ, bật cho hàng vật lý. Sửa sản phẩm không cho nhập đè trực tiếp số tồn.
+- Quyền `inventory.view` xem tồn và biến động, `inventory.receive` nhập kho (kèm quyền xem theo cơ chế hiện có). Các quyền này tách khỏi tạo đơn và sửa sản phẩm.

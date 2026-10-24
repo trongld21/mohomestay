@@ -5,7 +5,7 @@ const vm = require("node:vm");
 const nodes = new Map();
 const listeners = {};
 const id = "a".repeat(32);
-const product = { id, name: '<img src=x onerror="bad()">', price: 15000, is_active: 1 };
+const product = { id, name: '<img src=x onerror="bad()">', price: 15000, is_active: 1, track_stock: 1, stock_quantity: 5 };
 let failed = true;
 let salePosts = [];
 let uuidCount = 0;

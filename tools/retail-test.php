@@ -19,12 +19,14 @@ function retail_reject(callable $operation, int $status): void
     }
 }
 $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
-$pdo->exec("CREATE TABLE retail_products (id TEXT PRIMARY KEY,name TEXT,price INTEGER,is_active INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT);
+$pdo->exec("CREATE TABLE retail_stock_movements (id TEXT PRIMARY KEY,product_id TEXT,product_name TEXT,movement_type TEXT,quantity_change INTEGER,stock_after INTEGER,reference_id TEXT,note TEXT,created_by TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP,UNIQUE(movement_type,reference_id,product_id));
+CREATE TABLE retail_products (stock_quantity INTEGER DEFAULT 0,track_stock INTEGER DEFAULT 1,id TEXT PRIMARY KEY,name TEXT,price INTEGER,is_active INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT);
 CREATE TABLE rooms (id TEXT PRIMARY KEY,name TEXT,status TEXT);
 CREATE TABLE bookings (id TEXT PRIMARY KEY,room_id TEXT,booking_code TEXT,status TEXT,check_in TEXT,check_out TEXT);
 CREATE TABLE retail_sales (booking_id TEXT,booking_code_snapshot TEXT,room_id TEXT,room_name_snapshot TEXT,id TEXT PRIMARY KEY,request_id TEXT UNIQUE,request_hash TEXT,sale_code TEXT UNIQUE,total INTEGER,listed_total INTEGER,status TEXT DEFAULT 'PENDING',order_code INTEGER UNIQUE,created_by TEXT,qr_code TEXT,checkout_url TEXT,payment_link_id TEXT,transaction_reference TEXT UNIQUE,paid_at TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE retail_sale_items (sale_id TEXT,product_id TEXT,product_name TEXT,unit_price INTEGER,quantity INTEGER,PRIMARY KEY(sale_id,product_id));");
 $product = retail_save_product($pdo, ['name' => 'Nước suối', 'price' => 15000, 'isActive' => true]);
+retail_receive_stock($pdo, ['requestId' => str_repeat('8', 32), 'productId' => $product['id'], 'quantity' => 100, 'note' => 'Initial'], 'staff');
 $input = ['requestId' => str_repeat('a', 32), 'items' => [['productId' => $product['id'], 'quantity' => 2]], 'total' => 30000];
 $sale = retail_create_sale($pdo, $input, 'staff', false);
 retail_check((int)$sale['total'] === 30000 && $sale['status'] === 'PENDING', 'Create pending sale with server price.');
