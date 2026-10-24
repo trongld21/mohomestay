@@ -47,6 +47,17 @@ function retail_sale(PDO $pdo, string $id): array
     return $sale;
 }
 
+function retail_active_booking(PDO $pdo, string $roomId, bool $lock = false): ?array
+{
+    $query = $pdo->prepare(
+        "SELECT id,booking_code,check_in,check_out FROM bookings WHERE room_id=? "
+        . "AND (status='CHECKED_IN' OR (status='CONFIRMED' AND check_in<=?)) "
+        . 'ORDER BY check_in DESC,id DESC LIMIT 1' . ($lock ? room_operation_lock_suffix($pdo) : '')
+    );
+    $query->execute([$roomId, gmdate('Y-m-d H:i:s')]);
+    return $query->fetch() ?: null;
+}
+
 function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPrice): array
 {
     $requestId = $input['requestId'] ?? '';
@@ -68,9 +79,18 @@ function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPr
     if (!is_string($roomId) || ($roomId !== '' && !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $roomId))) {
         throw new BookingException('Phòng liên quan không hợp lệ.', 422);
     }
+    $expectedBookingId = $input['bookingId'] ?? null;
+    if ($expectedBookingId !== null && (!is_string($expectedBookingId)
+        || ($expectedBookingId !== '' && !preg_match('/^[a-f0-9]{32}$/D', $expectedBookingId)))) {
+        throw new BookingException('Đơn đặt phòng liên quan không hợp lệ.', 422);
+    }
+    if ($roomId === '' && !empty($expectedBookingId)) {
+        throw new BookingException('Chọn phòng trước khi liên kết đơn.', 422);
+    }
     // Preserve retry identities for older clients sending an unassigned sale.
     $identity = [$items, $totalRequested];
     if ($roomId !== '') $identity[] = $roomId;
+    if (!empty($expectedBookingId)) $identity[] = $expectedBookingId;
     $hash = hash('sha256', json_encode($identity, JSON_THROW_ON_ERROR));
     $pdo->beginTransaction();
     try {
@@ -84,6 +104,7 @@ function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPr
             return retail_sale($pdo, $existing['id']);
         }
         $roomName = null;
+        $activeBooking = null;
         if ($roomId !== '') {
             $query = $pdo->prepare('SELECT name,status FROM rooms WHERE id=?' . room_operation_lock_suffix($pdo));
             $query->execute([$roomId]);
@@ -92,6 +113,10 @@ function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPr
                 throw new BookingException('Phòng không tồn tại hoặc đang ẩn/ngừng nhận khách.', 422);
             }
             $roomName = (string)$room['name'];
+            $activeBooking = retail_active_booking($pdo, $roomId, true);
+            if ($expectedBookingId !== null && $expectedBookingId !== ($activeBooking['id'] ?? '')) {
+                throw new BookingException('Đơn đang lưu trú của phòng vừa thay đổi. Làm mới và chọn lại phòng trước khi chốt.', 409);
+            }
         }
         $snapshots = [];
         $listed = 0;
@@ -109,8 +134,8 @@ function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPr
         $id = uuid();
         $code = 'BH-' . strtoupper(bin2hex(random_bytes(5)));
         $orderCode = random_int(700000000000000, 799999999999999);
-        $pdo->prepare('INSERT INTO retail_sales (id,request_id,request_hash,sale_code,total,listed_total,order_code,created_by,room_id,room_name_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?)')
-            ->execute([$id, $requestId, $hash, $code, $total, $listed, $orderCode, $actor, $roomId !== '' ? $roomId : null, $roomName]);
+        $pdo->prepare('INSERT INTO retail_sales (id,request_id,request_hash,sale_code,total,listed_total,order_code,created_by,room_id,room_name_snapshot,booking_id,booking_code_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
+            ->execute([$id, $requestId, $hash, $code, $total, $listed, $orderCode, $actor, $roomId !== '' ? $roomId : null, $roomName, $activeBooking['id'] ?? null, $activeBooking['booking_code'] ?? null]);
         $insert = $pdo->prepare('INSERT INTO retail_sale_items (sale_id,product_id,product_name,unit_price,quantity) VALUES (?,?,?,?,?)');
         foreach ($snapshots as $snapshot) $insert->execute([$id, ...$snapshot]);
         $pdo->commit();

@@ -23,7 +23,7 @@ function one(selector) {
 }
 const sale = {
     id: "b".repeat(32), sale_code: "BH-TEST", total: 25000, listed_total: 30000,
-    room_id: "pink", room_name_snapshot: "Pink", status: "PENDING", created_at: "2026-10-24 07:00:00", checkout_url: "https://pay.payos.vn/web/test",
+    booking_id: "9".repeat(32), booking_code_snapshot: "MO-ACTIVE", room_id: "pink", room_name_snapshot: "Pink", status: "PENDING", created_at: "2026-10-24 07:00:00", checkout_url: "https://pay.payos.vn/web/test",
     items: [{ product_name: product.name, unit_price: 15000, quantity: 2 }],
 };
 const root = { dataset: { mode: "sales" }, querySelector: one, addEventListener(event, fn) { listeners[event] = fn; } };
@@ -35,7 +35,7 @@ const context = vm.createContext({
     Intl, Date, Map,
     fetch: async (url, config) => {
         let result;
-        if (url.endsWith("sales/catalog")) result = { products: [product], rooms: [{ id: "pink", name: "Pink" }] };
+        if (url.endsWith("sales/catalog")) result = { products: [product], rooms: [{ id: "pink", name: "Pink", activeBooking: { id: "9".repeat(32), booking_code: "MO-ACTIVE" } }] };
         else if (config.method === "POST") {
             salePosts.push(JSON.parse(config.body));
             if (failed) { failed = false; throw new Error("Network error"); }
@@ -63,6 +63,9 @@ const click = (selector, data = {}) => listeners.click({ target: { closest: (mat
     assert.equal(salePosts[0].requestId, salePosts[1].requestId);
     assert.equal(salePosts[1].total, 25000);
     assert.equal(salePosts[1].roomId, "pink");
+    assert.equal(salePosts[1].bookingId, "9".repeat(32));
+    assert.match(one("[data-sale-room]").innerHTML, /MO-ACTIVE/);
+    assert.match(one("[data-sale-detail]").innerHTML, /MO-ACTIVE/);
     assert.match(one("[data-sale-detail]").innerHTML, /Phòng: Pink/);
     assert.equal(salePosts[1].items[0].quantity, 2);
     assert.match(one("[data-sale-detail]").innerHTML, /pay.payos.vn/);

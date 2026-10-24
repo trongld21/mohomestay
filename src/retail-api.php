@@ -9,9 +9,14 @@ function retail_api(string $path, string $method): never
     header('Cache-Control: no-store');
     $pdo = db();
     if ($path === '/api/admin/sales/catalog' && $method === 'GET') {
+        $rooms = $pdo->query("SELECT id,name FROM rooms WHERE status='ACTIVE' AND is_active=1 ORDER BY sort_order,name,id")->fetchAll();
+        foreach ($rooms as &$room) {
+            $room['activeBooking'] = retail_active_booking($pdo, (string)$room['id']);
+        }
+        unset($room);
         json_response([
             'products' => $pdo->query('SELECT id,name,price,is_active FROM retail_products WHERE is_active=1 ORDER BY name,id')->fetchAll(),
-            'rooms' => $pdo->query("SELECT id,name FROM rooms WHERE status='ACTIVE' AND is_active=1 ORDER BY sort_order,name,id")->fetchAll(),
+            'rooms' => $rooms,
         ]);
     }
     if ($path === '/api/admin/products' && $method === 'GET') {
@@ -29,12 +34,12 @@ function retail_api(string $path, string $method): never
         $offset = ($page - 1) * 30;
         $search = trim((string)($_GET['q'] ?? ''));
         if (mb_strlen($search) > 150) throw new BookingException('Từ khóa tối đa 150 ký tự.', 422);
-        $where = $search !== '' ? ' WHERE (room_name_snapshot LIKE ? OR sale_code LIKE ?)' : '';
-        $params = $search !== '' ? ['%' . $search . '%', '%' . $search . '%'] : [];
+        $where = $search !== '' ? ' WHERE (room_name_snapshot LIKE ? OR sale_code LIKE ? OR booking_code_snapshot LIKE ?)' : '';
+        $params = $search !== '' ? ['%' . $search . '%', '%' . $search . '%', '%' . $search . '%'] : [];
         $count = $pdo->prepare('SELECT COUNT(*) FROM retail_sales' . $where);
         $count->execute($params);
         $total = (int)$count->fetchColumn();
-        $query = $pdo->prepare('SELECT id,sale_code,total,listed_total,status,created_by,created_at,paid_at,room_id,room_name_snapshot FROM retail_sales'
+        $query = $pdo->prepare('SELECT id,sale_code,total,listed_total,status,created_by,created_at,paid_at,room_id,room_name_snapshot,booking_id,booking_code_snapshot FROM retail_sales'
             . $where . ' ORDER BY created_at DESC,id DESC LIMIT 30 OFFSET ' . $offset);
         $query->execute($params);
         $rows = $query->fetchAll();
