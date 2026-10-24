@@ -47,10 +47,10 @@
         const staff = root.dataset.staff === "true";
         const roomId = root.dataset.roomId;
         const abilities = window.LANG_HOME?.abilities || [];
-        const canRead = abilities.includes("availability.view");
-        const canLock = abilities.includes("availability.lock");
-        const canCheckout = abilities.includes("availability.checkout");
-        const canHold = abilities.includes("availability.hold");
+        const canRead = staff && abilities.includes("availability.view");
+        const canLock = staff && abilities.includes("availability.lock");
+        const canCheckout = staff && abilities.includes("availability.checkout");
+        const canHold = staff && abilities.includes("availability.hold");
         const dateInput = one("[data-timeline-date]");
         const daysInput = one("[data-timeline-days]");
         const status = one("[data-timeline-status]");

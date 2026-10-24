@@ -200,7 +200,7 @@ function render_header(): void
                                                                                                                                                                                         {
                                                                                                                                                                                             return $package['mode'] === 'FIXED_TIME' ? substr((string)$package['checkInTime'], 0, 5) . ' – ' . substr((string)$package['checkOutTime'], 0, 5) : ((int)$package['durationMinutes'] >= 60 && ((int)$package['durationMinutes'] % 60 === 0) ? ((int)$package['durationMinutes'] / 60) . ' giờ' : (int)$package['durationMinutes'] . ' phút');
                                                                                                                                                                                         }
-function render_package_sale_price(array $package): void
+function render_package_sale_price(array $package, bool $showBadge = true): void
 {
     $base = (int)($package['basePrice'] ?? $package['price']);
     $price = (int)$package['price'];
@@ -208,7 +208,7 @@ function render_package_sale_price(array $package): void
     $sale = $percent > 0 && $base > $price;
     ?>
     <span class="inline-flex flex-col items-start gap-1">
-        <?php if ($sale): ?>
+        <?php if ($sale && $showBadge): ?>
             <span class="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Giảm <?= $percent ?>%</span>
         <?php endif ?>
         <span class="inline-flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -220,21 +220,38 @@ function render_package_sale_price(array $package): void
 }
 
 function render_room_cards(bool $liveAvailability = false): void
-                                                                                                                                                                                        {
-                                                                                                                                                                                            $catalog = array_values(rooms()); ?>
-    <div class="room-grid" data-public-room-grid <?= $liveAvailability ? 'hidden aria-busy="true"' : '' ?>><?php foreach ($catalog as $index => $room): $packages = array_values(array_filter($room['packages'] ?? [], fn($package) => $package['enabled']));
-                                                                                                                                                                                                $minimum = $packages ? min(array_column($packages, 'price')) : null;
-    $minimumPackage = null;
-    foreach ($packages as $candidate) {
-        if ($candidate['price'] === $minimum) {
-            $minimumPackage = $candidate;
-            break;
-        }
-    }
-                                                                                                                                                                                                $coming = $room['status'] === 'COMING_SOON'; ?><article class="room-card room-product-card <?= $coming ? 'coming-soon' : '' ?>" data-room-card-id="<?= e($room['id']) ?>">
-                <div class="room-image"><a href="/rooms/<?= e($room['slug']) ?>"><img src="<?= e($room['image']) ?>" alt="Phòng <?= e($room['name']) ?>" loading="lazy"></a><?php if ($coming): ?><span class="room-status-badge">Sắp ra mắt</span><?php elseif ($room['tag']): ?><span class="room-tag"><svg class="icon icon-tabler icon-tabler-sparkles" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6" />
-                            </svg><?= e($room['tag']) ?></span><?php endif ?><span class="room-photo-count">▧ 1/<?= max(1, count($room['images'] ?? [])) ?></span></div>
+{
+    $catalog = array_values(rooms());
+    ?>
+    <div class="room-grid" data-public-room-grid <?= $liveAvailability ? 'aria-busy="true"' : '' ?>>
+        <?php foreach ($catalog as $index => $room):
+            $packages = array_values(array_filter($room['packages'] ?? [], fn($package) => $package['enabled']));
+            $minimum = $packages ? min(array_column($packages, 'price')) : null;
+            $minimumPackage = null;
+            foreach ($packages as $candidate) {
+                if ($candidate['price'] === $minimum) {
+                    $minimumPackage = $candidate;
+                    break;
+                }
+            }
+            $discountPercent = (int)($minimumPackage['effectiveDiscountPercent'] ?? 0);
+            $hasDiscount = $minimumPackage !== null && $discountPercent > 0
+                && (int)($minimumPackage['basePrice'] ?? $minimumPackage['price']) > (int)$minimumPackage['price'];
+            $coming = $room['status'] === 'COMING_SOON';
+            ?>
+            <article class="room-card room-product-card relative <?= $coming ? 'coming-soon' : '' ?>" data-room-card-id="<?= e($room['id']) ?>">
+                <?php if ($liveAvailability && !$coming): ?>
+                    <span class="home-room-availability" data-room-availability data-state="unknown">Đang kiểm tra…</span>
+                <?php endif ?>
+                <div class="room-image">
+                    <a href="/rooms/<?= e($room['slug']) ?>"><img src="<?= e($room['image']) ?>" alt="Phòng <?= e($room['name']) ?>" loading="lazy"></a>
+                    <?php if ($coming): ?>
+                        <span class="room-status-badge">Sắp ra mắt</span>
+                    <?php elseif ($hasDiscount): ?>
+                        <span class="room-discount-corner">Giảm <?= $discountPercent ?>%</span>
+                    <?php endif ?>
+                    <span class="room-photo-count">▧ 1/<?= max(1, count($room['images'] ?? [])) ?></span>
+                </div>
                 <div class="room-body">
                     <div class="room-title">
                         <h3><a href="/rooms/<?= e($room['slug']) ?>"><?= e($room['name']) ?></a></h3><span><?= str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT) ?></span>
@@ -258,7 +275,7 @@ function render_room_cards(bool $liveAvailability = false): void
                                 <path d="M3 12h18v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5ZM6 12V5a2 2 0 0 1 4 0M6 20v2m12-2v2" />
                             </svg><?= e($room['bathrooms']) ?> phòng tắm</span></div>
                     <div class="room-price">
-                        <div><?php if ($minimum !== null): ?><small>Từ</small><?php render_package_sale_price($minimumPackage); ?><?php else: ?><span>Liên hệ để biết giá</span><?php endif ?></div><?php if ($coming): ?><span class="disabled-action" aria-disabled="true">Sắp mở</span><?php else: ?><a href="/bookings?room=<?= e($room['id']) ?>" aria-label="Đặt <?= e($room['name']) ?>">→</a><?php endif ?>
+                        <div><?php if ($minimum !== null): ?><small>Từ</small><?php render_package_sale_price($minimumPackage, false); ?><?php else: ?><span>Liên hệ để biết giá</span><?php endif ?></div><?php if ($coming): ?><span class="disabled-action" aria-disabled="true">Sắp mở</span><?php else: ?><a href="/bookings?room=<?= e($room['id']) ?>" aria-label="Đặt <?= e($room['name']) ?>">→</a><?php endif ?>
                     </div>
                 </div>
             </article><?php endforeach ?><?php if (!$catalog): ?><div class="empty-state">
@@ -717,7 +734,7 @@ function render_room(array $r): void
                 <div class="form-grid booking-primary-fields"><label class="field">Không gian<select name="roomId"><?php foreach ($active as $r): ?><option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option><?php endforeach ?></select></label><label class="field">Ngày ghé Mơ<input name="date" type="date" min="<?= date('Y-m-d') ?>" required></label></div>
                 <fieldset class="booking-slot-section" data-slot-section tabindex="-1">
                     <legend><span>02</span><strong>Chọn khung giờ</strong></legend>
-                    <p class="mb-3 text-sm text-stone-600">Gói giờ cố định vẫn nhận muộn nếu còn trống. Giờ trả và giá gói giữ nguyên.</p>
+                    <p class="mb-3 text-sm text-stone-600">Từ 21:00 chỉ nhận gói qua đêm. Gói nhận trước 21:00 vẫn được trả sau giờ này nếu không trùng lịch. Giờ trả và giá gói cố định giữ nguyên.</p>
                     <div class="slot-status-legend" aria-label="Chú thích trạng thái"><span><i class="is-available"></i>Còn trống</span><span><i class="is-selected"></i>Đang chọn</span><span><i class="is-booked"></i>Đã đặt</span></div>
                     <div class="booking-slot-grid" data-slot-grid aria-live="polite" aria-busy="true">
                         <div class="slot-skeleton"></div>

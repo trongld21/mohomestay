@@ -33,16 +33,16 @@ assert.equal(slotState(afternoon, [], new Date('2027-01-15T07:00:00Z')), 'availa
 assert.equal(slotState(afternoon, [], new Date('2027-01-15T09:00:00Z')), 'past', 'ended fixed slot is unavailable');
 const lateNow = new Date('2027-01-15T14:30:00Z');
 const late = slotWindow({mode: 'FIXED_TIME', checkInTime: '21:00', checkOutTime: '09:00'}, '2027-01-15', '', lateNow);
-assert.equal(late.start.toISOString(), '2027-01-15T14:30:00.000Z');
+assert.equal(late.start.toISOString(), '2027-01-15T14:00:00.000Z');
 assert.equal(late.end.toISOString(), '2027-01-16T02:00:00.000Z');
-assert.equal(slotState(late, [{start:'2027-01-15T14:00:00Z', end:'2027-01-15T14:29:00Z'}], lateNow), 'available', 'Past occupied portion does not block late arrival');
+assert.equal(slotState(late, [{start:'2027-01-15T14:00:00Z', end:'2027-01-15T14:29:00Z'}], lateNow), 'booked', 'Original overnight window must not overlap another booking');
 assert.equal(slotState(late, [{start:'2027-01-15T15:00:00Z', end:'2027-01-15T16:00:00Z'}], lateNow), 'booked', 'Future overlap still blocks late arrival');
 assert.equal(slotState(duration, [], new Date('2027-01-15T08:00:00Z')), 'past', 'Duration slots still require future start');
 
 const nightPackage = { mode: 'FIXED_TIME', checkInTime: '21:00', checkOutTime: '09:00' };
 const earlyNow = new Date('2026-10-24T00:50:25+07:00');
-const remainingNight = slotWindow(nightPackage, '2026-10-24', '', earlyNow);
-assert.equal(remainingNight.start.toISOString(), '2026-10-23T17:51:00.000Z', 'Today after midnight starts at the next minute');
+const remainingNight = slotWindow(nightPackage, '2026-10-23', '', earlyNow);
+assert.equal(remainingNight.start.toISOString(), '2026-10-23T14:00:00.000Z', 'Previous night retains scheduled evening');
 assert.equal(remainingNight.end.toISOString(), '2026-10-24T02:00:00.000Z', 'Today after midnight checks out this morning');
 assert.equal(slotState(remainingNight, [{ start: '2026-10-23T15:00:00Z', end: '2026-10-24T01:00:00Z' }], earlyNow), 'booked', 'An existing overnight stay blocks the remaining night');
 assert.equal(slotState(remainingNight, [{ start: '2026-10-24T02:30:00Z', end: '2026-10-24T05:00:00Z', status: 'CONFIRMED' }], earlyNow), 'booked', 'Remaining overnight stay preserves the one-hour cleaning gap before the next guest');
@@ -52,6 +52,70 @@ assert.equal(tomorrowNight.start.toISOString(), '2026-10-25T14:00:00.000Z', 'Fut
 const afterCheckout = slotWindow(nightPackage, '2026-10-24', '', new Date('2026-10-24T09:00:00+07:00'));
 assert.equal(afterCheckout.start.toISOString(), '2026-10-24T14:00:00.000Z', 'At checkout today refers to tonight again');
 const lastMinuteNow = new Date('2026-10-24T08:59:30+07:00');
-assert.equal(slotState(slotWindow(nightPackage, '2026-10-24', '', lastMinuteNow), [], lastMinuteNow), 'past', 'A remaining night needs at least one valid check-in minute');
+assert.equal(slotState(slotWindow(nightPackage, '2026-10-23', '', lastMinuteNow), [], lastMinuteNow), 'available', 'Previous night preserves its full window until checkout');
 
 console.log('Booking slot behavior tests: OK');
+
+const nightRoom = { packages: [{ ...nightPackage, enabled: true }] };
+assert.equal(globalThis.MoBookingSlots.earliestBookingDate(nightRoom, earlyNow), '2026-10-23');
+assert.equal(globalThis.MoBookingSlots.earliestBookingDate(nightRoom, new Date('2026-10-24T09:00:00+07:00')), '2026-10-23');
+assert.equal(globalThis.MoBookingSlots.earliestBookingDate({ packages: [] }, earlyNow), '2026-10-24');
+const previousNight = slotWindow(nightPackage, '2026-10-23', '', earlyNow);
+assert.equal(previousNight.end.toISOString(), remainingNight.end.toISOString());
+assert.equal(previousNight.start.toISOString(), remainingNight.start.toISOString());
+assert.equal(slotState(slotWindow(nightPackage, '2026-10-22', '', earlyNow), [], earlyNow), 'past');
+console.log('Previous-day booking is limited to an ongoing overnight package: OK');
+
+for (const checkInTime of ['22:00', '10:00']) {
+    const testNow = new Date('2027-01-15T00:00:00+07:00');
+    const night = slotWindow({ mode: 'FIXED_TIME', checkInTime, checkOutTime: '10:00' }, '2027-01-15', '', testNow);
+    assert.equal(night.end.toISOString(), '2027-01-16T03:00:00.000Z');
+    const occupied = [
+        { start: night.start.toISOString(), end: night.end.toISOString(), status: 'CONFIRMED' },
+        { start: night.end.toISOString(), end: new Date(night.end.getTime() + 3600000).toISOString(), status: 'CLEANING' },
+    ];
+    for (const durationMinutes of [180, 360]) {
+        const hourly = slotWindow({ mode: 'DURATION', durationMinutes }, '2027-01-16', '01:00', testNow);
+        assert.equal(slotState(hourly, occupied, testNow), 'booked');
+        assert.equal(slotState(night, [{ start: hourly.start.toISOString(), end: hourly.end.toISOString(), status: 'CONFIRMED' }], testNow), 'booked');
+        const cleaning = slotWindow({ mode: 'DURATION', durationMinutes }, '2027-01-16', '10:30', testNow);
+        assert.equal(slotState(cleaning, occupied, testNow), 'booked');
+        const afterCleaning = slotWindow({ mode: 'DURATION', durationMinutes }, '2027-01-16', '11:00', testNow);
+        assert.equal(slotState(afterCleaning, occupied, testNow), 'available');
+    }
+}
+console.log('Overnight and 24-hour packages block 3h/6h conflicts in both directions: OK');
+
+const fullDayNow = new Date('2027-01-15T00:00:00+07:00');
+const fullDayIntervals = [
+    { start: '2027-01-14T17:00:00Z', end: '2027-01-15T17:00:00Z', status: 'CONFIRMED' },
+    { start: '2027-01-15T17:00:00Z', end: '2027-01-15T18:00:00Z', status: 'CLEANING' },
+];
+for (const durationMinutes of [180, 360, 1440]) {
+    const slot = { mode: 'DURATION', durationMinutes };
+    assert.equal(globalThis.MoBookingSlots.durationDayState(slot, '2027-01-15', fullDayIntervals, fullDayNow), 'booked');
+    assert.equal(globalThis.MoBookingSlots.durationDayState(slot, '2027-01-15', [], fullDayNow), 'available');
+    assert.equal(globalThis.MoBookingSlots.durationDayState(slot, '2027-01-14', [], fullDayNow), 'past');
+}
+console.log('Full-day occupancy disables duration packages before a time is selected: OK');
+
+for (const durationMinutes of [180, 360, 1440]) {
+    const slot = { mode: 'DURATION', durationMinutes };
+    assert.equal(slotState(slotWindow(slot, '2027-01-15', '20:59', fullDayNow), [], fullDayNow), 'available');
+    assert.equal(slotState(slotWindow(slot, '2027-01-15', '21:00', fullDayNow), [], fullDayNow), 'restricted');
+    assert.equal(slotState(slotWindow(slot, '2027-01-15', '23:00', fullDayNow), [], fullDayNow), 'restricted');
+    assert.equal(globalThis.MoBookingSlots.durationDayState(slot, '2027-01-15', [], new Date('2027-01-15T21:00:00+07:00')), 'restricted');
+    const eveningNow = new Date('2027-01-15T22:00:00+07:00');
+    assert.equal(slotState(slotWindow(slot, '2027-01-16', '14:00', eveningNow), [], eveningNow), 'available');
+}
+assert.equal(slotState(slotWindow({ mode: 'FIXED_TIME', checkInTime: '22:00', checkOutTime: '10:00' }, '2027-01-15', '', fullDayNow), [], fullDayNow), 'available');
+console.log('21:00 cutoff follows arrival time, allows pre-cutoff stays ending later, and preserves overnight packages: OK');
+
+const regular = { mode: 'DURATION', durationMinutes: 180 };
+const beforeNine = new Date('2027-01-15T20:59:59+07:00');
+const atNine = new Date('2027-01-15T21:00:00+07:00');
+assert.equal(globalThis.MoBookingSlots.currentTimeRestricted(regular, '2027-01-15', beforeNine), false);
+assert.equal(globalThis.MoBookingSlots.currentTimeRestricted(regular, '2027-01-15', atNine), true);
+assert.equal(globalThis.MoBookingSlots.currentTimeRestricted(regular, '2027-01-16', atNine), false);
+assert.equal(globalThis.MoBookingSlots.currentTimeRestricted(nightPackage, '2027-01-15', atNine), false);
+console.log('Website current clock locks today regular packages from 21:00, preserving tomorrow and overnight: OK');

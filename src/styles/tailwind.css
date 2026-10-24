@@ -72,6 +72,45 @@
 [data-room-card-id][hidden] {
     @apply hidden;
 }
+.room-card.room-product-card,
+.room-card.room-product-card .room-image {
+    @apply rounded-lg;
+}
+.home-room-availability {
+    @apply absolute right-0 top-0 z-10 inline-flex w-fit rounded-bl-lg rounded-tr-[2px] border border-[#d8d0c4] bg-[#f3eee6] px-4 py-2 text-xs font-semibold leading-5 text-[#655c50];
+}
+.home-room-availability[data-state="available"] {
+    @apply bg-[#596747];
+}
+.home-room-availability[data-state="available"],
+.home-room-availability[data-state="unavailable"] {
+    @apply block size-24 rounded-none border-0 pb-0 pl-0 pr-1.5 pt-5 text-right text-[10px] leading-4 text-white;
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+.home-room-availability[data-state="unavailable"] {
+    @apply bg-[#b43c2d];
+}
+.home-room-availability[data-state="available"]::before,
+.home-room-availability[data-state="unavailable"]::before {
+    content: "";
+    @apply pointer-events-none absolute inset-0 bg-[#ef997d];
+    clip-path: polygon(0 0, 4% 0, 100% 96%, 100% 100%);
+}
+.home-room-availability[data-state="available"]::before {
+    @apply bg-[#aeb991];
+}
+.home-room-availability[data-state="available"]::after,
+.home-room-availability[data-state="unavailable"]::after {
+    content: "";
+    @apply absolute right-3 top-1 size-4;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 3 18 18M3 7v13m0-3h13m4 0h1v-4H12M7 10H3v3h5m-1-3V7h2m4 0h4a4 4 0 0 1 4 4v2M21 17v3'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.home-room-availability[data-state="available"]::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7v13m0-3h18v3M3 13h18v4M7 13V8h10a4 4 0 0 1 4 4v1M7 10H3'/%3E%3C/svg%3E");
+}
+.room-discount-corner {
+    @apply absolute left-0 top-0 z-10 inline-flex rounded-br-lg rounded-tl-lg bg-[#ff7a14] px-4 py-2 text-xs font-semibold leading-5 text-white;
+}
 
 .home-location {
     @apply relative isolate overflow-hidden border-y border-[#e5ded2] bg-[#f3efe7] py-12 text-[#3e3025] selection:bg-[#d8ddc9] selection:text-[#34412e] sm:py-16 lg:py-24;
