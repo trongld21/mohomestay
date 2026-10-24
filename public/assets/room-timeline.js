@@ -41,7 +41,7 @@
     }
 
     window.MoRoomTimeline = { freeWindows, cellState, overlaps };
-    const labels = { free: "Trống", booked: "Đã đặt", blocked: "Đang khóa", past: "Đã qua", inactive: "Ngưng nhận", cleaning: "Bận", held: "Đang giữ" };
+    const labels = { free: "Trống", booked: "Đã đặt", blocked: "Đang khóa", past: "Đã qua", inactive: "Ngưng nhận", cleaning: "Dọn phòng", held: "Đang giữ" };
     document.querySelectorAll("[data-room-timeline]").forEach((root) => {
         const one = (s) => root.querySelector(s);
         const staff = root.dataset.staff === "true";
@@ -50,7 +50,7 @@
         const canRead = staff && abilities.includes("availability.view");
         const canLock = staff && abilities.includes("availability.lock");
         const canCheckout = staff && abilities.includes("availability.checkout");
-        const canHold = staff && abilities.includes("availability.hold");
+        const canHold = abilities.includes("availability.hold");
         const dateInput = one("[data-timeline-date]");
         const daysInput = one("[data-timeline-days]");
         const status = one("[data-timeline-status]");
@@ -58,6 +58,14 @@
         const dialog = one("[data-timeline-dialog]");
         const body = one("[data-checkout-body]");
         const search = one("[data-timeline-search]");
+        const bookingPanel = one("[data-timeline-booking]");
+        const packageList = one("[data-timeline-packages]");
+        const packageStatus = one("[data-timeline-package-status]");
+        const bookingSummary = one("[data-timeline-booking-summary]");
+        const bookingConfirm = one("[data-timeline-booking-confirm]");
+        let choiceController = null;
+        let bookingChoice = null;
+        let packageOptions = [];
         let snapshot = null;
         let controller = null;
         let currentBooking = null;
@@ -149,6 +157,148 @@
             });
         }
 
+        function paintBookingChoice() {
+            grid.querySelectorAll("[data-slot-start]").forEach((cell) => {
+                const selected = bookingChoice?.selected;
+                const start = Number(cell.dataset.slotStart);
+                const included = !!selected && cell.dataset.slotRoom === bookingChoice.room.id
+                    && start < timestamp(selected.end) && start + 3600000 > timestamp(selected.start);
+                cell.dataset.selected = String(included);
+                cell.setAttribute("aria-pressed", String(included));
+            });
+        }
+
+        function clearBookingChoice() {
+            choiceController?.abort();
+            choiceController = null;
+            bookingChoice = null;
+            packageOptions = [];
+            bookingPanel.hidden = true;
+            packageList.innerHTML = "";
+            bookingSummary.hidden = true;
+            bookingConfirm.hidden = true;
+            bookingConfirm.disabled = false;
+            paintBookingChoice();
+        }
+
+        function renderPackageOptions() {
+            packageList.innerHTML = packageOptions.map((option) => `<button class="timeline-package" type="button" data-timeline-package="${escape(option.id)}" aria-pressed="${bookingChoice?.selected?.id === option.id}">
+                <strong>${escape(option.name)}</strong>
+                <span>${escape(dateTime(option.start))} – ${escape(dateTime(option.end))}</span>
+                <span class="font-semibold">${cash(option.price)}</span>
+            </button>`).join("");
+        }
+
+        async function selectBookingPackage(option) {
+            bookingChoice.selected = option;
+            renderPackageOptions();
+            const selectedButton = [...packageList.querySelectorAll("[data-timeline-package]")]
+                .find((button) => button.dataset.timelinePackage === option.id);
+            selectedButton?.focus({ preventScroll: true });
+            paintBookingChoice();
+            bookingSummary.textContent = `${bookingChoice.room.name} · ${option.name} · ${dateTime(option.start)} – ${dateTime(option.end)} · ${cash(option.price)}`;
+            bookingSummary.hidden = false;
+            const choice = bookingChoice;
+            const active = choiceController;
+            if (timestamp(option.end) > timestamp(snapshot.rangeEnd)) {
+                bookingConfirm.hidden = true;
+                packageStatus.textContent = "Đang tải thêm ngày để hiển thị toàn bộ khung giờ đã chọn…";
+                try {
+                    const days = Math.ceil((timestamp(option.end) - timestamp(snapshot.rangeStart)) / 86400000);
+                    const query = new URLSearchParams({ date: dateInput.value, days: String(days) });
+                    const expanded = await request("/api/availability?" + query, "GET", null, active.signal);
+                    if (choiceController !== active || bookingChoice !== choice || choice.selected !== option) return;
+                    if (expanded.connected !== true) throw new Error("Chưa xác minh được lịch phòng.");
+                    expanded.rooms.forEach((room) => {
+                        const previous = snapshot.rooms.find((item) => item.id === room.id);
+                        room.name = previous?.name || room.id;
+                        room.slug = previous?.slug || room.id;
+                        room.image = previous?.image;
+                    });
+                    snapshot = { ...snapshot, ...expanded };
+                    let range = daysInput.querySelector("[data-selection-range]");
+                    if (!range) {
+                        range = document.createElement("option");
+                        range.dataset.selectionRange = "true";
+                        daysInput.append(range);
+                    }
+                    range.value = String(days);
+                    range.textContent = days + " ngày";
+                    daysInput.value = String(days);
+                    renderGrid();
+                    paintBookingChoice();
+                } catch (error) {
+                    if (active.signal.aborted || choiceController !== active || choice.selected !== option) return;
+                    packageStatus.textContent = "Chưa hiển thị được toàn bộ khung giờ: " + error.message;
+                    return;
+                }
+            }
+            if (bookingChoice !== choice || choice.selected !== option) return;
+            bookingConfirm.hidden = false;
+            packageStatus.textContent = "Các ô màu nâu là thời gian lưu trú đã chọn. Lịch sẽ được kiểm tra lại khi xác nhận.";
+        }
+
+        async function chooseBookingHour(room, start) {
+            clearBookingChoice();
+            const active = new AbortController();
+            choiceController = active;
+            const local = localStamp(start);
+            bookingChoice = { room, start, date: local.slice(0, 10), time: local.slice(11, 16), selected: null };
+            bookingPanel.hidden = false;
+            bookingPanel.scrollIntoView({ block: "nearest", behavior: "instant" });
+            one("[data-timeline-package-title]").textContent = `${room.name} · ${dateTime(start)} · Chọn gói khả dụng`;
+            packageStatus.textContent = "Đang kiểm tra các gói và toàn bộ lịch lưu trú…";
+            try {
+                const query = new URLSearchParams({ roomId: room.id, date: bookingChoice.date, time: bookingChoice.time });
+                const result = await request("/api/availability/packages?" + query, "GET", null, active.signal);
+                if (choiceController !== active) return;
+                packageOptions = result.packages;
+                renderPackageOptions();
+                packageStatus.textContent = packageOptions.length
+                    ? "Chọn một gói để xem khung giờ trên lịch. Giá hiển thị là giá trọn gói."
+                    : "Không có gói khả dụng bắt đầu trong ô giờ này. Vui lòng chọn giờ hoặc phòng khác.";
+            } catch (error) {
+                if (active.signal.aborted || choiceController !== active) return;
+                packageStatus.textContent = "Chưa xác minh được gói khả dụng: " + error.message;
+            }
+        }
+
+        async function confirmBookingChoice() {
+            if (!bookingChoice?.selected || bookingConfirm.disabled) return;
+            const choice = bookingChoice;
+            const active = choiceController;
+            const selected = choice.selected;
+            bookingConfirm.disabled = true;
+            packageList.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+            packageStatus.textContent = "Đang kiểm tra lại lịch trước khi tiếp tục…";
+            try {
+                const query = new URLSearchParams({ roomId: choice.room.id, date: choice.date, time: choice.time });
+                const result = await request("/api/availability/packages?" + query, "GET", null, active.signal);
+                if (choiceController !== active || bookingChoice !== choice) return;
+                const fresh = result.packages.find((option) => option.id === selected.id);
+                if (!fresh || fresh.start !== selected.start || fresh.end !== selected.end || fresh.price !== selected.price) {
+                    packageOptions = result.packages;
+                    choice.selected = null;
+                    renderPackageOptions();
+                    paintBookingChoice();
+                    bookingSummary.hidden = true;
+                    bookingConfirm.hidden = true;
+                    packageStatus.textContent = "Gói hoặc lịch phòng vừa thay đổi. Vui lòng chọn lại một gói khả dụng.";
+                    return;
+                }
+                const params = new URLSearchParams({ room: choice.room.id, package: fresh.id, date: fresh.date, time: fresh.time, fromTimeline: "1" });
+                location.href = "/bookings?" + params;
+            } catch (error) {
+                if (active.signal.aborted || choiceController !== active) return;
+                packageStatus.textContent = "Chưa xác minh được lịch: " + error.message;
+            } finally {
+                if (choiceController === active) {
+                    bookingConfirm.disabled = false;
+                    packageList.querySelectorAll("button").forEach((button) => { button.disabled = false; });
+                }
+            }
+        }
+
         function renderGrid() {
             const rooms = snapshot.rooms.filter((r) => !roomId || r.id === roomId);
             const start = timestamp(snapshot.rangeStart);
@@ -165,21 +315,21 @@
                     for (let slot = 0; slot < 24; slot++) {
                         const a = dayStart + slot * 3600000;
                         const state = cellState(room, a, a + 3600000, now);
-                        const hour = String(slot).padStart(2, "0") + ":00";
+                        const hour = `${String(slot).padStart(2, "0")}:00–${String(slot + 1).padStart(2, "0")}:00`;
                         const label = `${room.name} · ${date} ${hour} · ${labels[state]}`;
-                        rows += `<td><button type="button" class="timeline-cell" data-state="${state}" data-slot-start="${a}" data-slot-room="${escape(room.id)}" aria-label="${escape(label)}" title="${escape(label)}">${state === "free" ? "Trống" : state === "booked" ? "Bận" : state === "blocked" ? "Khóa" : state === "cleaning" ? "Bận" : state === "held" ? "Giữ" : "—"}</button></td>`;
+                        rows += `<td><button type="button" class="timeline-cell" data-state="${state}" data-slot-start="${a}" data-slot-room="${escape(room.id)}" aria-label="${escape(label)}" title="${escape(label)}">${state === "free" ? "Trống" : state === "booked" ? "Bận" : state === "blocked" ? "Khóa" : state === "cleaning" ? "Dọn phòng" : state === "held" ? "Giữ" : "—"}</button></td>`;
                     }
                     rows += "</tr>";
                 });
             }
             grid.innerHTML = `<table class="timeline-table"><caption class="sr-only">Lịch phòng theo từng ô 1 giờ, giờ Việt Nam. Ô bận có thể chỉ bận một phần, bấm để xem chính xác.</caption>
-                <thead><tr><th class="timeline-row-heading" scope="col">Ngày${staff ? " / Phòng" : ""}</th>${Array.from({ length: 24 }, (_, i) => `<th scope="col">${String(i).padStart(2, "0")}:00</th>`).join("")}</tr></thead>
+                <thead><tr><th class="timeline-row-heading" scope="col">Ngày${staff ? " / Phòng" : ""}</th>${Array.from({ length: 24 }, (_, i) => `<th class="whitespace-nowrap" scope="col">${String(i).padStart(2, "0")}:00–${String(i + 1).padStart(2, "0")}:00</th>`).join("")}</tr></thead>
                 <tbody>${rows || '<tr><td>Không tìm thấy phòng.</td></tr>'}</tbody></table>`;
         }
 
         function renderStays() {
             const section = one("[data-timeline-operations]");
-            if (!canRead || (!canLock && !canCheckout && !canHold)) return;
+            if (!canRead || (!canLock && !canCheckout)) return;
             section.hidden = false;
             const bookings = (snapshot.bookings || []).filter((b) => (!roomId || b.room_id === roomId)
                 && b.status !== "CANCELLED" && (b.status === "CHECKED_IN" || Number(b.surcharge_amount) > 0));
@@ -199,20 +349,39 @@
                     </div>
                 </article>`;
             }).join("") || '<p class="text-sm text-[#736b61]">Chưa có khách đang lưu trú hoặc khoản phụ thu.</p>';
-            if (canHold) {
-                const holds = (snapshot.quoteHolds || []).filter((h) => !roomId || h.room_id === roomId);
-                holds.forEach((h) => {
-                    one("[data-timeline-stays]").insertAdjacentHTML("beforeend",
-                        '<article class="rounded-xl border border-sky-200 bg-sky-50 p-3"><h4 class="font-semibold">Đang giữ để báo giá</h4>'
-                        + '<p class="mt-1 text-sm">' + escape(dateTime(utc(h.starts_at))) + ' – ' + escape(dateTime(utc(h.ends_at))) + '</p>'
-                        + '<p class="mt-1 text-sm">Tự mở lúc ' + escape(dateTime(utc(h.expires_at))) + '</p>'
-                        + '<button type="button" class="timeline-button mt-3" data-release-hold="' + escape(h.id) + '">Mở lại khung giờ</button></article>');
-                });
+        }
+
+        async function loadQuoteHolds(active) {
+            if (!canHold) return;
+            const section = one("[data-timeline-holds-section]");
+            const list = one("[data-timeline-holds]");
+            const message = one("[data-timeline-holds-status]");
+            section.hidden = false;
+            list.innerHTML = "";
+            message.textContent = "Đang tải các khung giờ đang giữ…";
+            try {
+                const query = new URLSearchParams({ roomId });
+                const result = await request("/api/admin/room-operations/holds?" + query, "GET", null, active.signal);
+                if (controller !== active) return;
+                message.textContent = result.holds.length ? "Bấm Mở khóa để trả khung giờ về trạng thái trống." : "Không có khung giờ đang giữ.";
+                list.innerHTML = result.holds.map((hold) => {
+                    const name = snapshot.rooms.find((room) => room.id === hold.room_id)?.name || hold.room_id;
+                    return `<article class="rounded-xl border border-sky-200 bg-white p-3">
+                        <h4 class="font-semibold">${escape(name)}</h4>
+                        <p class="mt-1 text-sm">${escape(dateTime(utc(hold.starts_at)))} – ${escape(dateTime(utc(hold.ends_at)))}</p>
+                        <p class="mt-1 text-sm">Tự mở lúc ${escape(dateTime(utc(hold.expires_at)))}</p>
+                        <button type="button" class="timeline-button mt-3" data-release-hold="${escape(hold.id)}">Mở khóa</button>
+                    </article>`;
+                }).join("");
+            } catch (error) {
+                if (active.signal.aborted || controller !== active) return;
+                message.textContent = "Chưa tải được danh sách mở khóa: " + error.message;
             }
         }
 
         async function load() {
             if (!dateInput.value) return;
+            clearBookingChoice();
             controller?.abort();
             const active = new AbortController();
             controller = active;
@@ -224,6 +393,10 @@
             status.textContent = "Đang kết nối lịch phòng…";
             try {
                 const query = new URLSearchParams({ date: dateInput.value, days: daysInput.value });
+                if (canRead && Number(daysInput.value) > 14) {
+                    daysInput.value = "7";
+                    query.set("days", "7");
+                }
                 const result = await request((canRead ? "/api/admin/room-operations" : "/api/availability") + "?" + query, "GET", null, active.signal);
                 if (controller !== active) return;
                 if (result.connected !== true) throw new Error("Chưa xác minh được dữ liệu lịch phòng.");
@@ -237,6 +410,8 @@
                 renderGrid();
                 showResults();
                 renderStays();
+                await loadQuoteHolds(active);
+                if (controller !== active) return;
                 status.textContent = staff ? "" : `Cập nhật ${dateTime(result.serverTime)} · Cuộn ngang để xem các giờ.`;
                 status.hidden = staff;
                 if (staff && pendingBookingId) {
@@ -294,14 +469,32 @@
         }
 
         root.addEventListener("click", async (event) => {
+            const packageButton = event.target.closest("[data-timeline-package]");
+            if (packageButton && bookingChoice && !bookingConfirm.disabled) {
+                const option = packageOptions.find((item) => item.id === packageButton.dataset.timelinePackage);
+                if (option) await selectBookingPackage(option);
+                return;
+            }
+            if (event.target.closest("[data-timeline-booking-confirm]")) {
+                await confirmBookingChoice();
+                return;
+            }
+            if (event.target.closest("[data-timeline-booking-cancel]")) {
+                clearBookingChoice();
+                return;
+            }
             const slot = event.target.closest("[data-slot-start]");
             if (slot && snapshot) {
+                clearBookingChoice();
                 const a = Number(slot.dataset.slotStart);
                 const room = snapshot.rooms.find((r) => r.id === slot.dataset.slotRoom);
                 const intervals = room.intervals.filter((i) => overlaps(a, a + 3600000, i));
                 one("[data-timeline-selection]").textContent = `${room.name} · ${dateTime(a)}: `
-                    + (intervals.length ? intervals.map((i) => `${i.status === "BLOCKED" ? "Đang khóa" : i.status === "CLEANING" ? "Bận" : i.status === "HELD" ? "Đang giữ" : "Đã đặt"} ${dateTime(i.start)} – ${dateTime(i.end)}`).join("; ")
+                    + (intervals.length ? intervals.map((i) => `${i.status === "BLOCKED" ? "Đang khóa" : i.status === "CLEANING" ? "Dọn phòng" : i.status === "HELD" ? "Đang giữ" : "Đã đặt"} ${dateTime(i.start)} – ${dateTime(i.end)}`).join("; ")
                         : labels[cellState(room, a, a + 3600000, timestamp(snapshot.serverTime))]);
+                if (cellState(room, a, a + 3600000, timestamp(snapshot.serverTime)) === "free") {
+                    await chooseBookingHour(room, a);
+                }
                 return;
             }
             const cancelSurcharge = event.target.closest("[data-cancel-surcharge]");
@@ -334,7 +527,7 @@
                     await request("/api/admin/room-operations/release", "POST", { holdId: release.dataset.releaseHold });
                     await load();
                 } catch (error) {
-                    status.textContent = error.message;
+                    one("[data-timeline-holds-status]").textContent = "Chưa mở khóa được: " + error.message;
                 } finally {
                     release.disabled = false;
                     mutating = false;

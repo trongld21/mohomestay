@@ -101,6 +101,20 @@ function create_room_quote_hold(PDO $pdo, array $input, string $actor): array
     }
 }
 
+function active_room_quote_holds(PDO $pdo, string $roomId = ''): array
+{
+    $sql = 'SELECT id,room_id,starts_at,ends_at,expires_at FROM room_quote_holds '
+        . 'WHERE released_at IS NULL AND expires_at>?';
+    $params = [gmdate('Y-m-d H:i:s')];
+    if ($roomId !== '') {
+        $sql .= ' AND room_id=?';
+        $params[] = $roomId;
+    }
+    $query = $pdo->prepare($sql . ' ORDER BY starts_at');
+    $query->execute($params);
+    return $query->fetchAll();
+}
+
 function release_room_quote_hold(PDO $pdo, string $id, string $actor): void
 {
     $pdo->beginTransaction();

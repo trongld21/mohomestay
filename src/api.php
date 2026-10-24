@@ -41,6 +41,16 @@ function handle_api(string $path, string $method): never
             require_once APP_ROOT . '/src/room-operations-api.php';
             room_operations_api($path, $method);
         }
+        if ($path === '/api/availability/packages' && $method === 'GET') {
+            require_once APP_ROOT . '/src/availability.php';
+            header('Cache-Control: no-store');
+            $room = room_repository()->findById((string)($_GET['roomId'] ?? ''));
+            if (!$room || $room['status'] !== 'ACTIVE') {
+                throw new BookingException('Phòng không khả dụng.', 404);
+            }
+            $options = timeline_available_packages(db(), $room, (string)($_GET['date'] ?? ''), (string)($_GET['time'] ?? ''));
+            json_response(['packages' => $options]);
+        }
         if ($path === '/api/availability' && $method === 'GET') availability_api();
         if ($path === '/api/bookings' && $method === 'POST') create_booking_api();
         if ($path === '/api/bookings/lookup' && $method === 'POST') lookup_booking_api();

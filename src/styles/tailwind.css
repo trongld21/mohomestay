@@ -3286,3 +3286,13 @@ a.timeline-primary:hover {
 .admin-page .booking-work-table tr[data-booking-tone="overdue"] .admin-booking-status {
     @apply bg-orange-100 text-orange-900;
 }
+
+.timeline-cell[data-selected="true"] {
+    @apply bg-[#79543e] text-white ring-2 ring-inset ring-[#45382f] enabled:hover:bg-[#65432f];
+}
+.timeline-package {
+    @apply flex min-h-11 w-full cursor-pointer flex-col gap-2 rounded-xl border border-[#d2bda7] bg-[#fffdf9] p-4 text-left text-sm text-[#45382f] enabled:hover:bg-[#eee4d6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:cursor-wait disabled:opacity-50;
+}
+.timeline-package[aria-pressed="true"] {
+    @apply border-[#79543e] bg-[#eee4d6] ring-2 ring-[#79543e];
+}

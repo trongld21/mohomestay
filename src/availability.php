@@ -82,3 +82,57 @@ function availability_snapshot(PDO $pdo, array $rooms, string $date, int $days =
     }
     return ['connected' => true, 'serverTime' => gmdate('c', $now), 'rangeStart' => $start->format(DATE_ATOM), 'rangeEnd' => $end->format(DATE_ATOM), 'rooms' => $result];
 }
+
+/** Return only packages that can actually occupy the clicked hour and their full stay. */
+function timeline_available_packages(PDO $pdo, array $room, string $date, string $time, ?DateTimeImmutable $now = null): array
+{
+    $zone = new DateTimeZone('Asia/Ho_Chi_Minh');
+    $now ??= new DateTimeImmutable('now', $zone);
+    $value = $date . ' ' . $time;
+    $clicked = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $value, $zone);
+    if (!$clicked || $clicked->format('Y-m-d H:i') !== $value || substr($time, 3) !== '00') {
+        throw new BookingException('Ô giờ không hợp lệ.', 422);
+    }
+    if ($clicked > $now->modify('+366 days')) {
+        throw new BookingException('Chỉ nhận đặt phòng trong vòng 12 tháng.', 422);
+    }
+    $hourEnd = $clicked->modify('+1 hour');
+    if ($hourEnd <= $now || ($room['status'] ?? '') !== 'ACTIVE') {
+        return [];
+    }
+    $query = $pdo->prepare('SELECT is_active,status FROM rooms WHERE id=?');
+    $query->execute([$room['id']]);
+    $inventory = $query->fetch();
+    if (!$inventory || !$inventory['is_active'] || $inventory['status'] !== 'ACTIVE') {
+        return [];
+    }
+    $arrival = $clicked > $now ? $clicked : $now->setTimestamp((int)(floor($now->getTimestamp() / 60) * 60 + 60));
+    $options = [];
+    foreach ($room['packages'] ?? [] as $configured) {
+        if (empty($configured['enabled'])) {
+            continue;
+        }
+        try {
+            $package = resolve_bookable_slot($room, (string)$configured['id']);
+            [$start, $end] = bookable_package_window($package, $date, $arrival->format('H:i'), $now);
+            if ($start < $clicked || $start >= $hourEnd) {
+                continue;
+            }
+            assert_room_inventory($pdo, (string)$room['id'], mysql_datetime($start), mysql_datetime($end));
+            $blocked = $pdo->prepare('SELECT id FROM room_availability WHERE room_id=? AND available=0 AND `date` BETWEEN ? AND ? LIMIT 1');
+            $blocked->execute([$room['id'], $start->format('Y-m-d'), $end->modify('-1 second')->format('Y-m-d')]);
+            if ($blocked->fetchColumn()) {
+                continue;
+            }
+            $options[] = [
+                'id' => $package['id'], 'name' => $package['name'], 'price' => (int)$package['price'],
+                'start' => $start->format(DATE_ATOM), 'end' => $end->format(DATE_ATOM),
+                'date' => $date, 'time' => $start->format('H:i'),
+            ];
+        } catch (BookingException $error) {
+            // Invalid, expired, restricted and conflicting packages are not choices.
+            continue;
+        }
+    }
+    return $options;
+}

@@ -192,4 +192,6 @@ $row = ['status' => 'CONFIRMED', 'payment_status' => 'PAID', 'total_price' => 28
 $summary = booking_overview([$row, array_replace($row, ['is_test' => 1]), array_replace($row, ['status' => 'CANCELLED', 'total_price' => 100000])], $now);
 account_check($summary === ['paid' => 287000, 'confirmed' => 0, 'staying' => 2, 'reconcile' => 1], 'Overview must retain lifecycle counts and exclude cancelled and test payments');
 account_check(array_keys(booking_overview([])) === ['paid', 'confirmed', 'staying', 'reconcile'], 'Overview must return aggregates only');
+account_check(admin_api_permission('/api/admin/room-operations/holds', 'GET') === 'availability.hold', 'Hold list must require hold permission, independently of calendar view permission');
+
 echo "Account authorization tests: OK\n";

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 function room_operations_api(string $path, string $method): never
 {
+    if ($path === '/api/admin/room-operations/holds' && $method === 'GET') {
+        header('Cache-Control: no-store');
+        json_response(['holds' => active_room_quote_holds(db(), (string)($_GET['roomId'] ?? ''))]);
+    }
     if ($path === '/api/admin/room-operations' && $method === 'GET') {
         require_once APP_ROOT . '/src/availability.php';
         $date = (string)($_GET['date'] ?? '');

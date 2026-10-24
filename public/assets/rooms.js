@@ -99,6 +99,7 @@
             durationTime = query.time || "";
         const testPayment = one("[data-test-payment]", form);
         let testRequest = { payload: "", id: "" };
+        let timelineHandoff = query.fromTimeline === "1";
         if (activeRooms.some((room) => room.id === query.room)) {
             roomSelect.value = query.room;
             // Notify the enhanced dropdown after applying the room from the URL.
@@ -283,6 +284,18 @@
                         );
                 if (button) chooseSlot(preferred);
                 else renderSummary();
+                if (timelineHandoff) {
+                    timelineHandoff = false;
+                    const window = slotTools.slotWindow(selectedSlot(), form.date.value, form.time.value);
+                    if (selectedSlot() && availabilityForRoom()?.active
+                        && slotTools.slotState(window, availabilityForRoom().intervals) === "available") {
+                        form.elements.guestName.focus();
+                    } else {
+                        clearSelection();
+                        renderSummary();
+                        message.innerHTML = '<p class="notice error">Khung giờ vừa chọn không còn khả dụng. Vui lòng chọn lại.</p>';
+                    }
+                }
             } catch (error) {
                 slotGrid.innerHTML = `<div class="slot-empty is-error"><strong>Chưa tải được lịch phòng.</strong><span>${esc(error.message)}</span></div>`;
                 message.innerHTML = `<p class="notice error">${esc(error.message)}</p>`;

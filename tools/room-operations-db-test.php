@@ -45,12 +45,17 @@ operation_conflict(fn() => create_room_quote_hold($pdo, $holdInput, 'staff'));
 operation_check(room_quote_hold_conflict($pdo, 'r', $scheduledHold['starts_at'], $scheduledHold['ends_at'], time() + 7200), 'Future slot must remain reserved beyond one hour after clicking.');
 assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $holdStart - 3600), $scheduledHold['starts_at']);
 assert_room_inventory($pdo, 'r', $scheduledHold['ends_at'], gmdate('Y-m-d H:i:s', $holdStart + 7200));
+operation_check(count(active_room_quote_holds($pdo, 'r')) === 1, 'Room hold list must expose its active hold for unlocking.');
+operation_check(active_room_quote_holds($pdo, 'other') === [], 'Hold list must be scoped to the room.');
 release_room_quote_hold($pdo, $scheduledHold['id'], 'staff');
+operation_check(active_room_quote_holds($pdo, 'r') === [], 'Released holds must disappear from unlock list.');
 assert_room_inventory($pdo, 'r', $scheduledHold['starts_at'], $scheduledHold['ends_at']);
 $overnightHold = create_room_quote_hold($pdo, array_replace($holdInput, ['time' => '23:30']), 'staff');
 $overnightEnd = new DateTimeImmutable($overnightHold['ends_at'], new DateTimeZone('UTC'));
 operation_check($overnightEnd->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'))->format('Y-m-d H:i') === $selectedStart->modify('+1 day')->format('Y-m-d') . ' 00:30', 'One-hour hold must cross midnight correctly.');
 release_room_quote_hold($pdo, $overnightHold['id'], 'staff');
+$pdo->prepare('UPDATE room_quote_holds SET released_at=NULL,expires_at=? WHERE id=?')->execute([gmdate('Y-m-d H:i:s', time() - 1), $overnightHold['id']]);
+operation_check(active_room_quote_holds($pdo, 'r') === [], 'Expired holds must disappear from unlock list.');
 foreach ([[], ['date' => '2000-01-01', 'time' => '19:00'], ['date' => '2027-02-30', 'time' => '19:00'], ['date' => $holdInput['date'], 'time' => '25:00']] as $invalidInput) {
     try {
         create_room_quote_hold($pdo, ['roomId' => 'r'] + $invalidInput, 'staff');
