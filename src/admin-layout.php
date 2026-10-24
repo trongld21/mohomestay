@@ -49,11 +49,14 @@ function render_admin_navigation(string $path): void
                 <?php endif ?>
             <?php endforeach ?>
             <?php if (can_use('sales.view') || can_use('sales.create') || can_use('products.view')): ?>
-                <details class="rounded-lg border border-[#e5dacb]" <?= in_array($path, ['/admin/sales', '/admin/products'], true) ? 'open' : '' ?>>
+                <details class="rounded-lg border border-[#e5dacb]" <?= in_array($path, ['/admin/sales', '/admin/sales/history', '/admin/products'], true) ? 'open' : '' ?>>
                     <summary class="<?= $link ?> cursor-pointer">Bán hàng</summary>
                     <div class="grid gap-1 px-2 pb-2">
-                        <?php if (can_use('sales.view') || can_use('sales.create')): ?>
-                            <a class="<?= $link ?>" href="/admin/sales" <?= $path === '/admin/sales' ? 'aria-current="page"' : '' ?>>Bán hàng & lịch sử</a>
+                        <?php if (can_use('sales.create')): ?>
+                            <a class="<?= $link ?>" href="/admin/sales" <?= $path === '/admin/sales' ? 'aria-current="page"' : '' ?>>Bán hàng</a>
+                        <?php endif ?>
+                        <?php if (can_use('sales.view')): ?>
+                            <a class="<?= $link ?>" href="/admin/sales/history" <?= $path === '/admin/sales/history' ? 'aria-current="page"' : '' ?>>Lịch sử bán hàng</a>
                         <?php endif ?>
                         <?php if (can_use('products.view')): ?>
                             <a class="<?= $link ?>" href="/admin/products" <?= $path === '/admin/products' ? 'aria-current="page"' : '' ?>>Quản lý sản phẩm</a>
@@ -99,6 +102,7 @@ function render_admin_topbar(): void
         '/admin/door-codes' => 'Mã mở cửa',
         '/admin/availability' => 'Tìm phòng trống',
         '/admin/sales' => 'Bán hàng',
+        '/admin/sales/history' => 'Lịch sử bán hàng',
         '/admin/products' => 'Quản lý sản phẩm',
         '/admin/accounts' => 'Quản lý tài khoản',
         '/admin/permissions' => 'Phân quyền tài khoản',

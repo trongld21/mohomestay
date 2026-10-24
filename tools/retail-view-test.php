@@ -24,11 +24,12 @@ function view_check(bool $value, string $message): void
 }
 $grants = ['sales.view'];
 ob_start();
-render_retail_page(false);
+render_retail_page(false, true);
 $html = ob_get_clean();
 view_check(str_contains($html, 'data-sales-history'), 'Viewer must see history.');
+view_check(str_contains($html, 'data-mode="history"'), 'History must be its own screen.');
 view_check(!str_contains($html, 'data-sale-create'), 'Viewer must not see creation controls.');
-$grants = ['sales.create', 'sales.price', 'products.view'];
+$grants = ['sales.view', 'sales.create', 'sales.price', 'products.view'];
 ob_start();
 render_retail_page(false);
 $html = ob_get_clean();

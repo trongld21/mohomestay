@@ -21,3 +21,5 @@ Nút nhập phụ thu tên/giá trên đơn phòng đã ngừng sử dụng. Cá
 Có thể chọn phòng liên quan khi tạo đơn (hoặc Không gắn phòng). Lịch sử và chi tiết đơn giữ tên phòng tại lúc chốt, hỗ trợ tra theo tên phòng/mã đơn. Chạy thêm migration `018_retail_sale_room.sql` khi triển khai. Phòng đang ẩn không nằm trong danh sách chọn.
 
 Danh s?ch ch?n ph?ng hi?n th? th?m m? ??n ?ang l?u tr?. ??n b?n l?u booking_id v? m? ??t ph?ng t?i l?c ch?t, cho ph?p tra l?ch s? b?ng m? MO. Migration: `019_retail_sale_booking.sql`. N?u kh?ch c?a ph?ng thay ??i trong l?c t?o ??n, h? th?ng y?u c?u l?m m?i ?? tr?nh g?n nh?m.
+
+Lịch sử bán hàng được tách riêng tại `/admin/sales/history`, cùng nhóm Bán hàng trên sidebar. Trang bán hàng chỉ chứa giỏ hàng và chốt đơn; trang lịch sử giữ tra cứu, phân trang, doanh thu và xem lại đơn/QR. Quyền `sales.view` mở lịch sử, `sales.create` mở bán hàng.

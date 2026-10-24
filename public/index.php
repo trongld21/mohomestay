@@ -126,16 +126,21 @@ elseif ($path === '/admin/door-codes') {
     require APP_ROOT . '/src/door-code-view.php';
     render_page('Mã mở cửa', fn() => render_door_codes(), ['robots' => false]);
 }
-elseif (in_array($path, ['/admin/sales', '/admin/products'], true)) {
+elseif (in_array($path, ['/admin/sales', '/admin/sales/history', '/admin/products'], true)) {
     if (!is_admin()) redirect('/auth/login');
     if ($path === '/admin/products') {
         require_permission('products.view');
-    } elseif (!can_use('sales.view') && !can_use('sales.create')) {
+    } elseif ($path === '/admin/sales/history') {
         require_permission('sales.view');
+    } else {
+        if (!can_use('sales.create') && can_use('sales.view')) redirect('/admin/sales/history');
+        require_permission('sales.create');
     }
     header('Cache-Control: no-store');
     require_once APP_ROOT . '/src/retail-view.php';
-    render_page($path === '/admin/products' ? 'Quản lý sản phẩm' : 'Bán hàng', fn() => render_retail_page($path === '/admin/products'), ['robots' => false]);
+    $history = $path === '/admin/sales/history';
+    $title = $path === '/admin/products' ? 'Quản lý sản phẩm' : ($history ? 'Lịch sử bán hàng' : 'Bán hàng');
+    render_page($title, fn() => render_retail_page($path === '/admin/products', $history), ['robots' => false]);
 }
 elseif ($path === '/sale-payment') {
     render_page('Thanh toán bán hàng', fn() => print('<section class="mx-auto my-12 max-w-lg rounded-2xl border border-stone-200 bg-[#fffdf9] p-6"><h1 class="text-2xl font-semibold">Thanh toán bán hàng</h1><p class="mt-3">Mơ sẽ đối soát giao dịch và xác nhận đơn bán hàng. Bạn có thể nhờ nhân viên kiểm tra trạng thái thanh toán.</p></section>'), ['robots' => false]);

@@ -87,6 +87,7 @@ function account_home(): string
 {
     foreach (account_permissions() as $key => $label) {
         if (can_use($key)) {
+            if ($key === 'sales' && !can_use('sales.create')) return '/admin/sales/history';
             return in_array($key, ['door-codes', 'availability', 'sales', 'products'], true) ? '/admin/' . $key : '/admin#' . $key;
         }
     }

@@ -12,6 +12,7 @@
     const dateTime = (value) => value ? new Date(value.replace(" ", "T") + "Z").toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }) : "—";
     const status = one("[data-retail-status]");
     const productMode = root.dataset.mode === "products";
+    const historyMode = root.dataset.mode === "history";
     const form = one("[data-product-form]");
     const dialog = one("[data-sale-dialog]");
     const detail = one("[data-sale-detail]");
@@ -72,7 +73,7 @@
         one("[data-sale-create]").disabled = busy || loading || cart.size === 0;
     }
     async function loadHistory() {
-        if (!can("sales.view") || productMode) return;
+        if (!can("sales.view") || !historyMode) return;
         const query = new URLSearchParams({ page: String(page), q: one("[data-sales-filter]")?.value.trim() || "" });
         const result = await request("sales?" + query);
         one("[data-sales-revenue]").textContent = "Doanh thu đã thu (tất cả): " + cash(result.revenue);
@@ -90,7 +91,7 @@
         loading = true;
         status.textContent = "Đang tải…";
         try {
-            if (productMode || can("sales.create")) {
+            if (productMode || (!historyMode && can("sales.create"))) {
                 const result = await request(productMode ? "products" : "sales/catalog");
                 products = result.products;
                 saleRooms = result.rooms || [];
