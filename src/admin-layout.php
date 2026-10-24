@@ -66,10 +66,14 @@ function render_admin_navigation(string $path): void
             <?php endif ?>
             <?php if (can_use('accounts')): ?>
                 <details class="rounded-lg border border-[#e5dacb]" <?= in_array($path, ['/admin/accounts', '/admin/permissions'], true) ? 'open' : '' ?>>
-                    <summary class="<?= $link ?> cursor-pointer">Tài khoản & phân quyền</summary>
+                    <summary class="<?= $link ?> cursor-pointer"><?= admin_icon('user') ?><span>Tài khoản & phân quyền</span></summary>
                     <div class="grid gap-1 px-2 pb-2">
-                        <a class="<?= $link ?>" href="/admin/accounts" <?= $path === '/admin/accounts' ? 'aria-current="page"' : '' ?>>Quản lý tài khoản</a>
-                        <a class="<?= $link ?>" href="/admin/permissions" <?= $path === '/admin/permissions' ? 'aria-current="page"' : '' ?>>Phân quyền tài khoản</a>
+                        <a class="<?= $link ?>" href="/admin/accounts" <?= $path === '/admin/accounts' ? 'aria-current="page"' : '' ?>>
+                            <?= admin_icon('user') ?><span>Quản lý tài khoản</span>
+                        </a>
+                        <a class="<?= $link ?>" href="/admin/permissions" <?= $path === '/admin/permissions' ? 'aria-current="page"' : '' ?>>
+                            <?= admin_icon('shield-check') ?><span>Phân quyền tài khoản</span>
+                        </a>
                     </div>
                 </details>
             <?php endif ?>
