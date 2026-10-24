@@ -12,6 +12,7 @@ function account_permissions(): array
         'sales' => 'Bán hàng',
         'products' => 'Quản lý sản phẩm',
         'inventory' => 'Nhập kho & tồn kho',
+        'expenses' => 'Phiếu chi',
     ];
 }
 
@@ -89,7 +90,7 @@ function account_home(): string
     foreach (account_permissions() as $key => $label) {
         if (can_use($key)) {
             if ($key === 'sales' && !can_use('sales.create')) return '/admin/sales/history';
-            return in_array($key, ['door-codes', 'availability', 'sales', 'products', 'inventory'], true) ? '/admin/' . $key : '/admin#' . $key;
+            return in_array($key, ['door-codes', 'availability', 'sales', 'products', 'inventory', 'expenses'], true) ? '/admin/' . $key : '/admin#' . $key;
         }
     }
     if (can_use('sales.create')) return '/admin/sales';
@@ -162,6 +163,10 @@ function save_account(array $data, bool $permissionsOnly): void
 function account_permission_groups(): array
 {
     return [
+        'expenses' => [
+            'expenses.view' => 'Xem phiếu chi và tổng tiền chi',
+            'expenses.create' => 'Lập phiếu chi',
+        ],
         'inventory' => [
             'inventory.view' => 'Xem tồn kho và lịch sử nhập/bán',
             'inventory.receive' => 'Nhập hàng vào kho',
@@ -237,6 +242,7 @@ function admin_api_permission(string $path, string $method, array $body = []): s
 {
     $feature = explode('/', substr($path, strlen('/api/admin/')))[0];
     return match ($feature) {
+        'expenses' => $method === 'GET' ? 'expenses.view' : 'expenses.create',
         'inventory' => $method === 'GET' ? 'inventory.view' : 'inventory.receive',
         'sales' => match (true) {
             str_ends_with($path, '/cancel') => 'sales.cancel',

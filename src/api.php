@@ -26,6 +26,10 @@ function handle_api(string $path, string $method): never
             }
             json_response(['message' => 'Mail server đã nhận email thử gửi tới mohomestay01@gmail.com. Kiểm tra Hộp thư đến và Spam.']);
         }
+        if ($path === '/api/admin/expenses') {
+            require_once APP_ROOT . '/src/expenses.php';
+            expenses_api($method);
+        }
         if (preg_match('#^/api/admin/(sales|products|inventory)(/|$)#', $path)) {
             require_once APP_ROOT . '/src/retail-api.php';
             retail_api($path, $method);

@@ -15,6 +15,7 @@ function render_retail_page(bool $products, bool $history = false, bool $invento
             <?php if (can_use('sales.view')): ?><a class="timeline-button <?= $history ? 'timeline-primary' : '' ?>" href="/admin/sales/history" <?= $history ? 'aria-current="page"' : '' ?>>Lịch sử bán hàng</a><?php endif ?>
             <?php if (can_use('inventory.view')): ?><a class="timeline-button <?= $inventory ? 'timeline-primary' : '' ?>" href="/admin/inventory" <?= $inventory ? 'aria-current="page"' : '' ?>>Nhập kho & tồn kho</a><?php endif ?>
             <?php if (can_use('products.view')): ?><a class="timeline-button <?= $products ? 'timeline-primary' : '' ?>" href="/admin/products" <?= $products ? 'aria-current="page"' : '' ?>>Quản lý sản phẩm</a><?php endif ?>
+            <?php if (can_use('expenses.view')): ?><a class="timeline-button" href="/admin/expenses">Phiếu chi</a><?php endif ?>
         </nav>
         <p class="text-sm text-stone-600" data-retail-status role="status"></p>
         <?php if ($inventory): ?>
@@ -51,10 +52,7 @@ function render_retail_page(bool $products, bool $history = false, bool $invento
                         <label class="grid gap-1 text-sm">Giá chốt (đ)<input class="timeline-input" data-cart-total type="number" min="1" max="100000000" step="1" <?= !can_use('sales.price') ? 'readonly' : '' ?>></label>
                         <label class="grid gap-1 text-sm">Giảm giá (%)<input class="timeline-input" data-cart-discount type="number" min="0" max="100" step="1" value="0" <?= !can_use('sales.discount') ? 'readonly' : '' ?>></label>
                         <p class="text-sm font-semibold text-[#79543e]" data-cart-payable>Khách cần trả: 0đ</p>
-                        <p class="text-xs text-stone-600">Giảm 100% để tặng khách. Đơn tặng vẫn ghi nhận số lượng và trừ tồn, không tạo QR.</p>
-                        <p class="text-xs text-stone-600"><?= can_use('sales.price') ? 'Bạn có quyền điều chỉnh giá chốt của cả đơn.' : 'Giá chốt tự tính theo sản phẩm và số lượng.' ?></p>
                         <button type="button" class="timeline-button timeline-primary" data-sale-create disabled>Chốt đơn & tạo QR</button>
-                        <p class="text-sm text-stone-600">Doanh thu chỉ ghi nhận khi payOS xác nhận hoặc nhân viên có quyền đối soát chuyển khoản. Đơn tặng ghi nhận số lượng, doanh thu 0đ.</p>
                     </section>
                 </div>
             <?php endif ?>

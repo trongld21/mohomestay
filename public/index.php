@@ -126,6 +126,13 @@ elseif ($path === '/admin/door-codes') {
     require APP_ROOT . '/src/door-code-view.php';
     render_page('Mã mở cửa', fn() => render_door_codes(), ['robots' => false]);
 }
+elseif ($path === '/admin/expenses') {
+    if (!is_admin()) redirect('/auth/login');
+    require_permission('expenses.view');
+    header('Cache-Control: no-store');
+    require_once APP_ROOT . '/src/expense-view.php';
+    render_page('Phiếu chi', fn() => render_expenses_page(), ['robots' => false]);
+}
 elseif (in_array($path, ['/admin/sales', '/admin/sales/history', '/admin/products', '/admin/inventory'], true)) {
     if (!is_admin()) redirect('/auth/login');
     if ($path === '/admin/inventory') {

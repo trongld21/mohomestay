@@ -143,6 +143,8 @@ foreach ([
     ['/api/admin/manual-access', 'POST', [], 'door-codes.create'],
     ['/api/admin/manual-access/a/retry', 'POST', [], 'door-codes.retry'],
     ['/api/admin/booking-access/b/retry', 'POST', [], 'door-codes.retry'],
+    ['/api/admin/expenses', 'GET', [], 'expenses.view'],
+    ['/api/admin/expenses', 'POST', [], 'expenses.create'],
     ['/api/admin/unknown', 'POST', [], 'accounts'],
 ] as [$path, $method, $body, $expected]) {
     account_check(admin_api_permission($path, $method, $body) === $expected, 'Wrong permission for ' . $method . ' ' . $path);
@@ -156,7 +158,7 @@ foreach ([
     }
 }
 unset($_SESSION['account_id'], $_SESSION['account_version']);
-save_account(['id' => $id, 'permissions' => ['rooms.view', 'bookings.view', 'door-codes.view', 'availability.view', 'sales.view', 'products.view', 'inventory.view']], true);
+save_account(['id' => $id, 'permissions' => ['rooms.view', 'bookings.view', 'door-codes.view', 'availability.view', 'sales.view', 'products.view', 'inventory.view', 'expenses.view']], true);
 $_SESSION['account_id'] = $id;
 $_SESSION['account_version'] = 2;
 foreach (array_keys(account_permission_labels()) as $permission) {
