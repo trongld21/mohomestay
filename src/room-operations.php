@@ -89,6 +89,56 @@ function lock_overstaying_booking(PDO $pdo, string $bookingId, string $actor, ?i
     }
 }
 
+function booking_surcharge_items(PDO $pdo, string $bookingId): array
+{
+    $query = $pdo->prepare('SELECT id,name,amount,created_at FROM booking_surcharge_items WHERE booking_id=? ORDER BY created_at,id');
+    $query->execute([$bookingId]);
+    return $query->fetchAll();
+}
+
+function save_booking_surcharge(PDO $pdo, array $input, string $actor): void
+{
+    $rawName = $input['name'] ?? '';
+    $name = is_string($rawName) ? trim($rawName) : '';
+    $rawAmount = $input['amount'] ?? null;
+    $amount = filter_var($rawAmount, FILTER_VALIDATE_INT);
+    $requestId = (string)($input['requestId'] ?? '');
+    if (mb_strlen($name) < 1 || mb_strlen($name) > 150
+        || (!is_int($rawAmount) && !is_string($rawAmount)) || $amount === false || $amount < 1 || $amount > 100000000
+        || !preg_match('/^[a-f0-9]{32}$/', $requestId)) {
+        throw new BookingException('Nhập tên phụ thu (tối đa 150 ký tự) và giá nguyên từ 1 đến 100.000.000đ.', 422);
+    }
+    $pdo->beginTransaction();
+    try {
+        $bookingId = (string)($input['bookingId'] ?? '');
+        $booking = room_operation_booking($pdo, $bookingId);
+        $existing = $pdo->prepare('SELECT booking_id,name,amount FROM booking_surcharge_items WHERE id=?');
+        $existing->execute([$requestId]);
+        if ($row = $existing->fetch()) {
+            if ($row['booking_id'] !== $bookingId || $row['name'] !== $name || (int)$row['amount'] !== $amount) {
+                throw new BookingException('Mã lưu phụ thu đã được sử dụng. Vui lòng mở lại popup.', 409);
+            }
+            $pdo->commit();
+            return;
+        }
+        $final = $pdo->prepare('SELECT booking_id FROM booking_checkout_charges WHERE booking_id=?');
+        $final->execute([$bookingId]);
+        if (!in_array(booking_lifecycle($booking)['status'], ['CONFIRMED', 'CHECKED_IN'], true) || $final->fetchColumn()) {
+            throw new BookingException('Chỉ thêm phụ thu trước khi xác nhận trả phòng.', 409);
+        }
+        $items = booking_surcharge_items($pdo, $bookingId);
+        if (count($items) >= 100 || array_sum(array_column($items, 'amount')) + $amount > 100000000) {
+            throw new BookingException('Tổng phụ thu tối đa 100.000.000đ và 100 khoản mỗi đơn.', 422);
+        }
+        $pdo->prepare('INSERT INTO booking_surcharge_items (id,booking_id,name,amount,created_by) VALUES (?,?,?,?,?)')
+            ->execute([$requestId, $bookingId, $name, $amount, $actor]);
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $error;
+    }
+}
+
 function confirm_room_checkout(PDO $pdo, string $bookingId, string $actor, ?int $now = null, bool $collectSurcharge = false): array
 {
     $now ??= time();
@@ -111,6 +161,7 @@ function confirm_room_checkout(PDO $pdo, string $bookingId, string $actor, ?int 
             $fee['billableHours'] = 0;
             $fee['amount'] = 0;
         }
+        $fee['amount'] += (int)array_sum(array_column(booking_surcharge_items($pdo, $bookingId), 'amount'));
         // A separate numeric namespace cannot collide with booking millisecond order codes.
         $orderCode = $fee['amount'] > 0 ? random_int(800000000000000, 899999999999999) : null;
         $query = $pdo->prepare(
@@ -138,13 +189,15 @@ function confirm_room_checkout(PDO $pdo, string $bookingId, string $actor, ?int 
     }
 }
 
-function checkout_charge_dto(array $charge): array
+function checkout_charge_dto(array $charge, array $items = []): array
 {
     return [
         'bookingId' => $charge['booking_id'],
         'actualCheckoutAt' => $charge['actual_checkout_at'],
         'lateSeconds' => (int)$charge['late_seconds'],
         'billableHours' => (int)$charge['billable_hours'],
+        'items' => $items,
+        'itemsAmount' => (int)$charge['amount'] - (int)$charge['billable_hours'] * 50000,
         'amount' => (int)$charge['amount'],
         'paymentStatus' => $charge['payment_status'],
         'checkoutUrl' => $charge['payment_status'] === 'CANCELLED' ? null : $charge['checkout_url'],

@@ -147,8 +147,11 @@ function create_booking_api(): never
         if (!$freshPackage || !(bool)$freshPackage['is_enabled']) throw new BookingException('Gói giá vừa được thay đổi. Vui lòng chọn lại.', 409);
         $freshPackageDto = locked_booking_package($room, $freshPackage);
         [$freshStart,$freshEnd]=bookable_package_window($freshPackageDto,$q['requestedDate'],$freshPackageDto['mode']==='DURATION'?$q['start']->format('H:i'):'');
-        $q['package']=$freshPackageDto;$q['start']=$freshStart;$q['end']=$freshEnd;$q['total']=(int)$freshPackageDto['price'];
-        $q=array_replace($q,booking_package_snapshot($freshPackageDto));
+        $q['package'] = $freshPackageDto;
+        $q['start'] = $freshStart;
+        $q['end'] = $freshEnd;
+        $q = array_replace($q, booking_package_snapshot($freshPackageDto),
+            booking_extra_hours_details($freshPackageDto, $freshEnd, $q['extraHours']));
         if (!$room || !$room['is_active']) throw new BookingException('Phòng đang tạm ngưng nhận khách.', 409);
         assert_room_inventory($pdo, $q['room']['id'], mysql_datetime($q['start']), mysql_datetime($q['end']));
         $blocked = $pdo->prepare('SELECT id FROM room_availability WHERE room_id=? AND available=0 AND `date` BETWEEN ? AND ? LIMIT 1');
@@ -159,6 +162,10 @@ function create_booking_api(): never
         $booking=['id'=>uuid(),'bookingCode'=>'MO-'.strtoupper(bin2hex(random_bytes(5))),'accessToken'=>bin2hex(random_bytes(32)),'orderCode'=>(int)(floor(microtime(true)*1000)*1000+random_int(0,999)),'holdExpiresAt'=>gmdate('Y-m-d H:i:s',time()+900),'totalPrice'=>$q['total']];
         $sql='INSERT INTO bookings(id,booking_code,room_id,check_in,check_out,stay_package,package_id,package_name_snapshot,package_mode_snapshot,package_duration_snapshot,package_check_in_snapshot,package_check_out_snapshot,package_price_snapshot,hold_expires_at,access_token,order_code,total_price,number_of_guests,guest_name,guest_email,guest_phone,guest_note,payment_method) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,\'payos\')';
         $pdo->prepare($sql)->execute([$booking['id'],$booking['bookingCode'],$q['room']['id'],mysql_datetime($q['start']),mysql_datetime($q['end']),$q['packageId'],$q['packageId'],$q['packageName'],$q['packageMode'],$q['packageDuration'],$q['packageCheckIn'],$q['packageCheckOut'],$q['packagePrice'],$booking['holdExpiresAt'],$booking['accessToken'],$booking['orderCode'],$q['total'],$q['guests'],$q['name'],$q['email'],$q['phone'],$q['note']]);
+        if ($q['extraHours'] > 0) {
+            $pdo->prepare('UPDATE bookings SET extra_hours=?,extra_hours_amount=? WHERE id=?')
+                ->execute([$q['extraHours'], $q['extraHoursAmount'], $booking['id']]);
+        }
         save_booking_identity($pdo, $booking['id'], $identity);
         $pdo->commit();
     } catch (Throwable $e) { if($pdo->inTransaction())$pdo->rollBack(); throw $e; }
@@ -204,6 +211,8 @@ function lookup_booking_api(): never
         'checkIn' => gmdate('c', strtotime($b['check_in'] . ' UTC')),
         'checkOut' => gmdate('c', strtotime($b['check_out'] . ' UTC')),
         'total' => (int)$b['total_price'],
+        'extraHours' => (int)($b['extra_hours'] ?? 0),
+        'extraHoursAmount' => (int)($b['extra_hours_amount'] ?? 0),
         'status' => $expired ? 'EXPIRED' : $b['status'],
         'paymentStatus' => $b['payment_status'],
         'emailStatus' => $b['confirmation_email_status'] ?? 'PENDING',

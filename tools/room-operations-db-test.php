@@ -29,6 +29,7 @@ CREATE TABLE bookings (id TEXT PRIMARY KEY,room_id TEXT,booking_code TEXT,status
 CREATE TABLE room_availability (id TEXT,room_id TEXT,date TEXT,available INTEGER);
 CREATE TABLE room_emergency_locks (id TEXT PRIMARY KEY,booking_id TEXT UNIQUE,room_id TEXT,starts_at TEXT,ended_at TEXT,locked_by TEXT,ended_by TEXT);
 CREATE TABLE booking_checkout_charges (booking_id TEXT PRIMARY KEY,actual_checkout_at TEXT,confirmed_by TEXT,late_seconds INTEGER,billable_hours INTEGER,amount INTEGER,order_code INTEGER UNIQUE,payment_status TEXT,qr_code TEXT,checkout_url TEXT,payment_link_id TEXT,transaction_reference TEXT UNIQUE,paid_at TEXT,cancelled_at TEXT,cancelled_by TEXT);
+CREATE TABLE booking_surcharge_items (id TEXT PRIMARY KEY,booking_id TEXT,name TEXT,amount INTEGER,created_by TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE room_quote_holds (id TEXT PRIMARY KEY,room_id TEXT,package_id TEXT,starts_at TEXT,ends_at TEXT,expires_at TEXT,released_at TEXT,created_by TEXT,released_by TEXT);
 CREATE TABLE staff_email_notifications (id TEXT PRIMARY KEY,booking_id TEXT,event_type TEXT,recipient TEXT,payload TEXT,status TEXT DEFAULT 'PENDING',attempts INTEGER DEFAULT 0,last_attempt_at TEXT,sent_at TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP,UNIQUE(booking_id,event_type));
 INSERT INTO rooms VALUES ('r',1,'ACTIVE','Room');");

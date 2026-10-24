@@ -3323,3 +3323,17 @@ a.timeline-primary:hover {
 .timeline-package-popup [hidden] {
     @apply hidden;
 }
+
+.booking-extra-hour {
+    @apply flex min-h-11 w-full cursor-pointer flex-col gap-1 rounded-xl border border-[#d2bda7] bg-[#fffdf9] p-3 text-left text-sm text-[#45382f] enabled:hover:bg-[#eee4d6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:cursor-not-allowed disabled:opacity-50;
+}
+.booking-extra-hour[aria-pressed="true"] {
+    @apply border-[#79543e] bg-[#eee4d6] ring-2 ring-[#79543e];
+}
+
+[data-fee-form][hidden] {
+    @apply hidden;
+}
+.timeline-dialog [data-fee-title] {
+    @apply m-0 font-sans text-lg leading-6;
+}

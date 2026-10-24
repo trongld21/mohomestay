@@ -97,6 +97,12 @@
         let availability = null,
             selectedId = "",
             durationTime = query.time || "";
+        const extraSection = one("[data-extra-hours-section]", form);
+        const extraOptions = one("[data-extra-hours-options]", form);
+        const extraField = form.elements.extraHours;
+        const selectedWindow = () => slotTools.extendedWindow(
+            slotTools.slotWindow(selectedSlot(), form.date.value, form.time.value), extraField.value,
+        );
         const testPayment = one("[data-test-payment]", form);
         let testRequest = { payload: "", id: "" };
         let timelineHandoff = query.fromTimeline === "1";
@@ -140,6 +146,8 @@
         }
         function clearSelection() {
             selectedId = "";
+            extraField.value = "0";
+            extraSection.hidden = true;
             form.packageId.value = "";
             durationField.hidden = true;
             form.time.required = false;
@@ -149,7 +157,7 @@
         function renderSummary() {
             const current = room(),
                 slot = selectedSlot(),
-                window = slotTools.slotWindow(slot, form.date.value, form.time.value);
+                window = selectedWindow();
             if (!current) {
                 summary.innerHTML = '<div class="empty-state">Chưa có phòng đang mở.</div>';
                 return;
@@ -160,11 +168,29 @@
             const timeLabel = window
                 ? `<span class="block">Từ ${esc(clockLabel(window.start))} ${esc(dateLabel(window.start))}</span><span class="block">Đến ${esc(clockLabel(window.end))} ${esc(dateLabel(window.end))}</span>`
                 : "Chưa chọn";
-            summary.innerHTML = `<div class="summary-image"><img src="${esc(current.image)}" alt="Phòng ${esc(current.name)}"></div><span class="summary-kicker">TÓM TẮT CUỘC HẸN</span><h2>${esc(current.name)}</h2><p class="muted">${esc(current.subtitle)}</p><div class="room-tag-chips">${current.tags.map((tag) => `<span>${esc(tag)}</span>`).join("")}</div><div class="summary-row"><span>Ngày ghé</span><strong>${prettyDate(form.date.value)}</strong></div><div class="summary-row"><span>Khung giờ</span><strong>${timeLabel}</strong></div><div class="summary-row"><span>Gói lưu trú</span><strong>${esc(slot?.name || "—")}</strong></div><div class="summary-row total"><span>Tổng tiền</span><strong>${slot ? cash(slot.price) : "—"}</strong></div>${slot ? '<p class="summary-assurance"><span aria-hidden="true">✓</span> Khung giờ được giữ 15 phút khi tạo đơn.</p>' : '<p class="summary-prompt">Chọn một gói còn trống để xem đầy đủ chi tiết.</p>'}`;
+            const extraHours = Number(extraField.value);
+            const extraAmount = extraHours * 50000;
+            summary.innerHTML = `
+                <div class="summary-image"><img src="${esc(current.image)}" alt="Phòng ${esc(current.name)}"></div>
+                <span class="summary-kicker">TÓM TẮT CUỘC HẸN</span>
+                <h2>${esc(current.name)}</h2>
+                <p class="muted">${esc(current.subtitle)}</p>
+                <div class="room-tag-chips">${current.tags.map((tag) => `<span>${esc(tag)}</span>`).join("")}</div>
+                <div class="summary-row"><span>Ngày ghé</span><strong>${prettyDate(form.date.value)}</strong></div>
+                <div class="summary-row"><span>Khung giờ</span><strong>${timeLabel}</strong></div>
+                <div class="summary-row"><span>Gói lưu trú</span><strong>${esc(slot?.name || "—")}</strong></div>
+                ${slot ? `<div class="summary-row"><span>Giá gói</span><strong>${cash(slot.price)}</strong></div>` : ""}
+                ${slot && extraHours > 0 ? `<div class="summary-row"><span>Phụ thu ${extraHours} giờ</span><strong>${cash(extraAmount)}</strong></div>` : ""}
+                <div class="summary-row total"><span>Tổng tiền</span><strong>${slot ? cash(slot.price + extraAmount) : "—"}</strong></div>
+                ${slot
+                    ? '<p class="summary-assurance"><span aria-hidden="true">✓</span> Khung giờ được giữ 15 phút khi tạo đơn.</p>'
+                    : '<p class="summary-prompt">Chọn một gói còn trống để xem đầy đủ chi tiết.</p>'}`;
+
         }
         function chooseSlot(slot) {
             const previous = selectedSlot();
             if (previous?.mode === "DURATION" && form.time.value) durationTime = form.time.value;
+            extraField.value = "0";
             selectedId = slot.id;
             form.packageId.value = slot.id;
             durationField.hidden = slot.mode !== "DURATION";
@@ -174,6 +200,31 @@
             renderSlots();
             renderSummary();
         }
+        function renderExtras() {
+            const base = slotTools.slotWindow(selectedSlot(), form.date.value, form.time.value);
+            const info = availabilityForRoom();
+            extraSection.hidden = !selectedSlot() || !info?.active
+                || slotTools.slotState(base, info?.intervals || []) !== "available";
+            if (extraSection.hidden) {
+                extraField.value = "0";
+                return;
+            }
+            const available = (hours) => slotTools.slotState(
+                slotTools.extendedWindow(base, hours), info.intervals,
+            ) === "available";
+            if (!available(Number(extraField.value))) extraField.value = "0";
+            extraOptions.innerHTML = [1, 2].map((hours) => {
+                const allowed = available(hours);
+                return `<button class="booking-extra-hour" type="button" data-extra-hours="${hours}" aria-pressed="${Number(extraField.value) === hours}" ${allowed ? "" : "disabled"}>
+                    <strong>+${hours} giờ</strong><span>+${cash(hours * 50000)}</span>
+                    ${allowed ? "" : '<span class="text-xs">Không đủ lịch trống</span>'}
+                </button>`;
+            }).join("");
+            one("[data-extra-hours-status]", form).textContent = Number(extraField.value) > 0
+                ? `Giờ trả sau phát sinh: ${clockLabel(selectedWindow().end)} · ${Number(extraField.value)} giờ phụ thu.`
+                : "Không thêm giờ: giữ nguyên giờ trả của gói.";
+        }
+
         function renderSlots() {
             form.date.min = slotTools.earliestBookingDate(room());
             const today = new Intl.DateTimeFormat("en-CA", {
@@ -236,8 +287,9 @@
                 !one(`[data-slot-id="${CSS.escape(selectedId)}"]:not(:disabled)`, slotGrid)
             )
                 clearSelection();
+            renderExtras();
             const slot = selectedSlot(),
-                window = slotTools.slotWindow(slot, form.date.value, form.time.value),
+                window = selectedWindow(),
                 state = window ? slotTools.slotState(window, info?.intervals || []) : "needs-time",
                 canSubmit = (availability.onlineBooking || testPayment?.checked) && info?.active && state === "available";
             submit.disabled = !canSubmit;
@@ -261,7 +313,7 @@
             renderSummary();
             try {
                 availability = await request(
-                    "/api/availability?date=" + encodeURIComponent(form.date.value),
+                    "/api/availability?date=" + encodeURIComponent(form.date.value) + "&days=33",
                 );
                 terms.hidden = availability.onlineBooking && !availability.terms;
                 terms.textContent = !availability.onlineBooking
@@ -296,6 +348,15 @@
                 message.innerHTML = `<p class="notice error">${esc(error.message)}</p>`;
             }
         }
+        extraSection.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-extra-hours]:not(:disabled)");
+            if (!button) return;
+            const hours = button.dataset.extraHours;
+            extraField.value = extraField.value === hours ? "0" : hours;
+            renderSlots();
+            renderSummary();
+            extraOptions.querySelector(`[data-extra-hours="${hours}"]`)?.focus({ preventScroll: true });
+        });
         slotGrid.onclick = (event) => {
             const button = event.target.closest("[data-slot-id]:not(:disabled)");
             if (!button) return;

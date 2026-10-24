@@ -116,8 +116,31 @@ function quote_booking_for_room(array $room, array $input, bool $manual = false,
         && $package['checkOutTime'] < $package['checkInTime']
         ? $end->modify('-1 day')->format('Y-m-d')
         : (string)($input['date'] ?? '');
-    return compact('room', 'package', 'start', 'end') + $guestDetails
-        + booking_package_snapshot($package) + ['total'=>(int)$package['price'], 'requestedDate'=>$requestedDate];
+    return array_replace(
+        compact('room', 'package', 'start', 'end') + $guestDetails
+            + booking_package_snapshot($package) + ['requestedDate' => $requestedDate],
+        booking_extra_hours_details($package, $end, $input['extraHours'] ?? 0)
+    );
+}
+
+function booking_extra_hours_details(array $package, DateTimeImmutable $end, mixed $hours = 0): array
+{
+    if ((!is_int($hours) && !is_string($hours)) || !preg_match('/^[012]$/D', (string)$hours)) {
+        throw new BookingException('Chỉ được chọn phát sinh 1 giờ hoặc 2 giờ.', 422);
+    }
+    $extraHours = (int)$hours;
+    $extraHoursAmount = $extraHours * 50000;
+    $name = (string)$package['name'];
+    if ($extraHours > 0) {
+        $name .= ' + ' . $extraHours . ' giờ (phụ thu ' . number_format($extraHoursAmount, 0, ',', '.') . 'đ)';
+    }
+    return [
+        'end' => $end->modify('+' . $extraHours . ' hours'),
+        'extraHours' => $extraHours,
+        'extraHoursAmount' => $extraHoursAmount,
+        'total' => (int)$package['price'] + $extraHoursAmount,
+        'packageName' => $name,
+    ];
 }
 
 function booking_guest_details(array $room, array $input, bool $manual): array

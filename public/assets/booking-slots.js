@@ -42,6 +42,12 @@
         return { start, end, fixed };
     }
 
+    function extendedWindow(window, hours = 0) {
+        const count = Number(hours);
+        if (!window || !Number.isInteger(count) || count < 0 || count > 2) return null;
+        return { ...window, end: new Date(window.end.getTime() + count * 3600000) };
+    }
+
     function overlaps(window, interval) {
         const needsCleaning = ['CONFIRMED', 'CHECKED_IN', 'PENDING'].includes(interval.status);
         const occupiedEnd = new Date(window.end.getTime() + (needsCleaning ? 3600000 : 0));
@@ -66,5 +72,5 @@
         return 'booked';
     }
 
-    scope.MoBookingSlots = { configuredSlots, earliestBookingDate, slotWindow, slotState, durationDayState };
+    scope.MoBookingSlots = { configuredSlots, earliestBookingDate, slotWindow, extendedWindow, slotState, durationDayState };
 })(typeof window === 'undefined' ? globalThis : window);

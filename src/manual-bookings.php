@@ -137,6 +137,10 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false): arra
             'payment_status' => $quote['paymentStatus'],
             'payment_method' => $quote['paymentMethod'],
         ];
+        if (($quote['extraHours'] ?? 0) > 0) {
+            $values['extra_hours'] = $quote['extraHours'];
+            $values['extra_hours_amount'] = $quote['extraHoursAmount'];
+        }
         if ($test) {
             $values['is_test'] = 1;
             $values['status'] = 'PENDING';

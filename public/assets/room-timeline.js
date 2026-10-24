@@ -384,6 +384,7 @@
                     ${Number(b.surcharge_amount) > 0 ? `<p class="mt-2 rounded-lg p-2 text-sm font-bold ${unpaidSurcharge ? 'bg-red-100 text-red-900' : 'text-stone-700'}">Phụ thu: ${cash(b.surcharge_amount)} · ${b.surcharge_status === "PAID" ? "Đã thu" : b.surcharge_status === "CANCELLED" ? "Đã hủy" : "Chưa thu"}</p>` : ""}
                     <div class="mt-3 flex flex-wrap gap-2">
                         ${canLock && b.isOverdue && !locked ? `<button class="timeline-button" data-lock-booking="${escape(b.id)}" type="button">Khóa khẩn cấp</button>` : ""}
+                        ${canCheckout && b.status === "CHECKED_IN" ? `<button class="timeline-button" data-booking-surcharge="${escape(b.id)}" data-booking-surcharge-label="${escape(b.room_name)} · ${escape(b.booking_code)}" type="button">Phụ thu</button>` : ""}
                         ${canCheckout && b.status === "CHECKED_IN" ? `<button class="timeline-button timeline-primary" data-checkout-booking="${escape(b.id)}" type="button">Xác nhận trả phòng</button>` : ""}
                         ${canCheckout && Number(b.surcharge_amount) > 0 && b.surcharge_status !== "CANCELLED" ? `<button class="timeline-button" data-charge-booking="${escape(b.id)}" type="button">Xem phụ thu / QR</button>` : ""}
                         ${window.LANG_HOME?.isSuperAdmin === true && unpaidSurcharge ? `<button class="timeline-button !border-red-400 !text-red-800 enabled:hover:!bg-red-100" data-cancel-surcharge="${escape(b.id)}" type="button">Hủy phụ thu</button>` : ""}
@@ -499,7 +500,9 @@
             const cancelled = charge.paymentStatus === "CANCELLED";
             body.innerHTML = `<p class="text-sm">Giờ trả thực tế: ${escape(dateTime(utc(charge.actualCheckoutAt)))}</p>
                 <p class="mt-2 text-sm">Trễ ${Math.ceil(charge.lateSeconds / 60)} phút · Miễn 15 phút đầu · ${charge.billableHours} giờ tính phí</p>
-                <p class="mt-4 text-2xl font-semibold">${cash(charge.amount)}</p>
+                ${(charge.items || []).map((item) => `<p class="mt-2 flex justify-between gap-3 text-sm"><span>${escape(item.name)}</span><strong>${cash(item.amount)}</strong></p>`).join("")}
+                <p class="mt-2 text-sm">Phụ thu theo giờ: ${cash(charge.billableHours * 50000)}</p>
+                <p class="mt-4 text-2xl font-semibold">Tổng phụ thu: ${cash(charge.amount)}</p>
                 <p class="mt-2 text-sm">${cancelled ? "Khoản phụ thu đã hủy." : charge.amount === 0 ? "Không phát sinh phụ thu." : paid ? "Đã nhận tiền phụ thu." : "Chưa nhận tiền phụ thu. Khoản này tách riêng tiền đặt phòng."}</p>
                 ${warning ? `<p class="mt-3 text-sm text-red-800" role="status">${escape(warning)}</p>` : ""}
                 <div class="mt-4 flex flex-wrap gap-2">
@@ -593,21 +596,39 @@
                 }
                 return;
             }
-            if (checkout && snapshot) {
+            if (checkout && snapshot && !mutating) {
                 openDialog(checkout.dataset.checkoutBooking);
-                const b = snapshot.bookings.find((item) => item.id === currentBooking);
-                const late = Math.max(0, timestamp(snapshot.serverTime) - utc(b.check_out));
-                const hours = Math.ceil(Math.max(0, late - 900000) / 3600000);
-                body.innerHTML = `<p>${escape(b.room_name)} · ${escape(b.booking_code)}</p>
-                    <p class="mt-3 text-sm">Khách đã rời phòng? Xác nhận sẽ mở khóa khẩn cấp và ghi giờ trả thực tế.</p>
-                    <p class="mt-3 font-semibold">Phụ thu tạm tính: ${cash(hours * 50000)}</p>
-                    <p class="mt-2 text-sm text-[#736b61]">Miễn 15 phút đầu; phần còn lại làm tròn giờ × 50.000đ. Máy chủ chốt tiền tại lúc bấm xác nhận.</p>
-                    <label class="mt-4 flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-[#d2bda7] p-3 text-sm">
-                        <input class="size-5 accent-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800" type="checkbox" data-checkout-collect>
-                        Xác nhận thu phụ thu và tạo mã chuyển khoản
-                    </label>
-                    <p class="mt-2 text-sm text-[#736b61]">Không tích: chỉ trả phòng, không thu phụ thu.</p>
-                    <button class="timeline-button timeline-primary mt-4" type="button" data-checkout-confirm>Khách đã rời phòng · Xác nhận</button>`;
+                const selectedBooking = currentBooking;
+                body.innerHTML = '<p class="text-sm" role="status">Đang tải phụ thu đã lưu…</p>';
+                try {
+                    const saved = await request("/api/admin/room-operations/surcharges?" + new URLSearchParams({ bookingId: selectedBooking }));
+                    if (!dialog.open || currentBooking !== selectedBooking) return;
+                    const b = snapshot.bookings.find((item) => item.id === selectedBooking);
+                    const late = Math.max(0, Date.now() - utc(b.check_out));
+                    const hours = Math.ceil(Math.max(0, late - 900000) / 3600000);
+                    const savedTotal = saved.items.reduce((sum, item) => sum + Number(item.amount), 0);
+                    body.innerHTML = `<p>${escape(b.room_name)} · ${escape(b.booking_code)}</p>
+                        <p class="mt-3 text-sm">Khách đã rời phòng? Xác nhận sẽ ghi giờ trả thực tế và chốt các khoản phụ thu.</p>
+                        <div class="mt-3 grid gap-2 rounded-lg border border-[#e5dacb] p-3">
+                            ${saved.items.map((item) => `<p class="flex justify-between gap-3 text-sm"><span>${escape(item.name)}</span><strong>${cash(item.amount)}</strong></p>`).join("") || '<p class="text-sm">Chưa có khoản phụ thu đã lưu.</p>'}
+                            <p class="font-semibold">Phụ thu đã lưu: ${cash(savedTotal)}</p>
+                        </div>
+                        <p class="mt-3 text-sm">Phụ thu giờ tạm tính: ${cash(hours * 50000)} · Miễn 15 phút đầu, phần còn lại làm tròn giờ × 50.000đ.</p>
+                        <label class="mt-4 flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-[#d2bda7] p-3 text-sm">
+                            <input class="size-5 accent-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800" type="checkbox" data-checkout-collect>
+                            Thu thêm phụ thu giờ trả trễ
+                        </label>
+                        <p class="mt-2 text-sm text-[#736b61]">Không tích: chỉ miễn phụ thu giờ; các khoản đã lưu vẫn được thu. Máy chủ chốt tổng tiền tại lúc xác nhận.</p>
+                        <p class="mt-3 font-semibold" data-checkout-total>Tổng phụ thu dự kiến: ${cash(savedTotal)}</p>
+                        <button class="timeline-button timeline-primary mt-4" type="button" data-checkout-confirm>Khách đã rời phòng · Xác nhận</button>`;
+                    one("[data-checkout-collect]").addEventListener("change", (event) => {
+                        one("[data-checkout-total]").textContent = "Tổng phụ thu dự kiến: " + cash(savedTotal + (event.target.checked ? hours * 50000 : 0));
+                    });
+                } catch (error) {
+                    if (dialog.open && currentBooking === selectedBooking) {
+                        body.innerHTML = `<p class="text-sm text-red-800" role="alert">Chưa tải được phụ thu: ${escape(error.message)}. Đóng và mở lại để thử lại.</p>`;
+                    }
+                }
                 return;
             }
             const target = lock || chargeButton || pay || confirm || refreshCharge;

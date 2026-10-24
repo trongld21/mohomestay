@@ -213,6 +213,7 @@ function admin_api_permission(string $path, string $method, array $body = []): s
         'staff-email' => 'accounts',
         'room-operations' => match (true) {
             str_ends_with($path, '/cancel-surcharge') => 'accounts',
+            str_ends_with($path, '/surcharges') => 'availability.checkout',
             $path === '/api/admin/room-operations/holds' && $method === 'GET' => 'availability.hold',
             $method === 'GET' => 'availability.view',
             str_ends_with($path, '/lock') => 'availability.lock',

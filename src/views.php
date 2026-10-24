@@ -144,6 +144,7 @@ function render_google_analytics(string $path, string $host): void
         <script defer src="<?= e(asset_url('/assets/admin-permissions.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-booking-filters.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin.js')) ?>"></script>
+        <script defer src="<?= e(asset_url('/assets/booking-surcharges.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/booking-stay.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-inputs.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-date-picker.js')) ?>"></script>
@@ -727,13 +728,20 @@ function render_room(array $r): void
                 <div class="form-grid booking-primary-fields"><label class="field">Không gian<select name="roomId"><?php foreach ($active as $r): ?><option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option><?php endforeach ?></select></label><label class="field">Ngày ghé Mơ<input name="date" type="date" min="<?= date('Y-m-d') ?>" required></label></div>
                 <fieldset class="booking-slot-section" data-slot-section tabindex="-1">
                     <legend><span>02</span><strong>Chọn khung giờ</strong></legend>
-                    <p class="mb-3 text-sm text-stone-600">Các gói có thể nhận phòng cả sau 21:00 nếu còn trống toàn bộ thời gian lưu trú và đủ thời gian dọn phòng. Giờ trả và giá gói cố định giữ nguyên.</p>
+                    <p class="mb-3 text-sm text-stone-600">Các gói có thể nhận phòng cả sau 21:00 nếu còn trống toàn bộ thời gian lưu trú và đủ thời gian dọn phòng. Giờ trả chỉ tăng thêm khi bạn chọn giờ phát sinh.</p>
                     <div class="slot-status-legend" aria-label="Chú thích trạng thái"><span><i class="is-available"></i>Còn trống</span><span><i class="is-selected"></i>Đang chọn</span><span><i class="is-booked"></i>Đã đặt</span></div>
                     <div class="booking-slot-grid" data-slot-grid aria-live="polite" aria-busy="true">
                         <div class="slot-skeleton"></div>
                         <div class="slot-skeleton"></div>
                     </div>
                     <div class="field booking-duration-time" data-duration-time hidden><label for="booking-arrival-time">Giờ nhận phòng</label><input id="booking-arrival-time" name="time" type="time" step="1800"></div>
+                    <div class="mt-5 rounded-xl border border-[#e5dacb] bg-[#faf5ed] p-4" data-extra-hours-section hidden>
+                        <input type="hidden" name="extraHours" value="0">
+                        <h3 class="font-sans text-base font-semibold">Thêm giờ lưu trú</h3>
+                        <p class="mt-1 text-sm text-stone-600">50.000đ/giờ, cộng vào giờ trả và tổng tiền. Bấm lại lựa chọn để bỏ.</p>
+                        <div class="mt-3 grid grid-cols-2 gap-3" data-extra-hours-options></div>
+                        <p class="mt-2 text-sm text-stone-600" data-extra-hours-status role="status"></p>
+                    </div>
                 </fieldset>
                 <div class="form-section booking-guest-section">
                     <div class="booking-step-heading"><span>03</span>

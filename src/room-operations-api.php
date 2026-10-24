@@ -4,6 +4,29 @@ declare(strict_types=1);
 
 function room_operations_api(string $path, string $method): never
 {
+    if ($path === '/api/admin/room-operations/surcharges') {
+        require_permission('availability.checkout');
+        $bookingId = (string)($_GET['bookingId'] ?? '');
+        if ($method === 'POST') {
+            require_csrf();
+            $input = json_body();
+            $bookingId = (string)($input['bookingId'] ?? '');
+            save_booking_surcharge(db(), $input, (string)current_account()['id']);
+        } elseif ($method !== 'GET') {
+            throw new BookingException('Phương thức không hợp lệ.', 405);
+        }
+        header('Cache-Control: no-store');
+        $query = db()->prepare('SELECT id,status FROM bookings WHERE id=?');
+        $query->execute([$bookingId]);
+        $booking = $query->fetch();
+        if (!$booking) throw new BookingException('Không tìm thấy đơn.', 404);
+        $final = db()->prepare('SELECT booking_id FROM booking_checkout_charges WHERE booking_id=?');
+        $final->execute([$bookingId]);
+        json_response([
+            'items' => booking_surcharge_items(db(), $bookingId),
+            'editable' => in_array($booking['status'], ['CONFIRMED', 'CHECKED_IN'], true) && !$final->fetchColumn(),
+        ]);
+    }
     if ($path === '/api/admin/room-operations/holds' && $method === 'GET') {
         header('Cache-Control: no-store');
         json_response(['holds' => active_room_quote_holds(db(), (string)($_GET['roomId'] ?? ''))]);
@@ -47,7 +70,7 @@ function room_operations_api(string $path, string $method): never
         $query->execute([(string)($_GET['bookingId'] ?? '')]);
         $charge = $query->fetch();
         if (!$charge) throw new BookingException('Chưa có khoản phụ thu cho đơn này.', 404);
-        json_response(['charge' => checkout_charge_dto($charge)]);
+        json_response(['charge' => checkout_charge_dto($charge, booking_surcharge_items(db(), $charge['booking_id']))]);
     }
     if ($method !== 'POST' || !in_array($path, [
         '/api/admin/room-operations/lock',
@@ -86,12 +109,12 @@ function room_operations_api(string $path, string $method): never
             } catch (Throwable $error) {
                 error_log('Checkout QR unavailable: ' . $error->getMessage());
                 json_response([
-                    'charge' => checkout_charge_dto($charge),
+                    'charge' => checkout_charge_dto($charge, booking_surcharge_items(db(), $charge['booking_id'])),
                     'paymentError' => 'Đã xác nhận trả phòng và lưu phụ thu. Chưa tạo được QR, hãy bấm Tạo lại QR.',
                 ]);
             }
         }
-        json_response(['charge' => checkout_charge_dto($charge)]);
+        json_response(['charge' => checkout_charge_dto($charge, booking_surcharge_items(db(), $charge['booking_id']))]);
     }
-    json_response(['charge' => checkout_charge_dto(ensure_checkout_payment(db(), $id))]);
+    json_response(['charge' => checkout_charge_dto(ensure_checkout_payment(db(), $id), booking_surcharge_items(db(), $id))]);
 }

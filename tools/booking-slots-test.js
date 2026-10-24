@@ -116,3 +116,14 @@ const atNine = new Date('2027-01-15T21:00:00+07:00');
 assert.equal(slotState(slotWindow(regular, '2027-01-15', '23:00', atNine), [], atNine), 'available');
 assert.equal(slotState(slotWindow(regular, '2027-01-15', '20:00', atNine), [], atNine), 'past');
 console.log('Regular packages remain available after 21:00; past arrivals remain invalid: OK');
+
+const extensionBase = slotWindow({ mode: 'DURATION', durationMinutes: 180 }, '2027-01-15', '22:00', fullDayNow);
+const extension = globalThis.MoBookingSlots.extendedWindow(extensionBase, 2);
+assert.equal(extension.end.getTime() - extension.start.getTime(), 5 * 3600000);
+assert.equal(extensionBase.end.getTime() - extensionBase.start.getTime(), 3 * 3600000, 'Keep the base package unchanged');
+const followingStay = [{ start: '2027-01-16T04:00:00+07:00', end: '2027-01-16T07:00:00+07:00', status: 'CONFIRMED' }];
+assert.equal(slotState(globalThis.MoBookingSlots.extendedWindow(extensionBase, 1), followingStay, fullDayNow), 'available');
+assert.equal(slotState(globalThis.MoBookingSlots.extendedWindow(extensionBase, 2), followingStay, fullDayNow), 'available');
+const tighterStay = [{ ...followingStay[0], start: '2027-01-16T03:30:00+07:00' }];
+assert.equal(slotState(globalThis.MoBookingSlots.extendedWindow(extensionBase, 2), tighterStay, fullDayNow), 'booked', 'Extra hours must leave the full cleaning hour');
+console.log('Extra hours extend the stay and preserve cleaning conflict checks: OK');
