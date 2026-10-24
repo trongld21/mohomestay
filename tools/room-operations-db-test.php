@@ -32,6 +32,34 @@ CREATE TABLE booking_checkout_charges (booking_id TEXT PRIMARY KEY,actual_checko
 CREATE TABLE room_quote_holds (id TEXT PRIMARY KEY,room_id TEXT,package_id TEXT,starts_at TEXT,ends_at TEXT,expires_at TEXT,released_at TEXT,created_by TEXT,released_by TEXT);
 CREATE TABLE staff_email_notifications (id TEXT PRIMARY KEY,booking_id TEXT,event_type TEXT,recipient TEXT,payload TEXT,status TEXT DEFAULT 'PENDING',attempts INTEGER DEFAULT 0,last_attempt_at TEXT,sent_at TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP,UNIQUE(booking_id,event_type));
 INSERT INTO rooms VALUES ('r',1,'ACTIVE','Room');");
+$selectedStart = new DateTimeImmutable('tomorrow 19:00', new DateTimeZone('Asia/Ho_Chi_Minh'));
+$holdInput = ['roomId' => 'r', 'date' => $selectedStart->format('Y-m-d'), 'time' => '19:00'];
+$scheduledHold = create_room_quote_hold($pdo, $holdInput, 'staff');
+$holdStart = strtotime($scheduledHold['starts_at'] . ' UTC');
+operation_check($holdStart === $selectedStart->getTimestamp(), 'Hold must start at the selected local time without a package.');
+operation_check(strtotime($scheduledHold['ends_at'] . ' UTC') === $holdStart + 3600, 'Hold must cover exactly one hour from the selected start.');
+operation_check($scheduledHold['expires_at'] === $scheduledHold['ends_at'], 'Future hold must remain reserved until its selected end.');
+operation_conflict(fn() => assert_room_inventory($pdo, 'r', $scheduledHold['starts_at'], $scheduledHold['ends_at']));
+operation_check(!room_quote_hold_conflict($pdo, 'r', $scheduledHold['starts_at'], $scheduledHold['ends_at'], $holdStart + 3600), 'Hold must expire at its selected end.');
+operation_conflict(fn() => create_room_quote_hold($pdo, $holdInput, 'staff'));
+operation_check(room_quote_hold_conflict($pdo, 'r', $scheduledHold['starts_at'], $scheduledHold['ends_at'], time() + 7200), 'Future slot must remain reserved beyond one hour after clicking.');
+assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $holdStart - 3600), $scheduledHold['starts_at']);
+assert_room_inventory($pdo, 'r', $scheduledHold['ends_at'], gmdate('Y-m-d H:i:s', $holdStart + 7200));
+release_room_quote_hold($pdo, $scheduledHold['id'], 'staff');
+assert_room_inventory($pdo, 'r', $scheduledHold['starts_at'], $scheduledHold['ends_at']);
+$overnightHold = create_room_quote_hold($pdo, array_replace($holdInput, ['time' => '23:30']), 'staff');
+$overnightEnd = new DateTimeImmutable($overnightHold['ends_at'], new DateTimeZone('UTC'));
+operation_check($overnightEnd->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'))->format('Y-m-d H:i') === $selectedStart->modify('+1 day')->format('Y-m-d') . ' 00:30', 'One-hour hold must cross midnight correctly.');
+release_room_quote_hold($pdo, $overnightHold['id'], 'staff');
+foreach ([[], ['date' => '2000-01-01', 'time' => '19:00'], ['date' => '2027-02-30', 'time' => '19:00'], ['date' => $holdInput['date'], 'time' => '25:00']] as $invalidInput) {
+    try {
+        create_room_quote_hold($pdo, ['roomId' => 'r'] + $invalidInput, 'staff');
+        throw new RuntimeException('Invalid hold time accepted.');
+    } catch (BookingException $error) {
+        operation_check($error->httpStatus === 422, 'Invalid or past time must return 422.');
+    }
+}
+
 $id = str_repeat('a', 32);
 $now = time();
 $scheduled = gmdate('Y-m-d H:i:s', $now - 4200);

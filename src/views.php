@@ -523,24 +523,17 @@ function render_room(array $r): void
                     </div>
                     <?php if (can_use('availability.hold') && !$coming && !$hidden): ?>
                         <section class="my-4 rounded-xl border border-sky-200 bg-sky-50 p-4" data-room-quote-hold data-room-id="<?= e($r['id']) ?>">
-                            <h2 class="font-sans text-base font-semibold">Giữ căn để báo giá</h2>
-                            <p class="mt-1 text-sm text-stone-600">Khóa khung giờ đã chọn trong 1 giờ để tư vấn khách. Tự mở khi hết hạn hoặc nhân viên mở lại.</p>
+                            <h2 class="font-sans text-base font-semibold">Khóa phòng khẩn cấp</h2>
+                            <p class="mt-1 text-sm text-stone-600">Chọn ngày và giờ bắt đầu, phòng sẽ được giữ trong 1 giờ kể từ mốc đã chọn. Tự mở khi hết hạn hoặc nhân viên mở khóa sớm.</p>
                             <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                                <label class="grid gap-1 text-sm">Gói
-                                    <select class="timeline-input" data-hold-package>
-                                        <?php foreach ($packages as $holdPackage): ?>
-                                            <option value="<?= e($holdPackage['id']) ?>"><?= e($holdPackage['name']) ?></option>
-                                        <?php endforeach ?>
-                                    </select>
+                                <label class="grid gap-1 text-sm">Ngày bắt đầu khóa
+                                    <input class="timeline-input" type="date" data-hold-date value="<?= e(date('Y-m-d')) ?>" min="<?= e(date('Y-m-d')) ?>" required>
                                 </label>
-                                <label class="grid gap-1 text-sm">Ngày nhận
-                                    <input class="timeline-input" type="date" data-hold-date value="<?= e(date('Y-m-d')) ?>" min="<?= e(date('Y-m-d')) ?>">
-                                </label>
-                                <label class="grid gap-1 text-sm" data-hold-time-label>Giờ nhận
-                                    <input class="timeline-input" type="time" data-hold-time step="60">
+                                <label class="grid gap-1 text-sm">Giờ bắt đầu khóa
+                                    <input class="timeline-input" type="time" data-hold-time value="<?= e(date('H:i')) ?>" step="60" required>
                                 </label>
                             </div>
-                            <button class="timeline-button mt-3" type="button" data-hold-create>Khóa căn khẩn cấp · Giữ 1 giờ</button>
+                            <button class="timeline-button mt-3" type="button" data-hold-create>Khóa 1 giờ từ mốc đã chọn</button>
                             <p class="mt-2 text-sm text-stone-700" data-hold-status role="status"></p>
                         </section>
                         <script defer src="<?= e(asset_url('/assets/room-quote-hold.js')) ?>"></script>
