@@ -97,6 +97,7 @@ async function openHour(at = 13) {
     assert.equal(element("[data-timeline-booking-confirm]").hidden, true);
     await click("[data-timeline-package]", { dataset: { timelinePackage: "short" } });
     assert.equal(cells.filter((cell) => cell.dataset.selected === "true").length, 3);
+    assert.equal(cells.find((cell) => Number(cell.dataset.slotStart) === base + 16 * hour).dataset.selected, "false", "The hour after checkout is not part of the selected stay");
     assert.equal(element("[data-timeline-booking-confirm]").hidden, false);
     await click("[data-timeline-booking-confirm]", {});
     const handoff = new URLSearchParams(location.href.split("?")[1]);
@@ -119,6 +120,12 @@ async function openHour(at = 13) {
     resolveOld({ ok: true, json: async () => ({ packages: options }) });
     await oldRequest;
     assert.equal(element("[data-timeline-packages]").innerHTML, "", "Old responses must not replace the latest hour");
+    currentOptions = [{ ...options[0], start: new Date(base + 18 * hour).toISOString(), end: new Date(base + 21 * hour).toISOString(), time: "18:00" }];
+    await openHour(18);
+    await click("[data-timeline-package]", { dataset: { timelinePackage: "short" } });
+    const selectedHours = cells.filter((cell) => cell.dataset.selected === "true")
+        .map((cell) => (Number(cell.dataset.slotStart) - base) / hour);
+    assert.deepEqual(selectedHours, [18, 19, 20], "18:00-21:00 selects only stay hours, never the 21:00-22:00 cleaning hour");
     currentOptions = [{ ...options[0], id: "night", start: new Date(base + 21 * hour).toISOString(), end: new Date(base + 33 * hour).toISOString(), time: "21:00" }];
     root.querySelector("[data-timeline-scroll]").scrollLeft = 350;
     element("[data-timeline-scroll]").scrollTop = 120;

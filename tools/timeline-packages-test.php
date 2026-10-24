@@ -53,4 +53,15 @@ try {
 } catch (BookingException $error) {
     operation_check($error->httpStatus === 422, 'Invalid hour must return 422.');
 }
+
+$evening = timeline_available_packages($pdo, $room, $day, '18:00')[0];
+operation_check((new DateTimeImmutable($evening['end']))->format('H:i') === '21:00', 'Three-hour stay at 18:00 must end at 21:00 without cleaning added.');
+$pdo->prepare("INSERT INTO bookings (id,room_id,check_in,check_out,status) VALUES ('evening','r',?,?,'CONFIRMED')")
+    ->execute([mysql_datetime(new DateTimeImmutable($evening['start'])), mysql_datetime(new DateTimeImmutable($evening['end']))]);
+$afterBooking = availability_snapshot($pdo, [$room], $day, 2);
+$cleaning = array_values(array_filter($afterBooking['rooms'][0]['intervals'], static fn($interval) => $interval['status'] === 'CLEANING'));
+operation_check(count($cleaning) === 1, 'Cleaning appears after a booking exists.');
+operation_check((new DateTimeImmutable($cleaning[0]['start']))->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'))->format('H:i') === '21:00', 'Cleaning starts at checkout.');
+operation_check(strtotime($cleaning[0]['end']) - strtotime($cleaning[0]['start']) === 3600, 'Cleaning occupies exactly one hour after checkout.');
+
 echo "Timeline server package availability: OK\n";

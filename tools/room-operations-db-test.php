@@ -123,7 +123,11 @@ $pdo->prepare("INSERT INTO bookings (id,room_id,booking_code,status,check_in,che
 operation_conflict(fn() => assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $now + 80000), gmdate('Y-m-d H:i:s', $now + 86400 - 3599)));
 assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $now + 78000), gmdate('Y-m-d H:i:s', $now + 86400 - 3600));
 $localDate = (new DateTimeImmutable('@' . $now))->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'))->format('Y-m-d');
-$public = availability_snapshot($pdo, [['id' => 'r', 'status' => 'ACTIVE']], $localDate, 3);
+$public = availability_snapshot($pdo, [
+    ['id' => 'r', 'status' => 'ACTIVE'],
+    ['id' => 'hidden-test', 'status' => 'HIDDEN'],
+], $localDate, 3);
+operation_check(array_column($public['rooms'], 'id') === ['r'], 'Hidden rooms must not appear in the availability matrix.');
 $json = json_encode($public);
 operation_check(!str_contains($json, 'MO-TEST') && !str_contains($json, 'staff') && !str_contains($json, 'bookingId'), 'Public intervals must not disclose booking identities or staff.');
 operation_check(str_contains($json, 'CLEANING'), 'Public calendar must show cleaning time.');

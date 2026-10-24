@@ -37,6 +37,9 @@ function availability_snapshot(PDO $pdo, array $rooms, string $date, int $days =
     $inventory = $pdo->query('SELECT id,is_active FROM rooms')->fetchAll(PDO::FETCH_KEY_PAIR);
     $result = [];
     foreach ($rooms as $room) {
+        if (($room['status'] ?? '') === 'HIDDEN') {
+            continue;
+        }
         $intervals = [];
         foreach ($bookings as $booking) {
             if ($booking['room_id'] !== $room['id']) continue;
