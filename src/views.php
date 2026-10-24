@@ -287,8 +287,19 @@ function render_room_cards(bool $liveAvailability = false): void
                                                                                                                                                                                         { ?><script type="application/ld+json">
         <?= json_encode(['@context' => 'https://schema.org', '@type' => 'LodgingBusiness', 'name' => 'Mơ Home', 'telephone' => '+84357907153', 'address' => ['@type' => 'PostalAddress', 'streetAddress' => '82 đường B18, KDC 91B', 'addressLocality' => 'Ninh Kiều', 'addressRegion' => 'Cần Thơ', 'addressCountry' => 'VN']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
     </script>
+    <?php $heroImages = [
+        ['file' => 'room-1.webp', 'alt' => 'Không gian phòng tông hồng với giường đôi'],
+        ['file' => 'room-2.webp', 'alt' => 'Không gian phòng tông kem với rèm vàng và ghế sofa'],
+        ['file' => 'room-3.webp', 'alt' => 'Không gian phòng ấm áp dưới ánh đèn vàng'],
+        ['file' => 'room-4.webp', 'alt' => 'Không gian phòng tông tối với ánh đèn cầu vồng'],
+    ]; ?>
     <section class="hero" data-hero-carousel aria-label="Không gian Mơ Home" aria-roledescription="carousel">
-        <?php foreach (['pink', 'white', 'black'] as $index => $image): ?><img class="hero-photo hero-slide <?= $index === 0 ? 'is-active' : '' ?>" src="<?= e(asset_url('/images/' . $image . '-illustration.jpg')) ?>" alt="Không gian phòng <?= e(ucfirst($image)) ?>" data-hero-slide aria-hidden="<?= $index === 0 ? 'false' : 'true' ?>" <?= $index === 0 ? ' fetchpriority="high"' : ' loading="lazy"' ?>><?php endforeach ?>
+        <?php foreach ($heroImages as $index => $image): ?>
+            <img class="hero-photo hero-slide <?= $index === 0 ? 'is-active' : '' ?>"
+                src="<?= e(asset_url('/images/hero/' . $image['file'])) ?>" alt="<?= e($image['alt']) ?>"
+                width="1536" height="1024" data-hero-slide aria-hidden="<?= $index === 0 ? 'false' : 'true' ?>"
+                <?= $index === 0 ? 'fetchpriority="high"' : 'loading="lazy"' ?>>
+        <?php endforeach ?>
         <div class="hero-shade"></div>
         <div class="container hero-content" data-home-reveal><span class="eyebrow"><span class="tiny-line"></span> CHÀO BẠN, MƠ ĐÂY</span>
             <h1>Chạm vào<br>một chốn <em>mơ.</em></h1>
@@ -296,7 +307,7 @@ function render_room_cards(bool $liveAvailability = false): void
         </div>
         <div class="hero-carousel-controls" data-hero-controls hidden>
             <button type="button" data-hero-prev aria-label="Ảnh trước">‹</button>
-            <div class="hero-carousel-dots"><?php for ($i = 0; $i < 3; $i++): ?><button type="button" data-hero-dot="<?= $i ?>" aria-label="Xem ảnh <?= $i + 1 ?>" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>"></button><?php endfor ?></div>
+            <div class="hero-carousel-dots"><?php foreach ($heroImages as $i => $image): ?><button type="button" data-hero-dot="<?= $i ?>" aria-label="Xem ảnh <?= $i + 1 ?>" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>"></button><?php endforeach ?></div>
             <button type="button" data-hero-next aria-label="Ảnh tiếp theo">›</button>
             <button type="button" data-hero-pause aria-label="Tạm dừng chuyển ảnh">Ⅱ</button>
             <span class="sr-only" data-hero-status aria-live="polite"></span>

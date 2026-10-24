@@ -72,41 +72,35 @@
 [data-room-card-id][hidden] {
     @apply hidden;
 }
+@media (min-width: 981px) {
+    [data-public-room-grid] {
+        @apply grid-cols-6;
+    }
+    [data-public-room-grid] > [data-room-card-id] {
+        @apply col-span-2;
+    }
+    [data-public-room-grid] > [data-room-card-id]:nth-child(3n + 1):nth-last-child(2) {
+        @apply col-start-2;
+    }
+}
 .room-card.room-product-card,
 .room-card.room-product-card .room-image {
     @apply rounded-lg;
 }
 .home-room-availability {
-    @apply absolute right-0 top-0 z-10 inline-flex w-fit rounded-bl-lg rounded-tr-[2px] border border-[#d8d0c4] bg-[#f3eee6] px-4 py-2 text-xs font-semibold leading-5 text-[#655c50];
-}
-.home-room-availability[data-state="available"] {
-    @apply bg-[#596747];
-}
-.home-room-availability[data-state="available"],
-.home-room-availability[data-state="unavailable"] {
-    @apply block size-24 rounded-none border-0 pb-0 pl-0 pr-1.5 pt-5 text-right text-[10px] leading-4 text-white;
-    clip-path: polygon(0 0, 100% 0, 100% 100%);
+    @apply absolute right-3 top-3 z-10 inline-flex w-fit items-center gap-2 rounded-md border border-[#e5dacb] bg-[#fff8ed] px-3 py-1.5 text-xs font-semibold leading-5 text-[#65503c];
 }
 .home-room-availability[data-state="unavailable"] {
-    @apply bg-[#b43c2d];
+    @apply border-[#b43c2d] bg-[#b43c2d] text-white;
 }
 .home-room-availability[data-state="available"]::before,
 .home-room-availability[data-state="unavailable"]::before {
     content: "";
-    @apply pointer-events-none absolute inset-0 bg-[#ef997d];
-    clip-path: polygon(0 0, 4% 0, 100% 96%, 100% 100%);
+    @apply inline-block size-4 shrink-0 bg-current;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7v13m0-3h18v3M3 13h18v4M7 13V8h10a4 4 0 0 1 4 4v1M7 10H3'/%3E%3C/svg%3E") center / contain no-repeat;
 }
-.home-room-availability[data-state="available"]::before {
-    @apply bg-[#aeb991];
-}
-.home-room-availability[data-state="available"]::after,
-.home-room-availability[data-state="unavailable"]::after {
-    content: "";
-    @apply absolute right-3 top-1 size-4;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 3 18 18M3 7v13m0-3h13m4 0h1v-4H12M7 10H3v3h5m-1-3V7h2m4 0h4a4 4 0 0 1 4 4v2M21 17v3'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-.home-room-availability[data-state="available"]::after {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7v13m0-3h18v3M3 13h18v4M7 13V8h10a4 4 0 0 1 4 4v1M7 10H3'/%3E%3C/svg%3E");
+.home-room-availability[data-state="unavailable"]::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 3 18 18M3 7v13m0-3h13m4 0h1v-4H12M7 10H3v3h5m-1-3V7h2m4 0h4a4 4 0 0 1 4 4v2M21 17v3'/%3E%3C/svg%3E");
 }
 .room-discount-corner {
     @apply absolute left-0 top-0 z-10 inline-flex rounded-br-lg rounded-tl-lg bg-[#ff7a14] px-4 py-2 text-xs font-semibold leading-5 text-white;
@@ -1089,12 +1083,15 @@
     @apply hidden;
 }
 .room-product-card .room-tag-chips svg { @apply size-3 shrink-0; }
-.room-product-card .room-amenities { @apply mb-6 mt-auto flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#625b55]; }
+.room-product-card .room-amenities { @apply mb-0 mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-2 border-y border-[#eee9e3] py-3 text-xs text-[#625b55]; }
 .room-product-card .room-amenities > span { @apply inline-flex items-center gap-1.5; }
 .room-product-card .room-amenities svg { @apply size-4 shrink-0; }
-.room-product-card .room-price { @apply mt-0 border-t border-[#eee9e3] pt-5; }
+.room-product-card .room-price { @apply mt-0 gap-2 border-0 pt-3; }
+.room-product-card .room-price > div > small { @apply hidden; }
+.room-product-card .room-price del { @apply text-sm text-[#8c867f]; }
+.room-product-card .room-price > div { @apply min-w-0; }
 .room-product-card .room-price small { @apply mb-1 block text-xs text-[#82786f]; }
-.room-product-card .room-price strong { @apply text-2xl font-bold text-[#70432c]; }
+.room-product-card .room-price strong { @apply text-2xl font-bold text-[#791e18]; }
 .room-product-card .room-price > a { @apply flex size-11 shrink-0 items-center justify-center rounded-full border-0 bg-[#596747] p-0 text-2xl text-white; }
 @media (hover: hover) { .room-product-card .room-price > a:hover { @apply bg-[#465238]; } }
 
@@ -1546,7 +1543,7 @@ html:has(> body.admin-page) {
     @apply grid min-w-0 grid-cols-1 gap-2;
 }
 .admin-navigation :is(button, a) {
-    @apply m-0 flex min-h-12 min-w-0 w-full items-center justify-start gap-3 rounded-lg border-0 bg-transparent px-3 py-3 text-left text-sm text-[#6e665b] no-underline transition-colors motion-reduce:transition-none 2xl:text-[15px];
+    @apply m-0 flex min-h-12 min-w-0 w-full items-center justify-start gap-3 rounded-lg border-0 bg-transparent px-3 py-3 text-left text-sm font-medium leading-5 text-[#6e665b] no-underline transition-colors motion-reduce:transition-none;
 }
 .admin-navigation :is(button, a):hover {
     @apply bg-[#f2eee7];
@@ -2148,7 +2145,7 @@ html:has(> body.admin-page) {
     @apply inline-block size-5 shrink-0 align-middle;
 }
 .admin-navigation .admin-icon {
-    @apply size-[21px];
+    @apply size-5 shrink-0;
 }
 .admin-page :is(.admin-website-link, .admin-sidebar-bottom form button, .admin-card-actions .button, .admin-page-heading .button, .editor-section-title .button, .editor-footer .button) {
     @apply inline-flex items-center justify-center gap-2;
