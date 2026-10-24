@@ -102,20 +102,17 @@ console.log('Full-day occupancy disables duration packages before a time is sele
 for (const durationMinutes of [180, 360, 1440]) {
     const slot = { mode: 'DURATION', durationMinutes };
     assert.equal(slotState(slotWindow(slot, '2027-01-15', '20:59', fullDayNow), [], fullDayNow), 'available');
-    assert.equal(slotState(slotWindow(slot, '2027-01-15', '21:00', fullDayNow), [], fullDayNow), 'restricted');
-    assert.equal(slotState(slotWindow(slot, '2027-01-15', '23:00', fullDayNow), [], fullDayNow), 'restricted');
-    assert.equal(globalThis.MoBookingSlots.durationDayState(slot, '2027-01-15', [], new Date('2027-01-15T21:00:00+07:00')), 'restricted');
+    assert.equal(slotState(slotWindow(slot, '2027-01-15', '21:00', fullDayNow), [], fullDayNow), 'available');
+    assert.equal(slotState(slotWindow(slot, '2027-01-15', '23:00', fullDayNow), [], fullDayNow), 'available');
+    assert.equal(globalThis.MoBookingSlots.durationDayState(slot, '2027-01-15', [], new Date('2027-01-15T21:00:00+07:00')), 'available');
     const eveningNow = new Date('2027-01-15T22:00:00+07:00');
     assert.equal(slotState(slotWindow(slot, '2027-01-16', '14:00', eveningNow), [], eveningNow), 'available');
 }
 assert.equal(slotState(slotWindow({ mode: 'FIXED_TIME', checkInTime: '22:00', checkOutTime: '10:00' }, '2027-01-15', '', fullDayNow), [], fullDayNow), 'available');
-console.log('21:00 cutoff follows arrival time, allows pre-cutoff stays ending later, and preserves overnight packages: OK');
+console.log('Late arrivals and overnight packages remain available: OK');
 
 const regular = { mode: 'DURATION', durationMinutes: 180 };
-const beforeNine = new Date('2027-01-15T20:59:59+07:00');
 const atNine = new Date('2027-01-15T21:00:00+07:00');
-assert.equal(globalThis.MoBookingSlots.currentTimeRestricted(regular, '2027-01-15', beforeNine), false);
-assert.equal(globalThis.MoBookingSlots.currentTimeRestricted(regular, '2027-01-15', atNine), true);
-assert.equal(globalThis.MoBookingSlots.currentTimeRestricted(regular, '2027-01-16', atNine), false);
-assert.equal(globalThis.MoBookingSlots.currentTimeRestricted(nightPackage, '2027-01-15', atNine), false);
-console.log('Website current clock locks today regular packages from 21:00, preserving tomorrow and overnight: OK');
+assert.equal(slotState(slotWindow(regular, '2027-01-15', '23:00', atNine), [], atNine), 'available');
+assert.equal(slotState(slotWindow(regular, '2027-01-15', '20:00', atNine), [], atNine), 'past');
+console.log('Regular packages remain available after 21:00; past arrivals remain invalid: OK');

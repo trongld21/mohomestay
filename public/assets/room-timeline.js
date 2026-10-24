@@ -180,11 +180,14 @@
             const anchor = bookingAnchor();
             if (!anchor) return;
             const rect = anchor.getBoundingClientRect();
+            const belowSpace = Math.max(0, window.innerHeight - rect.bottom - 16);
+            const aboveSpace = Math.max(0, rect.top - 16);
+            const below = belowSpace >= 260 || belowSpace >= aboveSpace;
+            const available = below ? belowSpace : aboveSpace;
+            bookingPanel.style.maxHeight = Math.min(window.innerHeight - 16, available) + "px";
             const popup = bookingPanel.getBoundingClientRect();
             const left = Math.max(8, Math.min(rect.left, window.innerWidth - popup.width - 8));
-            const below = rect.bottom + 8;
-            const top = below + popup.height <= window.innerHeight - 8
-                ? below : Math.max(8, rect.top - popup.height - 8);
+            const top = below ? rect.bottom + 8 : Math.max(8, rect.top - popup.height - 8);
             bookingPanel.style.left = left + "px";
             bookingPanel.style.top = top + "px";
         }
@@ -203,11 +206,17 @@
             paintBookingChoice();
         }
 
+        function packageTime(value) {
+            return new Intl.DateTimeFormat("vi-VN", {
+                timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit",
+                day: "2-digit", month: "2-digit", hourCycle: "h23",
+            }).format(new Date(value));
+        }
+
         function renderPackageOptions() {
             packageList.innerHTML = packageOptions.map((option) => `<button class="timeline-package" type="button" data-timeline-package="${escape(option.id)}" aria-pressed="${bookingChoice?.selected?.id === option.id}">
-                <strong>${escape(option.name)}</strong>
-                <span>${escape(dateTime(option.start))} – ${escape(dateTime(option.end))}</span>
-                <span class="font-semibold">${cash(option.price)}</span>
+                <span class="flex w-full items-center justify-between gap-2"><strong>${escape(option.name)}</strong><span class="shrink-0 font-semibold">${cash(option.price)}</span></span>
+                <span class="text-xs">${escape(packageTime(option.start))} – ${escape(packageTime(option.end))}</span>
             </button>`).join("");
         }
 
@@ -247,7 +256,12 @@
                     range.value = String(days);
                     range.textContent = days + " ngày";
                     daysInput.value = String(days);
+                    const scroll = one("[data-timeline-scroll]");
+                    const scrollTop = scroll.scrollTop;
+                    const scrollLeft = scroll.scrollLeft;
                     renderGrid();
+                    scroll.scrollTop = scrollTop;
+                    scroll.scrollLeft = scrollLeft;
                     paintBookingChoice();
                 } catch (error) {
                     if (active.signal.aborted || choiceController !== active || choice.selected !== option) return;
@@ -257,7 +271,7 @@
             }
             if (bookingChoice !== choice || choice.selected !== option) return;
             bookingConfirm.hidden = false;
-            packageStatus.textContent = "Các ô màu nâu là thời gian lưu trú đã chọn.";
+            packageStatus.textContent = "Đã chọn gói · Xác nhận để nhập thông tin";
             positionBookingPopup();
         }
 
@@ -271,7 +285,7 @@
             bookingPanel.showPopover();
             positionBookingPopup();
             bookingPanel.focus({ preventScroll: true });
-            one("[data-timeline-package-title]").textContent = `${room.name} · ${dateTime(start)} · Chọn gói khả dụng`;
+            one("[data-timeline-package-title]").textContent = `${room.name} · ${packageTime(start)}`;
             packageStatus.textContent = "Đang kiểm tra các gói và toàn bộ lịch lưu trú…";
             try {
                 const query = new URLSearchParams({ roomId: room.id, date: bookingChoice.date, time: bookingChoice.time });
@@ -280,7 +294,7 @@
                 packageOptions = result.packages;
                 renderPackageOptions();
                 packageStatus.textContent = packageOptions.length
-                    ? "Chọn một gói để xem khung giờ trên lịch. Giá hiển thị là giá trọn gói."
+                    ? "Chọn gói khả dụng · Giá trọn gói"
                     : "Không có gói khả dụng bắt đầu trong ô giờ này. Vui lòng chọn giờ hoặc phòng khác.";
                 positionBookingPopup();
             } catch (error) {

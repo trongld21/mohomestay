@@ -727,7 +727,7 @@ function render_room(array $r): void
                 <div class="form-grid booking-primary-fields"><label class="field">Không gian<select name="roomId"><?php foreach ($active as $r): ?><option value="<?= e($r['id']) ?>"><?= e($r['name']) ?></option><?php endforeach ?></select></label><label class="field">Ngày ghé Mơ<input name="date" type="date" min="<?= date('Y-m-d') ?>" required></label></div>
                 <fieldset class="booking-slot-section" data-slot-section tabindex="-1">
                     <legend><span>02</span><strong>Chọn khung giờ</strong></legend>
-                    <p class="mb-3 text-sm text-stone-600">Từ 21:00 chỉ nhận gói qua đêm. Gói nhận trước 21:00 vẫn được trả sau giờ này nếu không trùng lịch. Giờ trả và giá gói cố định giữ nguyên.</p>
+                    <p class="mb-3 text-sm text-stone-600">Các gói có thể nhận phòng cả sau 21:00 nếu còn trống toàn bộ thời gian lưu trú và đủ thời gian dọn phòng. Giờ trả và giá gói cố định giữ nguyên.</p>
                     <div class="slot-status-legend" aria-label="Chú thích trạng thái"><span><i class="is-available"></i>Còn trống</span><span><i class="is-selected"></i>Đang chọn</span><span><i class="is-booked"></i>Đã đặt</span></div>
                     <div class="booking-slot-grid" data-slot-grid aria-live="polite" aria-busy="true">
                         <div class="slot-skeleton"></div>

@@ -63,11 +63,11 @@ function render_room_timeline(?array $room = null): void
         </section>
         <section class="timeline-package-popup" data-timeline-booking popover="manual" role="dialog" tabindex="-1" hidden aria-label="Chọn gói đặt phòng">
             <h3 class="text-sm font-semibold" data-timeline-package-title>Chọn gói khả dụng</h3>
-            <p class="mt-2 text-sm text-[#736b61]" data-timeline-package-status role="status"></p>
-            <div class="mt-3 grid gap-2" data-timeline-packages></div>
-            <p class="mt-3 text-sm font-semibold" data-timeline-booking-summary hidden></p>
-            <div class="mt-4 flex flex-wrap gap-3">
-                <button class="timeline-button timeline-primary" type="button" data-timeline-booking-confirm hidden>Xác nhận · Nhập thông tin</button>
+            <p class="mt-1 shrink-0 text-xs text-[#736b61]" data-timeline-package-status role="status"></p>
+            <div class="timeline-package-list" data-timeline-packages></div>
+            <p class="sr-only" data-timeline-booking-summary hidden></p>
+            <div class="timeline-package-footer">
+                <button class="timeline-button timeline-primary" type="button" data-timeline-booking-confirm hidden>Xác nhận</button>
                 <button class="timeline-button" type="button" data-timeline-booking-cancel>Hủy chọn</button>
             </div>
         </section>

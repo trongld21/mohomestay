@@ -203,8 +203,7 @@
                                   ? form.time.value
                                   : "",
                         window = slotTools.slotWindow(slot, form.date.value, time),
-                        clockRestricted = slotTools.currentTimeRestricted(slot, form.date.value),
-                        dayState = clockRestricted ? "restricted" : slot.mode === "DURATION"
+                        dayState = slot.mode === "DURATION"
                             ? slotTools.durationDayState(slot, form.date.value, info?.intervals || [])
                             : "available",
                         fullyBlocked = dayState !== "available",
@@ -212,13 +211,11 @@
                             ? slotTools.slotState(window, info?.intervals || [])
                             : dayState,
                         pastDuration = previousDate && slot.mode === "DURATION",
-                        state = !info?.active ? "closed" : clockRestricted ? "restricted" : pastDuration ? "past" : baseState,
+                        state = !info?.active ? "closed" : pastDuration ? "past" : baseState,
                         selected =
                             !pastDuration && !fullyBlocked && (state === "available" || slot.mode === "DURATION") && isSelected;
                     const label =
-                        state === "restricted"
-                            ? "Từ 21h chỉ nhận qua đêm"
-                            : state === "booked"
+                        state === "booked"
                             ? "Đã được đặt"
                             : state === "past"
                               ? "Đã qua giờ"
@@ -252,8 +249,6 @@
                     ? "Chọn giờ nhận phòng"
                     : state === "booked"
                       ? "Khung giờ đã được đặt"
-                      : state === "restricted"
-                        ? "Chọn giờ trước 21:00 hoặc gói qua đêm"
                       : state === "past"
                         ? "Khung giờ đã qua"
                         : "Tiếp tục thanh toán →";

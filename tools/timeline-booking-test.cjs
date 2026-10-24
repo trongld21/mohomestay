@@ -92,6 +92,7 @@ async function openHour(at = 13) {
     await openHour();
     assert.equal(popupOpen, true, "Package choices must open in an anchored popup");
     assert.equal(element("[data-timeline-booking]").style.top, "152px");
+    assert.equal(element("[data-timeline-booking]").style.maxHeight, "640px", "Popup height must be limited to the space beside its anchor");
     assert.match(element("[data-timeline-packages]").innerHTML, /data-timeline-package="short"/);
     assert.equal(element("[data-timeline-booking-confirm]").hidden, true);
     await click("[data-timeline-package]", { dataset: { timelinePackage: "short" } });
@@ -119,8 +120,12 @@ async function openHour(at = 13) {
     await oldRequest;
     assert.equal(element("[data-timeline-packages]").innerHTML, "", "Old responses must not replace the latest hour");
     currentOptions = [{ ...options[0], id: "night", start: new Date(base + 21 * hour).toISOString(), end: new Date(base + 33 * hour).toISOString(), time: "21:00" }];
+    root.querySelector("[data-timeline-scroll]").scrollLeft = 350;
+    element("[data-timeline-scroll]").scrollTop = 120;
     await openHour(21);
     await click("[data-timeline-package]", { dataset: { timelinePackage: "night" } });
+    assert.equal(element("[data-timeline-scroll]").scrollLeft, 350);
+    assert.equal(element("[data-timeline-scroll]").scrollTop, 120);
     assert.equal(cells.filter((cell) => cell.dataset.selected === "true").length, 12, "Overnight selection must expand and highlight the next day");
     await click("[data-timeline-booking-cancel]", {});
     assert.equal(element("[data-timeline-booking]").hidden, true);

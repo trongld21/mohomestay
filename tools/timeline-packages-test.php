@@ -27,11 +27,12 @@ $hold = create_room_quote_hold($pdo, ['roomId' => 'r', 'date' => $day, 'time' =>
 operation_check(timeline_available_packages($pdo, $room, $day, '13:00') === [], 'Reject packages crossing staff holds.');
 release_room_quote_hold($pdo, $hold['id'], 'staff');
 $options = timeline_available_packages($pdo, $room, $day, '21:00');
-operation_check(array_column($options, 'id') === ['night'], 'After 21:00 only the matching overnight package is available.');
-operation_check(strtotime($options[0]['end']) - strtotime($options[0]['start']) === 12 * 3600, 'Overnight must cross midnight.');
+operation_check(array_column($options, 'id') === ['short', 'long', 'night'], 'At 21:00 regular and overnight packages must be available.');
+operation_check(strtotime($options[2]['end']) - strtotime($options[2]['start']) === 12 * 3600, 'Overnight must cross midnight.');
 $pdo->prepare("INSERT INTO room_availability VALUES ('blocked','r',?,0)")->execute([(new DateTimeImmutable($day))->modify('+1 day')->format('Y-m-d')]);
-operation_check(timeline_available_packages($pdo, $room, $day, '21:00') === [], 'Reject overnight packages crossing a blocked date.');
+operation_check(array_column(timeline_available_packages($pdo, $room, $day, '21:00'), 'id') === ['short'], 'Allow a stay ending at midnight; reject packages entering a blocked date.');
 $pdo->exec('DELETE FROM room_availability');
+operation_check(array_column(timeline_available_packages($pdo, $room, $day, '23:00'), 'id') === ['short', 'long'], 'Regular packages must remain bookable at 23:00 across midnight.');
 $pdo->exec("UPDATE rooms SET is_active=0 WHERE id='r'");
 operation_check(timeline_available_packages($pdo, $room, $day, '13:00') === [], 'Inactive inventory must not offer packages.');
 $pdo->exec("UPDATE rooms SET is_active=1 WHERE id='r'");

@@ -5,12 +5,6 @@
         return (room?.packages || []).filter(slot => slot.enabled && ['FIXED_TIME', 'DURATION'].includes(slot.mode));
     }
 
-    function currentTimeRestricted(slot, date, now = new Date()) {
-        const overnight = slot?.mode === 'FIXED_TIME' && slot.checkOutTime < slot.checkInTime;
-        const localNow = new Date(now.getTime() + 7 * 3600000).toISOString();
-        return !overnight && date === localNow.slice(0, 10) && localNow.slice(11, 16) >= '21:00';
-    }
-
     function earliestBookingDate(room, now = new Date()) {
         const today = new Intl.DateTimeFormat('en-CA', {
             timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -45,10 +39,7 @@
         if (fixed && !overnight && start <= now && end > now) {
             start.setTime(Math.ceil(now.getTime() / 60000) * 60000);
         }
-        const arrivalHour = Number(new Intl.DateTimeFormat('en-GB', {
-            timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', hourCycle: 'h23',
-        }).format(start));
-        return { start, end, fixed, restricted: (!overnight && arrivalHour >= 21) || currentTimeRestricted(slot, date, now) };
+        return { start, end, fixed };
     }
 
     function overlaps(window, interval) {
@@ -59,7 +50,6 @@
 
     function slotState(window, intervals = [], now = new Date()) {
         if (!window || window.end <= now || window.end <= window.start || (!window.fixed && window.start <= now)) return 'past';
-        if (window.restricted) return 'restricted';
         const remaining = window;
         return intervals.some(interval => overlaps(remaining, interval)) ? 'booked' : 'available';
     }
@@ -67,16 +57,14 @@
     function durationDayState(slot, date, intervals = [], now = new Date()) {
         const dayStart = new Date(`${date}T00:00:00+07:00`).getTime();
         const dayEnd = dayStart + 86400000;
-        const cutoff = dayStart + 21 * 3600000;
         const first = Math.max(dayStart, Math.floor(now.getTime() / 60000) * 60000 + 60000);
         if (first >= dayEnd) return 'past';
-        if (first >= cutoff) return 'restricted';
-        for (let start = first; start < cutoff; start += 60000) {
+        for (let start = first; start < dayEnd; start += 60000) {
             const window = { start: new Date(start), end: new Date(start + Number(slot.durationMinutes) * 60000), fixed: false };
             if (slotState(window, intervals, now) === 'available') return 'available';
         }
         return 'booked';
     }
 
-    scope.MoBookingSlots = { configuredSlots, earliestBookingDate, slotWindow, slotState, durationDayState, currentTimeRestricted };
+    scope.MoBookingSlots = { configuredSlots, earliestBookingDate, slotWindow, slotState, durationDayState };
 })(typeof window === 'undefined' ? globalThis : window);

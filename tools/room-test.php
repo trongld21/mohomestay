@@ -22,15 +22,17 @@ function room_throws(callable $callback, string $contains, string $message): voi
 $latePackage = ['mode' => 'FIXED_TIME', 'checkInTime' => '21:00', 'checkOutTime' => '09:00'];
 $cutoffNow = new DateTimeImmutable('2027-01-15T00:00:00+07:00');
 $atNine = new DateTimeImmutable('2027-01-15T21:00:00+07:00');
-room_throws(fn() => bookable_package_window(['mode' => 'DURATION', 'durationMinutes' => 180], '2027-01-15', '20:00', $atNine), 'hôm nay chỉ nhận gói qua đêm', 'Current server time must lock today regular packages.');
+room_throws(fn() => bookable_package_window(['mode' => 'DURATION', 'durationMinutes' => 180], '2027-01-15', '20:00', $atNine), 'tương lai', 'Past arrival remains invalid after 21:00.');
 [$tomorrowStart] = bookable_package_window(['mode' => 'DURATION', 'durationMinutes' => 180], '2027-01-16', '14:00', $atNine);
 room_check($tomorrowStart->format('Y-m-d H:i') === '2027-01-16 14:00', 'Current time must not lock tomorrow.');
 foreach ([180, 360, 1440] as $duration) {
     $durationPackage = ['mode' => 'DURATION', 'durationMinutes' => $duration];
     [$beforeCutoff] = bookable_package_window($durationPackage, '2027-01-15', '20:59', $cutoffNow);
     room_check($beforeCutoff->format('H:i') === '20:59', 'Arrival before 21:00 may check out after 21:00.');
-    room_throws(fn() => bookable_package_window($durationPackage, '2027-01-15', '21:00', $cutoffNow), 'chỉ nhận gói qua đêm', 'Exactly 21:00 must reject non-overnight packages.');
-    room_throws(fn() => bookable_package_window($durationPackage, '2027-01-15', '23:00', $cutoffNow), 'chỉ nhận gói qua đêm', 'Late arrival must reject non-overnight packages.');
+    [$atNineStart] = bookable_package_window($durationPackage, '2027-01-15', '21:00', $cutoffNow);
+    room_check($atNineStart->format('H:i') === '21:00', 'Regular packages must allow arrival at 21:00.');
+    [$lateArrival] = bookable_package_window($durationPackage, '2027-01-15', '23:00', $atNine);
+    room_check($lateArrival->format('H:i') === '23:00', 'Regular packages must allow future late arrival.');
 }
 $earlyNow = new DateTimeImmutable('2026-10-24T00:50:25+07:00');
 [$remainingStart, $remainingEnd] = bookable_package_window($latePackage, '2026-10-23', '', $earlyNow);
@@ -48,7 +50,7 @@ room_check($lateEnd->format('Y-m-d H:i:s') === '2027-01-16 09:00:00', 'Late fixe
 [$afterMidnightStart, $afterMidnightEnd] = bookable_package_window($latePackage, '2027-01-15', '', new DateTimeImmutable('2027-01-16 01:00:00', new DateTimeZone('Asia/Ho_Chi_Minh')));
 room_check($afterMidnightEnd->format('Y-m-d H:i:s') === '2027-01-16 09:00:00', 'Overnight original date does not shift checkout another day');
 room_throws(fn() => bookable_package_window($latePackage, '2027-01-15', '', new DateTimeImmutable('2027-01-16 09:00:00', new DateTimeZone('Asia/Ho_Chi_Minh'))), 'hết giờ', 'Ended fixed package rejects booking');
-room_throws(fn() => bookable_package_window(['mode' => 'DURATION', 'durationMinutes' => 180], '2027-01-15', '21:00', $lateNow), 'chỉ nhận gói qua đêm', 'Current time after 21:00 blocks today duration package');
+room_throws(fn() => bookable_package_window(['mode' => 'DURATION', 'durationMinutes' => 180], '2027-01-15', '21:00', $lateNow), 'tương lai', 'Past duration arrival must still be rejected');
 
 room_check(normalize_slug('Phòng Mây  2') === 'phong-may-2', 'Slug tieng Viet phai duoc chuan hoa');
 
