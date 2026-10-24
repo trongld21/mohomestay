@@ -28,3 +28,6 @@ node_modules/
 
 /deploy-activate.ini
 /.deploy-incoming/
+
+# Private PHP session data
+/storage/sessions/

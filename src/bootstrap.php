@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 define('APP_ROOT', dirname(__DIR__));
+define('LOGIN_LIFETIME', 30 * 24 * 3600);
 $envFile = APP_ROOT . '/.env';
 if (is_file($envFile)) {
     $values = parse_ini_file($envFile, false, INI_SCANNER_RAW);
@@ -16,6 +17,25 @@ if (is_file($envFile)) {
 date_default_timezone_set((string) config('timezone', 'Asia/Ho_Chi_Minh'));
 
 if (PHP_SAPI !== 'cli') {
+    start_app_session();
+}
+
+function start_app_session(): void
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        return;
+    }
+
+    $savePath = APP_ROOT . '/storage/sessions';
+    if (!is_dir($savePath) && !mkdir($savePath, 0700, true) && !is_dir($savePath)) {
+        throw new RuntimeException('Cannot create private session storage.');
+    }
+    ini_set('session.save_handler', 'files');
+    session_save_path($savePath);
+    ini_set('session.gc_maxlifetime', (string)LOGIN_LIFETIME);
+    ini_set('session.gc_probability', '1');
+    ini_set('session.gc_divisor', '100');
+    ini_set('session.cookie_lifetime', (string)LOGIN_LIFETIME);
     ini_set('session.use_strict_mode', '1');
     ini_set('session.cookie_httponly', '1');
     ini_set('session.cookie_samesite', 'Lax');

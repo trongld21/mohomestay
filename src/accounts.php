@@ -73,7 +73,7 @@ function account_login(string $email, string $password): bool
         }
     }
     session_regenerate_id(true);
-    $_SESSION = ['admin_until' => time() + 8 * 3600];
+    $_SESSION = ['admin_until' => time() + LOGIN_LIFETIME];
     if ($account) {
         $_SESSION['account_id'] = $account['id'];
         $_SESSION['account_version'] = (int)$account['session_version'];
