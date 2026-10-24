@@ -4,7 +4,8 @@
     if (!root) return;
     const one = (selector) => root.querySelector(selector);
     const abilities = window.LANG_HOME?.abilities || [];
-    const can = (key) => abilities.includes(key);
+    const can = (key) => window.LANG_HOME?.isSuperAdmin === true || abilities.includes(key);
+    const canCancel = (item) => (item.status === "PENDING" && can("sales.cancel")) || (item.status === "PAID" && window.LANG_HOME?.isSuperAdmin === true);
     const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
     })[char]);
@@ -52,7 +53,7 @@
         target.innerHTML = visible.map((product) => `<article class="rounded-xl border border-[#e5dacb] bg-white p-4">
             <h3 class="font-sans text-base font-semibold">${escape(product.name)}</h3>
             <p class="mt-2 font-semibold text-[#79543e]">${cash(product.price)}</p>
-            <p class="mt-1 text-sm ${Number(product.stock_quantity) > 0 || !Number(product.track_stock) ? 'text-emerald-800' : 'text-red-800'}">${Number(product.track_stock) ? `Tồn: ${Number(product.stock_quantity)} sản phẩm` : "Dịch vụ · Không quản lý tồn"}</p>
+            <p class="mt-1 text-sm ${Number(product.stock_quantity) > 0 || !Number(product.track_stock) ? 'text-emerald-800' : 'text-red-800'}">${Number(product.track_stock) ? `Tồn: ${Number(product.stock_quantity)} sản phẩm` : ""}</p>
             ${productMode ? `<p class="mt-1 text-xs text-stone-500">${Number(product.is_active) ? "Đang bán" : "Ngừng bán"}</p>` : ""}
             ${productMode
                 ? (can("products.edit") ? `<button class="timeline-button mt-3" type="button" data-edit-product="${escape(product.id)}">Sửa sản phẩm</button>` : "")
@@ -104,7 +105,7 @@
             <td class="font-semibold">${escape(item.sale_code)}</td><td>${escape(item.room_name_snapshot || "Không gắn phòng")}${item.booking_code_snapshot ? `<span class="mt-1 block text-xs text-stone-500">${escape(item.booking_code_snapshot)}</span>` : ""}</td><td>${escape(dateTime(item.created_at))}</td>
             <td>${cash(item.total)}</td><td>${item.status === "CANCELLED" ? "Đã hủy" : item.status === "PAID" ? (item.completion_method === "GIFT" ? "Tặng khách" : "Đã hoàn thành") : "Chờ thanh toán"}</td>
             <td><div class="flex flex-wrap gap-2"><button class="timeline-button" type="button" data-sale-open="${escape(item.id)}">Xem đơn / QR</button>
-                ${item.status === "PENDING" && can("sales.cancel") ? `<button class="timeline-button" type="button" data-sale-open="${escape(item.id)}" data-sale-intent="cancel">Hủy đơn</button>` : ""}
+                ${canCancel(item) ? `<button class="timeline-button" type="button" data-sale-open="${escape(item.id)}" data-sale-intent="cancel">Hủy đơn</button>` : ""}
                 ${item.status === "PENDING" && can("sales.complete") ? `<button class="timeline-button" type="button" data-sale-open="${escape(item.id)}" data-sale-intent="complete">Đã chuyển khoản trước</button>` : ""}</div></td>
         </tr>`).join("")}</tbody></table>` : '<p class="text-sm text-stone-500">Chưa có đơn bán hàng.</p>';
         one("[data-sales-page]").textContent = `Trang ${result.page} · ${result.count} đơn`;
@@ -187,9 +188,9 @@
                 ${pending && safeLink ? `<a class="timeline-button timeline-primary" href="${escape(sale.checkout_url)}" target="_blank" rel="noopener noreferrer">Mở mã QR payOS ↗</a>` : ""}
                 ${pending && can("sales.create") ? `<button class="timeline-button" type="button" data-sale-action="${safeLink ? "check" : "payment"}">${safeLink ? "Kiểm tra thanh toán" : "Tạo lại QR"}</button>` : ""}
             </div>
-            ${pending && (can("sales.cancel") || can("sales.complete")) ? `<label class="grid gap-1 text-sm">Lý do hủy / thông tin đối soát chuyển khoản<textarea class="timeline-input" maxlength="255" rows="2" data-sale-note></textarea></label><div class="flex flex-wrap gap-2">
-                ${can("sales.cancel") ? '<button class="timeline-button" type="button" data-sale-action="cancel">Hủy đơn & hoàn kho</button>' : ""}
-                ${can("sales.complete") ? '<button class="timeline-button timeline-primary" type="button" data-sale-action="complete">Xác nhận đã chuyển khoản trước</button>' : ""}
+            ${(canCancel(sale) || (pending && can("sales.complete"))) ? `<label class="grid gap-1 text-sm">Lý do hủy / thông tin đối soát chuyển khoản<textarea class="timeline-input" maxlength="255" rows="2" data-sale-note></textarea></label><div class="flex flex-wrap gap-2">
+                ${canCancel(sale) ? '<button class="timeline-button" type="button" data-sale-action="cancel">Hủy đơn & hoàn kho</button>' : ""}
+                ${pending && can("sales.complete") ? '<button class="timeline-button timeline-primary" type="button" data-sale-action="complete">Xác nhận đã chuyển khoản trước</button>' : ""}
             </div>` : ""}
             <p class="text-sm text-stone-600" data-sale-message role="status"></p>`;
         if (!dialog.open) dialog.showModal();
@@ -256,9 +257,26 @@
         }
     });
     one("[data-retail-search]")?.addEventListener("input", renderProducts);
+    function updateDateRange() {
+        const format = (value) => value ? value.split("-").reverse().join("/") : "Chọn ngày";
+        const label = one("[data-sales-date-label]");
+        if (label) label.textContent = `${format(one("[data-sales-from]").value)} – ${format(one("[data-sales-to]").value)}`;
+    }
+    if (historyMode) {
+        one("[data-sales-from]")?.addEventListener("change", updateDateRange);
+        one("[data-sales-to]")?.addEventListener("change", updateDateRange);
+        one("[data-sales-date-done]")?.addEventListener("click", () => {
+            one("[data-sales-date-range]").open = false;
+        });
+    }
     one("[data-sales-filter-form]")?.addEventListener("submit", (event) => {
         event.preventDefault();
-        if (!busy && !loading && event.target.reportValidity()) { page = 1; historyPage(); }
+        if (!busy && !loading && event.target.reportValidity()) {
+            const range = one("[data-sales-date-range]");
+            if (range) range.open = false;
+            page = 1;
+            historyPage();
+        }
     });
     one("[data-cart-total]")?.addEventListener("input", renderPayable);
     one("[data-cart-discount]")?.addEventListener("input", renderPayable);
@@ -360,7 +378,7 @@
                 if (!note) { one("[data-sale-message]").textContent = "Nhập lý do / thông tin đối soát trước khi xác nhận."; return; }
                 const accepted = await LangUI["confirm"]({
                     title: action.dataset.saleAction === "cancel" ? "Hủy đơn và hoàn kho?" : "Xác nhận khách đã chuyển khoản?",
-                    message: action.dataset.saleAction === "cancel" ? "Chỉ hủy đơn chưa thanh toán. QR sẽ được đóng và hàng được hoàn lại kho." : "Chỉ xác nhận sau khi đã kiểm tra tiền vào ngân hàng. Đơn sẽ được tính doanh thu và lưu người xác nhận.",
+                    message: action.dataset.saleAction === "cancel" ? (sale.status === "PAID" ? "Đơn đã thanh toán: hàng sẽ hoàn kho, doanh thu và số lượng bán sẽ được loại khỏi thống kê. Hệ thống không tự hoàn tiền; cần đối soát và hoàn tiền cho khách riêng." : "QR sẽ được đóng và hàng được hoàn lại kho.") : "Chỉ xác nhận sau khi đã kiểm tra tiền vào ngân hàng. Đơn sẽ được tính doanh thu và lưu người xác nhận.",
                     confirmLabel: "Xác nhận", cancelLabel: "Quay lại",
                 });
                 if (!accepted) return;

@@ -51,3 +51,11 @@ try {
 }
 retail_check(retail_sale($pdo, $blocked['id'])['status'] === 'PENDING', 'Unconfirmed remote cancellation cannot release stock or close the local sale.');
 echo "Retail discounts, gifts, cancellation stock return, manual completion and history filters: OK\n";
+
+$paidToCancel = retail_create_sale($pdo, ['items' => [['productId' => $product['id'], 'quantity' => 1]], 'requestId' => uuid(), 'total' => 15000], 'manager', true);
+retail_complete_sale($pdo, $paidToCancel['id'], 'manager', 'BANK', static function (): void {});
+retail_reject(fn() => retail_cancel_sale($pdo, $paidToCancel['id'], 'manager', 'No elevated authority'), 409);
+$cancelledPaid = retail_cancel_sale($pdo, $paidToCancel['id'], 'admin', 'Đối soát hoàn tiền riêng', static function (): never { throw new RuntimeException('Paid sale must not cancel the paid QR.'); }, true);
+retail_check($cancelledPaid['status'] === 'CANCELLED' && $cancelledPaid['cancelled_by'] === 'admin', 'Admin can cancel a paid sale with an audit trail.');
+retail_cancel_sale($pdo, $paidToCancel['id'], 'admin', 'Retry', null, true);
+echo "Admin paid cancellation and retry: OK\n";

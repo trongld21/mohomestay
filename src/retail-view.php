@@ -60,13 +60,24 @@ function render_retail_page(bool $products, bool $history = false, bool $invento
                 <section class="retail-panel grid gap-4">
                     <div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-sans text-lg font-semibold">Lịch sử bán hàng</h2><p class="font-semibold text-[#79543e]" data-sales-revenue></p></div>
                     <?php $today = (new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh')))->format('Y-m-d'); ?>
-                    <form class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-sales-filter-form>
-                        <label class="grid gap-1 text-sm">Từ ngày<input class="timeline-input" type="date" data-sales-from value="<?= e($today) ?>" required></label>
-                        <label class="grid gap-1 text-sm">Đến ngày<input class="timeline-input" type="date" data-sales-to value="<?= e($today) ?>" required></label>
-                        <label class="grid gap-1 text-sm">Thanh toán<select class="timeline-input" data-sales-state><option value="">Tất cả</option><option value="PENDING">Chờ thanh toán</option><option value="PAID">Đã hoàn thành</option><option value="CANCELLED">Đã hủy</option></select></label>
-                        <label class="grid gap-1 text-sm">Tra phòng, mã đơn hoặc sản phẩm<input type="search" class="timeline-input" data-sales-filter maxlength="150" placeholder="Tên phòng, mã BH/MO, tên sản phẩm…"></label>
-                        <label class="grid gap-1 text-sm">Sắp xếp<select class="timeline-input" data-sales-sort><option value="oldest">Cũ nhất → mới nhất</option><option value="newest">Mới nhất → cũ nhất</option></select></label>
-                        <button class="timeline-button timeline-primary self-end" type="submit">Lọc lịch sử</button>
+                    <form class="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(230px,1.2fr)_minmax(140px,.8fr)_minmax(180px,1.2fr)_minmax(160px,.9fr)_auto]" data-sales-filter-form>
+                        <div class="grid min-w-0 gap-1 text-sm">
+                            <span>Khoảng ngày</span>
+                            <details class="relative" data-sales-date-range>
+                                <summary class="timeline-input flex cursor-pointer list-none items-center justify-between gap-2 hover:border-[#79543e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e]">
+                                    <span class="truncate" data-sales-date-label><?= e(date('d/m/Y', strtotime($today))) ?> – <?= e(date('d/m/Y', strtotime($today))) ?></span><span aria-hidden="true">▾</span>
+                                </summary>
+                                <div class="absolute left-0 top-full z-20 mt-2 grid w-[min(330px,80vw)] gap-3 rounded-xl border border-[#dfcdbc] bg-[#fffdf9] p-4 shadow-lg">
+                                    <label class="grid gap-1">Từ ngày<input class="timeline-input min-w-0" type="date" data-sales-from value="<?= e($today) ?>" required></label>
+                                    <label class="grid gap-1">Đến ngày<input class="timeline-input min-w-0" type="date" data-sales-to value="<?= e($today) ?>" required></label>
+                                    <button class="timeline-button" type="button" data-sales-date-done>Xong</button>
+                                </div>
+                            </details>
+                        </div>
+                        <label class="grid min-w-0 gap-1 text-sm">Thanh toán<select class="timeline-input min-w-0" data-sales-state><option value="">Tất cả</option><option value="PENDING">Chờ thanh toán</option><option value="PAID">Đã hoàn thành</option><option value="CANCELLED">Đã hủy</option></select></label>
+                        <label class="grid min-w-0 gap-1 text-sm">Tìm kiếm<input type="search" class="timeline-input min-w-0" data-sales-filter maxlength="150" placeholder="Phòng, mã đơn, sản phẩm…"></label>
+                        <label class="grid min-w-0 gap-1 text-sm">Sắp xếp<select class="timeline-input min-w-0" data-sales-sort><option value="oldest">Cũ nhất → mới nhất</option><option value="newest">Mới nhất → cũ nhất</option></select></label>
+                        <button class="timeline-button timeline-primary whitespace-nowrap" type="submit">Lọc lịch sử</button>
                     </form>
                     <p class="text-sm font-semibold" data-sales-quantity></p>
                     <div class="flex flex-wrap gap-2 text-sm" data-sales-products></div>

@@ -75,7 +75,7 @@ function retail_api(string $path, string $method): never
                 $note = $body['note'] ?? '';
                 if (!is_string($note)) throw new BookingException('Nội dung xác nhận không hợp lệ.', 422);
                 $sale = $match[2] === 'cancel'
-                    ? retail_cancel_sale($pdo, $sale['id'], (string)current_account()['id'], $note)
+                    ? retail_cancel_sale($pdo, $sale['id'], (string)current_account()['id'], $note, null, (bool)(current_account()['root'] ?? false))
                     : retail_complete_sale($pdo, $sale['id'], (string)current_account()['id'], $note);
                 try_dispatch_retail_stock_alerts($pdo);
             } else {

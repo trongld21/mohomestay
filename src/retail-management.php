@@ -40,7 +40,7 @@ function retail_close_remote_payment(array $sale): void
     throw new BookingException('Chưa đóng được QR hoặc QR đã nhận tiền. Bấm Kiểm tra thanh toán trước khi thử lại.', 409);
 }
 
-function retail_cancel_sale(PDO $pdo, string $id, string $actor, string $reason, ?callable $closePayment = null): array
+function retail_cancel_sale(PDO $pdo, string $id, string $actor, string $reason, ?callable $closePayment = null, bool $allowPaid = false): array
 {
     $reason = trim($reason);
     if ($reason === '' || mb_strlen($reason) > 255) throw new BookingException('Nhập lý do hủy tối đa 255 ký tự.', 422);
@@ -54,8 +54,10 @@ function retail_cancel_sale(PDO $pdo, string $id, string $actor, string $reason,
             $pdo->commit();
             return retail_sale($pdo, $id);
         }
-        if ($sale['status'] !== 'PENDING') throw new BookingException('Đơn đã thanh toán không thể hủy; cần đối soát hoàn tiền riêng.', 409);
-        ($closePayment ?? 'retail_close_remote_payment')($sale);
+        if ($sale['status'] !== 'PENDING' && !($allowPaid && $sale['status'] === 'PAID')) throw new BookingException('Đơn đã thanh toán không thể hủy; cần đối soát hoàn tiền riêng.', 409);
+        if ($sale['status'] === 'PENDING') {
+            ($closePayment ?? 'retail_close_remote_payment')($sale);
+        }
         $moves = $pdo->prepare("SELECT * FROM retail_stock_movements WHERE movement_type='SALE' AND reference_id=? ORDER BY product_id");
         $moves->execute([$id]);
         foreach ($moves->fetchAll() as $move) {
