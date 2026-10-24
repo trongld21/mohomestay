@@ -80,7 +80,7 @@
             <h3 class="text-sm font-semibold">Mã mở cổng của bạn</h3>
             ${doorCodes.length ? doorCodes.map((door) => {
                 const code = String(door.code ?? "").trim();
-                return `<p class="booking-gate-password">Mật khẩu cổng: ${escape(code)}${code.endsWith("#") ? "" : "#"}</p>`;
+                return `<p class="booking-gate-password">Mật khẩu cổng: ${code.startsWith("*") ? "" : "*"}${escape(code)}${code.endsWith("#") ? "" : "#"}</p>`;
             }).join("")
                 : `<p class="mt-2 font-medium text-[#79543e]">${info.isTest
                     ? "Chưa có mã cổng phù hợp. Kiểm tra mã đang Bật và thời gian hiệu lực trong trang quản trị."

@@ -118,7 +118,7 @@
             if (LANG_HOME.abilities.includes("bookings.overview")) {
                 const { overview } = await request("/api/admin/booking-overview");
                 const stats = [
-                    ["Doanh thu", cash(overview.paid), "Đơn đã thanh toán, không gồm đơn đã hủy"],
+                    ["Doanh thu", cash(overview.paid), "Đặt phòng và bán hàng đã thanh toán"],
                     ["Đã xác nhận", overview.confirmed, "Sẵn sàng đón khách"],
                     ["Trong giờ lưu trú", overview.staying, "Theo giờ đặt hoặc xác nhận của admin"],
                     ["Cần đối soát", overview.reconcile, "Đơn đã hủy nhưng đã nhận tiền"],
@@ -324,9 +324,6 @@
         if (booking.status === "CONFIRMED") actions = action("CHECKED_IN", "Nhận sớm", "key") + action("CANCELLED", "Hủy", "x", true);
         if (booking.status === "CHECKED_IN" && LANG_HOME.abilities.includes("availability.checkout")) {
             actions = `<a class="timeline-button" href="/admin/availability#booking-${encodeURIComponent(booking.id)}">Trả phòng & phụ thu</a>`;
-        }
-        if (LANG_HOME.abilities.includes("availability.checkout") && ["CONFIRMED", "CHECKED_IN", "CHECKED_OUT"].includes(booking.status)) {
-            actions += `<button type="button" class="timeline-button" data-booking-surcharge="${esc(booking.id)}" data-booking-surcharge-label="${esc(booking.room_name)} · ${esc(booking.booking_code)}">Phụ thu</button>`;
         }
         if (LANG_HOME.manualDateOverride === true && ["PENDING", "CONFIRMED", "CHECKED_IN"].includes(booking.status)) {
             actions += `<button type="button" class="timeline-button" data-booking-stay="${esc(booking.id)}">Đổi phòng / sửa lịch</button>`;

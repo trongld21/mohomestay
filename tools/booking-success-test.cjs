@@ -50,7 +50,7 @@ const source = fs.readFileSync("public/assets/booking-success.js", "utf8");
             assert.ok(elements.content.innerHTML.includes('fixture-password'));
             assert.ok(!elements.content.innerHTML.includes('Bạn có thể lưu mã đơn'));
             assert.ok(!elements.content.innerHTML.includes('booking-success-email'));
-            assert.ok(elements.content.innerHTML.includes('&lt;real-test-code&gt;'));
+            assert.ok(elements.content.innerHTML.includes('Mật khẩu cổng: *&lt;real-test-code&gt;#'));
             assert.ok(!elements.content.innerHTML.includes('KHÔNG CẤP MÃ CỔNG'));
         }
         if (status === "NO_TOKEN") assert.equal(fetched, 0);

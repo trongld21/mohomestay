@@ -384,7 +384,6 @@
                     ${Number(b.surcharge_amount) > 0 ? `<p class="mt-2 rounded-lg p-2 text-sm font-bold ${unpaidSurcharge ? 'bg-red-100 text-red-900' : 'text-stone-700'}">Phụ thu: ${cash(b.surcharge_amount)} · ${b.surcharge_status === "PAID" ? "Đã thu" : b.surcharge_status === "CANCELLED" ? "Đã hủy" : "Chưa thu"}</p>` : ""}
                     <div class="mt-3 flex flex-wrap gap-2">
                         ${canLock && b.isOverdue && !locked ? `<button class="timeline-button" data-lock-booking="${escape(b.id)}" type="button">Khóa khẩn cấp</button>` : ""}
-                        ${canCheckout && b.status === "CHECKED_IN" ? `<button class="timeline-button" data-booking-surcharge="${escape(b.id)}" data-booking-surcharge-label="${escape(b.room_name)} · ${escape(b.booking_code)}" type="button">Phụ thu</button>` : ""}
                         ${canCheckout && b.status === "CHECKED_IN" ? `<button class="timeline-button timeline-primary" data-checkout-booking="${escape(b.id)}" type="button">Xác nhận trả phòng</button>` : ""}
                         ${canCheckout && Number(b.surcharge_amount) > 0 && b.surcharge_status !== "CANCELLED" ? `<button class="timeline-button" data-charge-booking="${escape(b.id)}" type="button">Xem phụ thu / QR</button>` : ""}
                         ${window.LANG_HOME?.isSuperAdmin === true && unpaidSurcharge ? `<button class="timeline-button !border-red-400 !text-red-800 enabled:hover:!bg-red-100" data-cancel-surcharge="${escape(b.id)}" type="button">Hủy phụ thu</button>` : ""}

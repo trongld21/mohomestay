@@ -26,6 +26,10 @@ function handle_api(string $path, string $method): never
             }
             json_response(['message' => 'Mail server đã nhận email thử gửi tới mohomestay01@gmail.com. Kiểm tra Hộp thư đến và Spam.']);
         }
+        if (preg_match('#^/api/admin/(sales|products)(/|$)#', $path)) {
+            require_once APP_ROOT . '/src/retail-api.php';
+            retail_api($path, $method);
+        }
         if ($path === '/api/health' && $method === 'GET') json_response(['status'=>'ok','service'=>'mo-home-php']);
         if ($path === '/api/rooms/available-now' && $method === 'GET') {
             require_once APP_ROOT . '/src/home-availability.php';
@@ -84,7 +88,10 @@ function handle_api(string $path, string $method): never
         if (preg_match('#^/api/admin/rooms/([a-zA-Z0-9_-]+)$#',$path,$matches) && $method === 'DELETE') delete_room_api($matches[1]);
         if ($path === '/api/admin/booking-overview' && $method === 'GET') {
             $rows = db()->query('SELECT status,payment_status,total_price,is_test,check_in,check_out FROM bookings')->fetchAll();
-            json_response(['overview' => booking_overview($rows)]);
+            require_once APP_ROOT . '/src/retail.php';
+            $overview = booking_overview($rows);
+            $overview['paid'] += retail_revenue(db());
+            json_response(['overview' => $overview]);
         }
         if ($method === 'GET' && preg_match('#^/api/admin/bookings/([a-f0-9]{32})/identity/(front|back)$#', $path, $matches)) admin_booking_identity_image($matches[1], $matches[2]);
         if ($path === '/api/admin/bookings' && $method === 'GET') admin_bookings_api();
@@ -232,6 +239,8 @@ function payment_webhook_api(): never
     if(!is_array($data)||!payos_verify($data,$signature))json_response(['error'=>'Invalid signature'],401);
     if(($data['code']??'')!=='00'||($data['currency']??'')!=='VND')json_response(['ok'=>true]);
     if(!isset($data['orderCode'],$data['amount'],$data['reference'])||!is_numeric($data['orderCode'])||!is_numeric($data['amount'])||!is_string($data['reference'])||$data['reference']==='')json_response(['error'=>'Invalid payment data'],400);
+    require_once APP_ROOT . '/src/retail.php';
+    if (retail_payment_callback(db(), $data)) json_response(['ok' => true]);
     if (apply_checkout_payment_callback(db(), $data)) json_response(['ok' => true]);
     $booking = apply_payment_callback(db(), $data);
     if ($booking) {

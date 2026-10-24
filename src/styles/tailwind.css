@@ -3337,3 +3337,32 @@ a.timeline-primary:hover {
 .timeline-dialog [data-fee-title] {
     @apply m-0 font-sans text-lg leading-6;
 }
+
+.retail-panel {
+    @apply rounded-2xl border border-[#e5dacb] bg-[#fffdf9] p-4 sm:p-5;
+}
+.retail-page h1, .retail-page h2 {
+    @apply m-0 font-sans;
+}
+.retail-page [hidden] {
+    @apply hidden;
+}
+.retail-page .timeline-input {
+    @apply w-full min-w-0;
+}
+.retail-page table {
+    @apply w-full border-collapse text-left text-sm;
+}
+.retail-page th, .retail-page td {
+    @apply border-b border-[#e5dacb] px-3 py-3;
+}
+
+.retail-page h1 {
+    @apply text-2xl leading-8;
+}
+.retail-page h2 {
+    @apply text-lg leading-6;
+}
+.retail-page h3 {
+    @apply m-0 font-sans text-base leading-6;
+}

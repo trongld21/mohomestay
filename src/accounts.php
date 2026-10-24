@@ -9,6 +9,8 @@ function account_permissions(): array
         'availability' => 'Tìm phòng trống',
         'rooms' => 'Quản lý phòng',
         'door-codes' => 'Quản lý mã mở cửa',
+        'sales' => 'Bán hàng',
+        'products' => 'Quản lý sản phẩm',
     ];
 }
 
@@ -85,9 +87,11 @@ function account_home(): string
 {
     foreach (account_permissions() as $key => $label) {
         if (can_use($key)) {
-            return in_array($key, ['door-codes', 'availability'], true) ? '/admin/' . $key : '/admin#' . $key;
+            return in_array($key, ['door-codes', 'availability', 'sales', 'products'], true) ? '/admin/' . $key : '/admin#' . $key;
         }
     }
+    if (can_use('sales.create')) return '/admin/sales';
+    if (can_use('products.create') || can_use('products.edit')) return '/admin/products';
     return can_use('accounts') ? '/admin/accounts' : '/admin/no-access';
 }
 
@@ -156,6 +160,16 @@ function save_account(array $data, bool $permissionsOnly): void
 function account_permission_groups(): array
 {
     return [
+        'sales' => [
+            'sales.view' => 'Xem lịch sử bán hàng và doanh thu',
+            'sales.create' => 'Tạo đơn bán hàng, tạo QR và kiểm tra thanh toán',
+            'sales.price' => 'Điều chỉnh giá chốt đơn bán hàng',
+        ],
+        'products' => [
+            'products.view' => 'Xem danh sách sản phẩm',
+            'products.create' => 'Thêm sản phẩm',
+            'products.edit' => 'Sửa sản phẩm, giá và bật/tắt bán',
+        ],
         'bookings' => [
             'bookings.overview' => 'Xem tổng quan và thống kê',
             'bookings.view' => 'Xem danh sách đặt phòng',
@@ -203,13 +217,24 @@ function expanded_account_permissions(array $permissions): array
             $expanded = array_merge($expanded, array_keys($actions));
         }
     }
-    return array_values(array_unique(array_merge($expanded, array_intersect($permissions, array_keys(account_permission_labels())))));
+    $expanded = array_merge($expanded, array_intersect($permissions, array_keys(account_permission_labels())));
+    if (in_array('products.create', $expanded, true) || in_array('products.edit', $expanded, true)) {
+        $expanded[] = 'products.view';
+    }
+    return array_values(array_unique($expanded));
 }
 
 function admin_api_permission(string $path, string $method, array $body = []): string
 {
     $feature = explode('/', substr($path, strlen('/api/admin/')))[0];
     return match ($feature) {
+        'sales' => $path === '/api/admin/sales/catalog' ? 'sales.create' : ($method === 'GET' ? 'sales.view' : 'sales.create'),
+        'products' => match ($method) {
+            'GET' => 'products.view',
+            'POST' => 'products.create',
+            'PATCH' => 'products.edit',
+            default => 'accounts',
+        },
         'staff-email' => 'accounts',
         'room-operations' => match (true) {
             str_ends_with($path, '/cancel-surcharge') => 'accounts',

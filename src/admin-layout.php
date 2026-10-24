@@ -23,7 +23,7 @@ function render_admin_navigation(string $path): void
         <nav class="admin-navigation" aria-label="Khu vực quản lý">
             <?php foreach (account_permissions() as $key => $label): ?>
                 <?php
-                if (!can_use($key)) {
+                if (in_array($key, ['sales', 'products'], true) || !can_use($key)) {
                     continue;
                 }
                 $shortLabel = match ($key) {
@@ -48,9 +48,27 @@ function render_admin_navigation(string $path): void
                     </a>
                 <?php endif ?>
             <?php endforeach ?>
+            <?php if (can_use('sales.view') || can_use('sales.create') || can_use('products.view')): ?>
+                <details class="rounded-lg border border-[#e5dacb]" <?= in_array($path, ['/admin/sales', '/admin/products'], true) ? 'open' : '' ?>>
+                    <summary class="<?= $link ?> cursor-pointer">Bán hàng</summary>
+                    <div class="grid gap-1 px-2 pb-2">
+                        <?php if (can_use('sales.view') || can_use('sales.create')): ?>
+                            <a class="<?= $link ?>" href="/admin/sales" <?= $path === '/admin/sales' ? 'aria-current="page"' : '' ?>>Bán hàng & lịch sử</a>
+                        <?php endif ?>
+                        <?php if (can_use('products.view')): ?>
+                            <a class="<?= $link ?>" href="/admin/products" <?= $path === '/admin/products' ? 'aria-current="page"' : '' ?>>Quản lý sản phẩm</a>
+                        <?php endif ?>
+                    </div>
+                </details>
+            <?php endif ?>
             <?php if (can_use('accounts')): ?>
-                <a class="<?= $link ?>" href="/admin/accounts" <?= $path === '/admin/accounts' ? 'aria-current="page"' : '' ?>>Quản lý tài khoản</a>
-                <a class="<?= $link ?>" href="/admin/permissions" <?= $path === '/admin/permissions' ? 'aria-current="page"' : '' ?>>Phân quyền tài khoản</a>
+                <details class="rounded-lg border border-[#e5dacb]" <?= in_array($path, ['/admin/accounts', '/admin/permissions'], true) ? 'open' : '' ?>>
+                    <summary class="<?= $link ?> cursor-pointer">Tài khoản & phân quyền</summary>
+                    <div class="grid gap-1 px-2 pb-2">
+                        <a class="<?= $link ?>" href="/admin/accounts" <?= $path === '/admin/accounts' ? 'aria-current="page"' : '' ?>>Quản lý tài khoản</a>
+                        <a class="<?= $link ?>" href="/admin/permissions" <?= $path === '/admin/permissions' ? 'aria-current="page"' : '' ?>>Phân quyền tài khoản</a>
+                    </div>
+                </details>
             <?php endif ?>
         </nav>
         <div class="admin-sidebar-bottom">
@@ -80,6 +98,8 @@ function render_admin_topbar(): void
     $title = match ($path) {
         '/admin/door-codes' => 'Mã mở cửa',
         '/admin/availability' => 'Tìm phòng trống',
+        '/admin/sales' => 'Bán hàng',
+        '/admin/products' => 'Quản lý sản phẩm',
         '/admin/accounts' => 'Quản lý tài khoản',
         '/admin/permissions' => 'Phân quyền tài khoản',
         default => 'Không gian quản lý',

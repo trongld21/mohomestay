@@ -77,7 +77,7 @@ function render_google_analytics(string $path, string $host): void
             {
                 $fullTitle = e($title) . ' | Mơ Home';
                 $adminPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-                $adminLayout = in_array($adminPath, ['/admin', '/admin/availability', '/admin/door-codes', '/admin/accounts', '/admin/permissions', '/admin/no-access'], true);
+                $adminLayout = in_array($adminPath, ['/admin', '/admin/availability', '/admin/door-codes', '/admin/accounts', '/admin/permissions', '/admin/no-access', '/admin/sales', '/admin/products'], true);
                 if ($adminLayout) require_once APP_ROOT . '/src/admin-layout.php';
                 $robots = ($options['robots'] ?? true) ? 'index,follow' : 'noindex,nofollow';
                 ?>
@@ -144,7 +144,6 @@ function render_google_analytics(string $path, string $host): void
         <script defer src="<?= e(asset_url('/assets/admin-permissions.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-booking-filters.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin.js')) ?>"></script>
-        <script defer src="<?= e(asset_url('/assets/booking-surcharges.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/booking-stay.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-inputs.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-date-picker.js')) ?>"></script>

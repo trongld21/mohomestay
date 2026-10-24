@@ -7,24 +7,17 @@ function room_operations_api(string $path, string $method): never
     if ($path === '/api/admin/room-operations/surcharges') {
         require_permission('availability.checkout');
         $bookingId = (string)($_GET['bookingId'] ?? '');
-        if ($method === 'POST') {
-            require_csrf();
-            $input = json_body();
-            $bookingId = (string)($input['bookingId'] ?? '');
-            save_booking_surcharge(db(), $input, (string)current_account()['id']);
-        } elseif ($method !== 'GET') {
-            throw new BookingException('Phương thức không hợp lệ.', 405);
+        if ($method !== 'GET') {
+            throw new BookingException('Nhập khoản thu mới trong màn Bán hàng.', 404);
         }
         header('Cache-Control: no-store');
         $query = db()->prepare('SELECT id,status FROM bookings WHERE id=?');
         $query->execute([$bookingId]);
         $booking = $query->fetch();
         if (!$booking) throw new BookingException('Không tìm thấy đơn.', 404);
-        $final = db()->prepare('SELECT booking_id FROM booking_checkout_charges WHERE booking_id=?');
-        $final->execute([$bookingId]);
         json_response([
             'items' => booking_surcharge_items(db(), $bookingId),
-            'editable' => in_array($booking['status'], ['CONFIRMED', 'CHECKED_IN'], true) && !$final->fetchColumn(),
+            'editable' => false,
         ]);
     }
     if ($path === '/api/admin/room-operations/holds' && $method === 'GET') {
