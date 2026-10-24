@@ -39,7 +39,7 @@ function room_operations_api(string $path, string $method): never
         }
         unset($item);
         $query = $pdo->prepare(
-            'SELECT b.id,b.booking_code,b.room_id,b.check_in,b.check_out,b.status,'
+            'SELECT b.id,b.booking_code,b.room_id,b.check_in,b.check_out,b.status,b.continued_to_booking_id,b.continued_from_booking_id,'
             . 'r.name room_name,l.id emergency_lock_id,l.ended_at,'
             . 'c.actual_checkout_at,c.amount surcharge_amount,c.payment_status surcharge_status '
             . 'FROM bookings b JOIN rooms r ON r.id=b.room_id '

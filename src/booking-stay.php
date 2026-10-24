@@ -69,6 +69,9 @@ function correct_booking_stay(PDO $pdo, string $id, array $input): void
         if ($oldRoomId === $roomId && $booking['check_in'] === $a && $booking['check_out'] === $b) {
             throw new BookingException('Phòng và lịch chưa thay đổi.', 422);
         }
+        if (!empty($booking['continued_from_booking_id']) || !empty($booking['continued_to_booking_id'])) {
+            throw new BookingException('Đơn đang nối gói ở tiếp. Hủy gói ở tiếp trước khi sửa lịch/phòng.', 409);
+        }
         $query = $pdo->prepare('SELECT booking_id FROM booking_checkout_charges WHERE booking_id=?');
         $query->execute([$id]);
         if ($query->fetchColumn()) throw new BookingException('Đơn đã có xác nhận trả phòng/phụ thu, không thể sửa lịch.', 409);

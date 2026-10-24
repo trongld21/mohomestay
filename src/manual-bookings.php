@@ -87,7 +87,7 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false): arra
     $pdo->beginTransaction();
     try {
         // All booking writers lock the room before checking overlaps.
-        $lock = $pdo->prepare('SELECT id FROM rooms WHERE id=? FOR UPDATE');
+        $lock = $pdo->prepare('SELECT id FROM rooms WHERE id=?' . room_operation_lock_suffix($pdo));
         $lock->execute([(string)($input['roomId'] ?? '')]);
         if (!$lock->fetchColumn()) {
             throw new BookingException('Không tìm thấy phòng.', 404);
@@ -98,13 +98,19 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false): arra
             $pdo->commit();
             return $booking;
         }
+        $continuation = null;
+        if (!empty($input['continuedFromBookingId'])) {
+            if ($test) throw new BookingException('Đơn thử không được nối gói lưu trú thật.', 422);
+            [$continuation, $input] = prepare_booking_continuation($pdo, $input);
+        }
         $room = (new RoomRepository($pdo))->findById((string)$input['roomId']);
         // Trusted account state only; request fields must never grant the override.
         $allowAnyDate = !$test && (bool)(current_account()['root'] ?? false);
-        $quote = quote_manual_booking($room, $input, $allowAnyDate);
+        $quote = quote_manual_booking($room, $input, $allowAnyDate || $continuation !== null);
+        if ($continuation !== null) validate_booking_continuation($continuation, $quote);
         $start = mysql_datetime($quote['start']);
         $end = mysql_datetime($quote['end']);
-        assert_room_inventory($pdo, $room['id'], $start, $end);
+        assert_room_inventory($pdo, $room['id'], $start, $end, $continuation['id'] ?? null);
         $blocked = $pdo->prepare('SELECT id FROM room_availability WHERE room_id=? AND available=0 AND `date` BETWEEN ? AND ? LIMIT 1');
         $blocked->execute([$room['id'], $quote['start']->format('Y-m-d'), $quote['end']->modify('-1 second')->format('Y-m-d')]);
         if ($blocked->fetch()) {
@@ -137,6 +143,9 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false): arra
             'payment_status' => $quote['paymentStatus'],
             'payment_method' => $quote['paymentMethod'],
         ];
+        if ($continuation !== null) {
+            $values['continued_from_booking_id'] = $continuation['id'];
+        }
         if (($quote['extraHours'] ?? 0) > 0) {
             $values['extra_hours'] = $quote['extraHours'];
             $values['extra_hours_amount'] = $quote['extraHoursAmount'];
@@ -152,6 +161,9 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false): arra
         $columns = implode(',', array_keys($values));
         $marks = implode(',', array_fill(0, count($values), '?'));
         $pdo->prepare('INSERT INTO bookings (' . $columns . ') VALUES (' . $marks . ')')->execute(array_values($values));
+        if ($continuation !== null) {
+            $pdo->prepare('UPDATE bookings SET continued_to_booking_id=? WHERE id=?')->execute([$values['id'], $continuation['id']]);
+        }
         if (!$test && $quote['paymentStatus'] === 'PAID') {
             record_manual_payment($pdo, $values['id'], $quote['total'], $quote['paymentMethod']);
         }

@@ -200,4 +200,7 @@ account_check(admin_api_permission('/api/admin/products', 'PATCH') === 'products
 account_check(admin_api_permission('/api/admin/products', 'POST') === 'products.create', 'Creating product must require create permission');
 account_check(admin_api_permission('/api/admin/inventory', 'GET') === 'inventory.view', 'Stock viewing needs inventory view grant');
 account_check(admin_api_permission('/api/admin/inventory', 'POST') === 'inventory.receive', 'Receiving stock needs receive grant');
+account_check(admin_api_permission('/api/admin/sales/a/cancel', 'POST') === 'sales.cancel', 'Cancellation requires separate permission');
+account_check(admin_api_permission('/api/admin/sales/a/complete', 'POST') === 'sales.complete', 'Manual completion requires separate permission');
+account_check(admin_api_permission('/api/admin/bookings/a/continuation', 'GET') === 'bookings.create', 'Continuation context requires booking creation permission');
 echo "Account authorization tests: OK\n";

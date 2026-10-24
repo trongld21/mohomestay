@@ -325,10 +325,16 @@
         if (booking.status === "CHECKED_IN" && LANG_HOME.abilities.includes("availability.checkout")) {
             actions = `<a class="timeline-button" href="/admin/availability#booking-${encodeURIComponent(booking.id)}">Trả phòng & phụ thu</a>`;
         }
-        if (LANG_HOME.manualDateOverride === true && ["PENDING", "CONFIRMED", "CHECKED_IN"].includes(booking.status)) {
+        if (LANG_HOME.abilities.includes("bookings.create") && ["CONFIRMED", "CHECKED_IN"].includes(booking.status)
+            && !Number(booking.is_test) && !booking.continued_to_booking_id) {
+            actions += `<button type="button" class="timeline-button" data-booking-continuation="${esc(booking.id)}">Ở tiếp / thêm gói</button>`;
+        }
+        if (LANG_HOME.manualDateOverride === true && ["PENDING", "CONFIRMED", "CHECKED_IN"].includes(booking.status)
+            && !booking.continued_from_booking_id && !booking.continued_to_booking_id) {
             actions += `<button type="button" class="timeline-button" data-booking-stay="${esc(booking.id)}">Đổi phòng / sửa lịch</button>`;
         }
-        if (LANG_HOME.isSuperAdmin === true && ["CHECKED_IN", "CHECKED_OUT", "EXPIRED"].includes(booking.status)) {
+        if (LANG_HOME.isSuperAdmin === true && ["CHECKED_IN", "CHECKED_OUT", "EXPIRED"].includes(booking.status)
+            && !booking.continued_to_booking_id) {
             actions += action("CANCELLED", "Hủy đơn", "x", true);
         }
         const identity = Number(booking.identity_image_count) === 2

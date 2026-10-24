@@ -12,7 +12,7 @@ function availability_snapshot(PDO $pdo, array $rooms, string $date, int $days =
     $now ??= time();
     $end = $start->modify('+' . $days . ' days');
     $query = $pdo->prepare(
-        'SELECT b.room_id,b.check_in,b.check_out,b.status,c.actual_checkout_at FROM bookings b '
+        'SELECT b.*,c.actual_checkout_at FROM bookings b '
         . 'LEFT JOIN booking_checkout_charges c ON c.booking_id=b.id '
         . "WHERE b.check_in<? AND (b.status IN ('CONFIRMED','CHECKED_IN','CHECKED_OUT') "
         . "OR (b.status='PENDING' AND b.hold_expires_at>?))"
@@ -43,6 +43,7 @@ function availability_snapshot(PDO $pdo, array $rooms, string $date, int $days =
         $intervals = [];
         foreach ($bookings as $booking) {
             if ($booking['room_id'] !== $room['id']) continue;
+            $booking['continuation_active'] = booking_has_live_continuation($booking, $bookings);
             $occupiedEnd = room_occupied_until($booking);
             if ($occupiedEnd <= mysql_datetime($start)) continue;
             $stayEnd = $booking['status'] === 'CHECKED_OUT'
@@ -54,11 +55,13 @@ function availability_snapshot(PDO $pdo, array $rooms, string $date, int $days =
                     'status' => $booking['status'] === 'CHECKED_OUT' ? 'CONFIRMED' : $booking['status'],
                 ];
             }
-            $intervals[] = [
-                'start' => gmdate('c', strtotime($stayEnd . ' UTC')),
-                'end' => gmdate('c', strtotime($occupiedEnd . ' UTC')),
-                'status' => 'CLEANING',
-            ];
+            if ($occupiedEnd > $stayEnd) {
+                $intervals[] = [
+                    'start' => gmdate('c', strtotime($stayEnd . ' UTC')),
+                    'end' => gmdate('c', strtotime($occupiedEnd . ' UTC')),
+                    'status' => 'CLEANING',
+                ];
+            }
         }
         foreach ($blocked as $block) {
             if ($block['room_id'] !== $room['id']) continue;

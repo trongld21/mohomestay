@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/retail-stock-alerts.php';
+
 function retail_integer(mixed $value, int $min, int $max): int
 {
     if ((!is_int($value) && !is_string($value)) || !preg_match('/^[0-9]+$/D', (string)$value)) {
@@ -69,6 +71,7 @@ function retail_receive_stock(PDO $pdo, array $input, string $actor): void
         $pdo->prepare('UPDATE retail_products SET stock_quantity=? WHERE id=?')->execute([$after, $productId]);
         $pdo->prepare("INSERT INTO retail_stock_movements (id,product_id,product_name,movement_type,quantity_change,stock_after,reference_id,note,created_by) VALUES (?,?,?,'IN',?,?,?,?,?)")
             ->execute([$id, $productId, $product['name'], $quantity, $after, $id, $note, $actor]);
+        retail_queue_low_stock_alert($pdo, $productId);
         $pdo->commit();
     } catch (Throwable $error) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -99,7 +102,7 @@ function retail_active_booking(PDO $pdo, string $roomId, bool $lock = false): ?a
     return $query->fetch() ?: null;
 }
 
-function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPrice): array
+function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPrice, bool $allowDiscount = false): array
 {
     $requestId = $input['requestId'] ?? '';
     if (!is_string($requestId) || !preg_match('/^[a-f0-9]{32}$/D', $requestId)
@@ -115,6 +118,8 @@ function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPr
         $items[$item['productId']] = retail_integer($item['quantity'] ?? null, 1, 999);
     }
     ksort($items);
+    $discountPercent = retail_integer($input['discountPercent'] ?? 0, 0, 100);
+    if ($discountPercent > 0 && !$allowDiscount) throw new BookingException('Bạn chưa có quyền giảm giá bán hàng.', 403);
     $totalRequested = isset($input['total']) ? retail_integer($input['total'], 1, 100000000) : null;
     $roomId = $input['roomId'] ?? '';
     if (!is_string($roomId) || ($roomId !== '' && !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $roomId))) {
@@ -132,6 +137,7 @@ function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPr
     $identity = [$items, $totalRequested];
     if ($roomId !== '') $identity[] = $roomId;
     if (!empty($expectedBookingId)) $identity[] = $expectedBookingId;
+    if ($discountPercent > 0) $identity[] = ['discountPercent' => $discountPercent];
     $hash = hash('sha256', json_encode($identity, JSON_THROW_ON_ERROR));
     $pdo->beginTransaction();
     try {
@@ -166,20 +172,20 @@ function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPr
             $query->execute([$productId]);
             $product = $query->fetch();
             if (!$product || !(bool)$product['is_active']) throw new BookingException('Sản phẩm vừa ngừng bán. Vui lòng chọn lại.', 409);
-            if ((bool)$product['track_stock'] && (int)$product['stock_quantity'] < $quantity) {
-                throw new BookingException('Không đủ tồn kho cho ' . $product['name'] . '. Còn ' . (int)$product['stock_quantity'] . '.', 409);
-            }
             $listed += (int)$product['price'] * $quantity;
             if ($listed > 100000000) throw new BookingException('Tổng đơn tối đa 100.000.000đ.', 422);
             $snapshots[] = [$productId, $product['name'], (int)$product['price'], $quantity];
         }
         $total = $totalRequested ?? $listed;
         if (!$allowPrice && $total !== $listed) throw new BookingException('Bạn chưa có quyền chỉnh giá chốt hoặc giá sản phẩm vừa thay đổi.', 403);
+        $subtotal = $total;
+        $total = (int)round($subtotal * (100 - $discountPercent) / 100);
+        $discountAmount = $subtotal - $total;
         $id = uuid();
         $code = 'BH-' . strtoupper(bin2hex(random_bytes(5)));
         $orderCode = random_int(700000000000000, 799999999999999);
-        $pdo->prepare('INSERT INTO retail_sales (id,request_id,request_hash,sale_code,total,listed_total,order_code,created_by,room_id,room_name_snapshot,booking_id,booking_code_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
-            ->execute([$id, $requestId, $hash, $code, $total, $listed, $orderCode, $actor, $roomId !== '' ? $roomId : null, $roomName, $activeBooking['id'] ?? null, $activeBooking['booking_code'] ?? null]);
+        $pdo->prepare('INSERT INTO retail_sales (id,request_id,request_hash,sale_code,total,listed_total,order_code,created_by,room_id,room_name_snapshot,booking_id,booking_code_snapshot,subtotal,discount_percent,discount_amount) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+            ->execute([$id, $requestId, $hash, $code, $total, $listed, $orderCode, $actor, $roomId !== '' ? $roomId : null, $roomName, $activeBooking['id'] ?? null, $activeBooking['booking_code'] ?? null, $subtotal, $discountPercent, $discountAmount]);
         $insert = $pdo->prepare('INSERT INTO retail_sale_items (sale_id,product_id,product_name,unit_price,quantity) VALUES (?,?,?,?,?)');
         foreach ($snapshots as $snapshot) $insert->execute([$id, ...$snapshot]);
         foreach ($items as $productId => $quantity) {
@@ -187,11 +193,16 @@ function retail_create_sale(PDO $pdo, array $input, string $actor, bool $allowPr
             $query->execute([$productId]);
             $product = $query->fetch();
             if (!(bool)$product['track_stock']) continue;
-            $update = $pdo->prepare('UPDATE retail_products SET stock_quantity=stock_quantity-? WHERE id=? AND stock_quantity>=?');
+            $update = $pdo->prepare('UPDATE retail_products SET stock_quantity=stock_quantity-? WHERE id=? AND stock_quantity>=-1000000000+?');
             $update->execute([$quantity, $productId, $quantity]);
-            if ($update->rowCount() !== 1) throw new BookingException('Tồn kho vừa thay đổi. Vui lòng kiểm tra lại.', 409);
+            if ($update->rowCount() !== 1) throw new BookingException('Số tồn kho vượt giới hạn hệ thống.', 409);
             $pdo->prepare("INSERT INTO retail_stock_movements (id,product_id,product_name,movement_type,quantity_change,stock_after,reference_id,note,created_by) VALUES (?,?,?,'SALE',?,?,?,?,?)")
                 ->execute([uuid(), $productId, $product['name'], -$quantity, (int)$product['stock_quantity'] - $quantity, $id, $code, $actor]);
+            retail_queue_low_stock_alert($pdo, $productId);
+        }
+        if ($total === 0) {
+            $pdo->prepare("UPDATE retail_sales SET status='PAID',paid_at=?,completion_method='GIFT',completed_by=? WHERE id=?")
+                ->execute([gmdate('Y-m-d H:i:s'), $actor, $id]);
         }
         $pdo->commit();
         return retail_sale($pdo, $id);
@@ -217,8 +228,9 @@ function retail_payment_callback(PDO $pdo, array $data): bool
             || (!empty($sale['payment_link_id']) && $sale['payment_link_id'] !== ($data['paymentLinkId'] ?? ''))) {
             throw new BookingException('Giao dịch không khớp đơn bán hàng.', 422);
         }
+        if ($sale['status'] === 'CANCELLED') throw new BookingException('Đơn đã hủy. Cần đối soát giao dịch này.', 409);
         if ($sale['status'] !== 'PAID') {
-            $pdo->prepare("UPDATE retail_sales SET status='PAID',transaction_reference=?,paid_at=? WHERE id=?")
+            $pdo->prepare("UPDATE retail_sales SET status='PAID',transaction_reference=?,paid_at=?,completion_method='PAYOS' WHERE id=?")
                 ->execute([$data['reference'], gmdate('Y-m-d H:i:s'), $sale['id']]);
         }
         $pdo->commit();
@@ -277,6 +289,7 @@ function retail_ensure_payment(PDO $pdo, string $id, ?callable $create = null): 
         $query->execute([$id]);
         $sale = $query->fetch();
         if (!$sale) throw new BookingException('Không tìm thấy đơn.', 404);
+        if ($sale['status'] === 'CANCELLED') throw new BookingException('Đơn đã hủy, không tạo QR.', 409);
         if ($sale['status'] !== 'PAID' && empty($sale['checkout_url'])) {
             $payment = ($create ?? 'retail_create_payment')($sale);
             $pdo->prepare('UPDATE retail_sales SET qr_code=?,checkout_url=?,payment_link_id=? WHERE id=?')
@@ -293,7 +306,7 @@ function retail_ensure_payment(PDO $pdo, string $id, ?callable $create = null): 
 function retail_refresh_payment(PDO $pdo, string $id): array
 {
     $sale = retail_sale($pdo, $id);
-    if ($sale['status'] === 'PAID') return $sale;
+    if ($sale['status'] !== 'PENDING') return $sale;
     $remote = payos_payment_status((string)$sale['order_code']);
     if (($remote['status'] ?? '') === 'PAID'
         && (string)($remote['orderCode'] ?? '') === (string)$sale['order_code']

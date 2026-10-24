@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/retail.php';
+require_once __DIR__ . '/retail-management.php';
 
 function retail_api(string $path, string $method): never
 {
     header('Cache-Control: no-store');
     $pdo = db();
+    try_dispatch_retail_stock_alerts($pdo);
     if ($path === '/api/admin/inventory' && $method === 'GET') {
         $page = max(1, min(100000, (int)($_GET['page'] ?? 1)));
         $offset = ($page - 1) * 30;
@@ -21,6 +23,7 @@ function retail_api(string $path, string $method): never
     if ($path === '/api/admin/inventory' && $method === 'POST') {
         require_csrf();
         retail_receive_stock($pdo, json_body(), (string)current_account()['id']);
+        try_dispatch_retail_stock_alerts($pdo);
         json_response(['ok' => true]);
     }
     if ($path === '/api/admin/sales/catalog' && $method === 'GET') {
@@ -45,24 +48,12 @@ function retail_api(string $path, string $method): never
         json_response(['product' => retail_save_product($pdo, $body)]);
     }
     if ($path === '/api/admin/sales' && $method === 'GET') {
-        $page = max(1, min(100000, (int)($_GET['page'] ?? 1)));
-        $offset = ($page - 1) * 30;
-        $search = trim((string)($_GET['q'] ?? ''));
-        if (mb_strlen($search) > 150) throw new BookingException('Từ khóa tối đa 150 ký tự.', 422);
-        $where = $search !== '' ? ' WHERE (room_name_snapshot LIKE ? OR sale_code LIKE ? OR booking_code_snapshot LIKE ?)' : '';
-        $params = $search !== '' ? ['%' . $search . '%', '%' . $search . '%', '%' . $search . '%'] : [];
-        $count = $pdo->prepare('SELECT COUNT(*) FROM retail_sales' . $where);
-        $count->execute($params);
-        $total = (int)$count->fetchColumn();
-        $query = $pdo->prepare('SELECT id,sale_code,total,listed_total,status,created_by,created_at,paid_at,room_id,room_name_snapshot,booking_id,booking_code_snapshot FROM retail_sales'
-            . $where . ' ORDER BY created_at DESC,id DESC LIMIT 30 OFFSET ' . $offset);
-        $query->execute($params);
-        $rows = $query->fetchAll();
-        json_response(['sales' => $rows, 'revenue' => retail_revenue($pdo), 'count' => $total, 'page' => $page]);
+        json_response(retail_history($pdo, $_GET));
     }
     if ($path === '/api/admin/sales' && $method === 'POST') {
         require_csrf();
-        $sale = retail_create_sale($pdo, json_body(), (string)current_account()['id'], can_use('sales.price'));
+        $sale = retail_create_sale($pdo, json_body(), (string)current_account()['id'], can_use('sales.price'), can_use('sales.discount'));
+        try_dispatch_retail_stock_alerts($pdo);
         try {
             $sale = retail_ensure_payment($pdo, $sale['id']);
             json_response(['sale' => $sale]);
@@ -71,7 +62,7 @@ function retail_api(string $path, string $method): never
             json_response(['sale' => $sale, 'paymentError' => 'Đơn đã lưu. Chưa tạo được QR; bấm Tạo lại QR trên đơn này.']);
         }
     }
-    if (preg_match('#^/api/admin/sales/([a-f0-9]{32})(?:/(payment|check))?$#', $path, $match)) {
+    if (preg_match('#^/api/admin/sales/([a-f0-9]{32})(?:/(payment|check|cancel|complete))?$#', $path, $match)) {
         $sale = retail_sale($pdo, $match[1]);
         if (!can_use('sales.view') && $sale['created_by'] !== (string)current_account()['id']) {
             throw new BookingException('Bạn không có quyền xem đơn của nhân viên khác.', 403);
@@ -79,7 +70,17 @@ function retail_api(string $path, string $method): never
         if ($method === 'GET' && empty($match[2])) json_response(['sale' => $sale]);
         if ($method === 'POST' && !empty($match[2])) {
             require_csrf();
-            $sale = $match[2] === 'payment' ? retail_ensure_payment($pdo, $sale['id']) : retail_refresh_payment($pdo, $sale['id']);
+            if ($match[2] === 'cancel' || $match[2] === 'complete') {
+                $body = json_body();
+                $note = $body['note'] ?? '';
+                if (!is_string($note)) throw new BookingException('Nội dung xác nhận không hợp lệ.', 422);
+                $sale = $match[2] === 'cancel'
+                    ? retail_cancel_sale($pdo, $sale['id'], (string)current_account()['id'], $note)
+                    : retail_complete_sale($pdo, $sale['id'], (string)current_account()['id'], $note);
+                try_dispatch_retail_stock_alerts($pdo);
+            } else {
+                $sale = $match[2] === 'payment' ? retail_ensure_payment($pdo, $sale['id']) : retail_refresh_payment($pdo, $sale['id']);
+            }
             json_response(['sale' => $sale]);
         }
     }

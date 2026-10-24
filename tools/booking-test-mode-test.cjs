@@ -4,10 +4,10 @@ const vm = require("node:vm");
 
 (async () => {
     for (const testing of [true, false]) {
-        const node = () => ({ value: "", innerHTML: "", setAttribute() {}, dispatchEvent() {} });
+        const node = () => ({ value: "", innerHTML: "", setAttribute() {}, dispatchEvent() {}, addEventListener() {}, querySelector: () => null });
         const checkbox = { checked: testing, addEventListener() {} };
         const submit = node();
-        const fields = { roomId: { ...node(), value: "pink" } };
+        const fields = { roomId: { ...node(), value: "pink" }, extraHours: { ...node(), value: "0" } };
         const form = {
             reportValidity: () => true, elements: fields, date: node(), time: node(), packageId: node(), numberOfGuests: node(),
             querySelector: (selector) => selector === "[data-test-payment]" ? checkbox : submit,
@@ -19,6 +19,7 @@ const vm = require("node:vm");
             "[data-booking-form]": form, "[data-summary]": node(),
             "[data-booking-message]": node(), "[data-terms]": node(),
             "[data-slot-grid]": grid, "[data-duration-time]": node(),
+            "[data-extra-hours-section]": node(), "[data-extra-hours-options]": node(), "[data-extra-hours-status]": node(),
         };
         const root = { querySelector: (selector) => nodes[selector] };
         const config = {
@@ -32,12 +33,16 @@ const vm = require("node:vm");
                 LANG_HOME: config,
                 MoBookingSlots: {
                     configuredSlots: () => [slot],
+                    earliestBookingDate: () => "2099-01-01",
+                    durationDayState: () => "available",
+                    extendedWindow: (window) => window,
                     slotWindow: () => ({ start: new Date("2099-01-01T07:00:00Z"), end: new Date("2099-01-01T10:00:00Z") }),
                     slotState: () => "available",
                 },
             },
             LANG_HOME: config, location,
-            document: { querySelector: (selector) => selector === "#booking-app" ? root : null },
+            document: { addEventListener() {}, querySelector: (selector) => selector === "#booking-app" ? root : null },
+            setInterval() {},
             URLSearchParams, Event, CSS: { escape: (value) => value },
             crypto: { randomUUID: () => "12345678-1234-1234-1234-123456789012" },
             sessionStorage: { setItem() {} }, LangUI: { toast() {} },

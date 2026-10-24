@@ -170,6 +170,9 @@ function account_permission_groups(): array
             'sales.view' => 'Xem lịch sử bán hàng và doanh thu',
             'sales.create' => 'Tạo đơn bán hàng, tạo QR và kiểm tra thanh toán',
             'sales.price' => 'Điều chỉnh giá chốt đơn bán hàng',
+            'sales.discount' => 'Giảm giá % và tặng sản phẩm (100%)',
+            'sales.cancel' => 'Hủy đơn bán hàng chưa thanh toán và hoàn kho',
+            'sales.complete' => 'Xác nhận hoàn thành đơn đã chuyển khoản trước',
         ],
         'products' => [
             'products.view' => 'Xem danh sách sản phẩm',
@@ -235,7 +238,13 @@ function admin_api_permission(string $path, string $method, array $body = []): s
     $feature = explode('/', substr($path, strlen('/api/admin/')))[0];
     return match ($feature) {
         'inventory' => $method === 'GET' ? 'inventory.view' : 'inventory.receive',
-        'sales' => $path === '/api/admin/sales/catalog' ? 'sales.create' : ($method === 'GET' ? 'sales.view' : 'sales.create'),
+        'sales' => match (true) {
+            str_ends_with($path, '/cancel') => 'sales.cancel',
+            str_ends_with($path, '/complete') => 'sales.complete',
+            $path === '/api/admin/sales/catalog' => 'sales.create',
+            $method === 'GET' => 'sales.view',
+            default => 'sales.create',
+        },
         'products' => match ($method) {
             'GET' => 'products.view',
             'POST' => 'products.create',
@@ -255,7 +264,7 @@ function admin_api_permission(string $path, string $method, array $body = []): s
         },
         'booking-overview' => 'bookings.overview',
         'booking-rooms' => 'bookings.create',
-        'bookings' => match ($method) {
+        'bookings' => str_ends_with($path, '/continuation') ? 'bookings.create' : match ($method) {
             'GET' => str_contains($path, '/identity/') ? 'bookings.identity' : 'bookings.view',
             'POST' => str_ends_with($path, '/stay') ? 'accounts'
                 : (str_ends_with($path, '/payment') ? 'bookings.payment' : 'bookings.create'),

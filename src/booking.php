@@ -175,7 +175,14 @@ function booking_lifecycle(array $booking, ?int $now = null): array
             $source = 'AUTO';
         }
     }
+    $continuing = !empty($booking['continued_to_booking_id']) && in_array($status, ['CONFIRMED', 'CHECKED_IN'], true)
+        && $now >= strtotime($booking['check_out'] . ' UTC');
+    if ($continuing) {
+        $status = 'CHECKED_OUT';
+        $source = 'AUTO';
+    }
     return array_replace($booking, [
+        'continuingStay' => $continuing,
         'status' => $status,
         'statusSource' => $source,
         'isOverdue' => $status === 'CHECKED_IN' && $now >= strtotime($booking['check_out'] . ' UTC'),
@@ -229,6 +236,7 @@ function update_booking_lifecycle(PDO $pdo, string $id, string $status): void
             $blocked->execute([$roomId, $local->format('Y-m-d'), $end->modify('-1 second')->format('Y-m-d')]);
             if ($blocked->fetch()) throw new BookingException('Phòng đang bị khóa trong khoảng nhận sớm.', 409);
         }
+        if ($status === 'CANCELLED') detach_cancelled_booking_continuation($pdo, $booking);
         $pdo->prepare('UPDATE bookings SET status=?,check_in=? WHERE id=?')->execute([$status, $start, $id]);
         if ($status === 'CANCELLED') {
             $pdo->prepare('UPDATE room_emergency_locks SET ended_at=?,ended_by=? WHERE booking_id=? AND ended_at IS NULL')

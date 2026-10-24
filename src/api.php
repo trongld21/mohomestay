@@ -94,6 +94,16 @@ function handle_api(string $path, string $method): never
             json_response(['overview' => $overview]);
         }
         if ($method === 'GET' && preg_match('#^/api/admin/bookings/([a-f0-9]{32})/identity/(front|back)$#', $path, $matches)) admin_booking_identity_image($matches[1], $matches[2]);
+        if (preg_match('#^/api/admin/bookings/([a-f0-9]{32})/continuation$#', $path, $matches)) {
+            require_permission('bookings.create');
+            if ($method === 'GET') json_response(booking_continuation_context(db(), $matches[1]));
+            if ($method !== 'POST') throw new BookingException('Phương thức không hợp lệ.', 405);
+            require_csrf();
+            $input = json_body();
+            if (($input['paymentStatus'] ?? '') === 'PAID') require_permission('bookings.payment');
+            $booking = create_booking_continuation(db(), $matches[1], $input);
+            json_response(['bookingCode' => $booking['booking_code']], 201);
+        }
         if ($path === '/api/admin/bookings' && $method === 'GET') admin_bookings_api();
         if ($method === 'POST' && preg_match('#^/api/admin/bookings/([a-f0-9]{32})/stay$#', $path, $matches)) {
             require_csrf();

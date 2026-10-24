@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/booking-continuation.php';
+
 const ROOM_CLEANING_SECONDS = 3600;
 
 function room_occupied_until(array $booking, ?string $actualCheckout = null): string
@@ -11,7 +13,8 @@ function room_occupied_until(array $booking, ?string $actualCheckout = null): st
         $actual = $actualCheckout ?? ($booking['actual_checkout_at'] ?? null);
         $scheduled = $actual ? strtotime($actual . ' UTC') : $scheduled;
     }
-    return gmdate('Y-m-d H:i:s', $scheduled + ROOM_CLEANING_SECONDS);
+    $cleaning = !empty($booking['continuation_active']) && $booking['status'] !== 'CHECKED_OUT' ? 0 : ROOM_CLEANING_SECONDS;
+    return gmdate('Y-m-d H:i:s', $scheduled + $cleaning);
 }
 
 /**
@@ -27,7 +30,9 @@ function room_booking_conflict(PDO $pdo, string $roomId, string $start, string $
         . "OR (b.status='PENDING' AND b.hold_expires_at>?))"
     );
     $query->execute([$roomId, gmdate('Y-m-d H:i:s', strtotime($end . ' UTC') + ROOM_CLEANING_SECONDS), gmdate('Y-m-d H:i:s')]);
-    foreach ($query->fetchAll() as $booking) {
+    $bookings = $query->fetchAll();
+    foreach ($bookings as $booking) {
+        $booking['continuation_active'] = booking_has_live_continuation($booking, $bookings);
         if ($exceptId !== null && $booking['id'] === $exceptId) continue;
         if ($start < room_occupied_until($booking)) return true;
     }

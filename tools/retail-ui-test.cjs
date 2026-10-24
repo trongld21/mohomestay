@@ -5,7 +5,7 @@ const vm = require("node:vm");
 const nodes = new Map();
 const listeners = {};
 const id = "a".repeat(32);
-const product = { id, name: '<img src=x onerror="bad()">', price: 15000, is_active: 1, track_stock: 1, stock_quantity: 5 };
+const product = { id, name: '<img src=x onerror="bad()">', price: 15000, is_active: 1, track_stock: 1, stock_quantity: 0 };
 let failed = true;
 let salePosts = [];
 let uuidCount = 0;
@@ -71,6 +71,7 @@ const click = (selector, data = {}) => listeners.click({ target: { closest: (mat
     assert.match(one("[data-sale-detail]").innerHTML, /pay.payos.vn/);
     assert.match(one("[data-sale-detail]").innerHTML, /&lt;img/);
     assert.equal(one("[data-sale-dialog]").open, true);
+    assert.match(one("[data-products]").innerHTML, /-2/);
     assert.equal(one("[data-cart-total]").value, "");
     console.log("Retail cart, negotiated totals, network retry identity, QR handoff and escaping: OK");
 })().catch((error) => { console.error(error); process.exitCode = 1; });

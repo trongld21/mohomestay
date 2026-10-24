@@ -58,6 +58,7 @@ function lock_overstaying_booking(PDO $pdo, string $bookingId, string $actor, ?i
     $pdo->beginTransaction();
     try {
         $booking = room_operation_booking($pdo, $bookingId);
+        assert_booking_has_no_active_continuation($pdo, $booking);
         if (!in_array($booking['status'], ['CONFIRMED', 'CHECKED_IN'], true)
             || strtotime($booking['check_out'] . ' UTC') > $now) {
             throw new BookingException('Chỉ khóa khẩn cấp đơn đã đến giờ trả phòng và chưa xác nhận trả.', 409);
@@ -112,6 +113,7 @@ function save_booking_surcharge(PDO $pdo, array $input, string $actor): void
     try {
         $bookingId = (string)($input['bookingId'] ?? '');
         $booking = room_operation_booking($pdo, $bookingId);
+        assert_booking_has_no_active_continuation($pdo, $booking);
         $existing = $pdo->prepare('SELECT booking_id,name,amount FROM booking_surcharge_items WHERE id=?');
         $existing->execute([$requestId]);
         if ($row = $existing->fetch()) {
@@ -145,6 +147,7 @@ function confirm_room_checkout(PDO $pdo, string $bookingId, string $actor, ?int 
     $pdo->beginTransaction();
     try {
         $booking = room_operation_booking($pdo, $bookingId);
+        assert_booking_has_no_active_continuation($pdo, $booking);
         $query = $pdo->prepare('SELECT * FROM booking_checkout_charges WHERE booking_id=?');
         $query->execute([$bookingId]);
         $charge = $query->fetch();

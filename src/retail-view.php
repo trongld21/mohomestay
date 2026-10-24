@@ -49,14 +49,32 @@ function render_retail_page(bool $products, bool $history = false, bool $invento
                         <div class="grid gap-3" data-cart></div>
                         <p class="text-sm" data-cart-listed>Tổng theo bảng giá: 0đ</p>
                         <label class="grid gap-1 text-sm">Giá chốt (đ)<input class="timeline-input" data-cart-total type="number" min="1" max="100000000" step="1" <?= !can_use('sales.price') ? 'readonly' : '' ?>></label>
+                        <label class="grid gap-1 text-sm">Giảm giá (%)<input class="timeline-input" data-cart-discount type="number" min="0" max="100" step="1" value="0" <?= !can_use('sales.discount') ? 'readonly' : '' ?>></label>
+                        <p class="text-sm font-semibold text-[#79543e]" data-cart-payable>Khách cần trả: 0đ</p>
+                        <p class="text-xs text-stone-600">Giảm 100% để tặng khách. Đơn tặng vẫn ghi nhận số lượng và trừ tồn, không tạo QR.</p>
                         <p class="text-xs text-stone-600"><?= can_use('sales.price') ? 'Bạn có quyền điều chỉnh giá chốt của cả đơn.' : 'Giá chốt tự tính theo sản phẩm và số lượng.' ?></p>
                         <button type="button" class="timeline-button timeline-primary" data-sale-create disabled>Chốt đơn & tạo QR</button>
-                        <p class="text-sm text-stone-600">Đơn chỉ được tính doanh thu khi payOS xác nhận thanh toán.</p>
+                        <p class="text-sm text-stone-600">Doanh thu chỉ ghi nhận khi payOS xác nhận hoặc nhân viên có quyền đối soát chuyển khoản. Đơn tặng ghi nhận số lượng, doanh thu 0đ.</p>
                     </section>
                 </div>
             <?php endif ?>
             <?php if ($history && can_use('sales.view')): ?>
-                <section class="retail-panel grid gap-4"><div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-sans text-lg font-semibold">Lịch sử bán hàng</h2><p class="font-semibold text-[#79543e]" data-sales-revenue></p></div><label class="grid gap-1 text-sm">Tra theo phòng, mã bán hàng hoặc mã đặt phòng<input type="search" class="timeline-input" data-sales-filter maxlength="150" placeholder="Tên phòng, mã BH… hoặc MO…"></label><div class="overflow-x-auto" data-sales-history></div><div class="flex items-center gap-3"><button type="button" class="timeline-button" data-sales-prev>Trước</button><span class="text-sm" data-sales-page></span><button type="button" class="timeline-button" data-sales-next>Sau</button></div></section>
+                <section class="retail-panel grid gap-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-sans text-lg font-semibold">Lịch sử bán hàng</h2><p class="font-semibold text-[#79543e]" data-sales-revenue></p></div>
+                    <?php $today = (new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh')))->format('Y-m-d'); ?>
+                    <form class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-sales-filter-form>
+                        <label class="grid gap-1 text-sm">Từ ngày<input class="timeline-input" type="date" data-sales-from value="<?= e($today) ?>" required></label>
+                        <label class="grid gap-1 text-sm">Đến ngày<input class="timeline-input" type="date" data-sales-to value="<?= e($today) ?>" required></label>
+                        <label class="grid gap-1 text-sm">Thanh toán<select class="timeline-input" data-sales-state><option value="">Tất cả</option><option value="PENDING">Chờ thanh toán</option><option value="PAID">Đã hoàn thành</option><option value="CANCELLED">Đã hủy</option></select></label>
+                        <label class="grid gap-1 text-sm">Tra phòng, mã đơn hoặc sản phẩm<input type="search" class="timeline-input" data-sales-filter maxlength="150" placeholder="Tên phòng, mã BH/MO, tên sản phẩm…"></label>
+                        <label class="grid gap-1 text-sm">Sắp xếp<select class="timeline-input" data-sales-sort><option value="oldest">Cũ nhất → mới nhất</option><option value="newest">Mới nhất → cũ nhất</option></select></label>
+                        <button class="timeline-button timeline-primary self-end" type="submit">Lọc lịch sử</button>
+                    </form>
+                    <p class="text-sm font-semibold" data-sales-quantity></p>
+                    <div class="flex flex-wrap gap-2 text-sm" data-sales-products></div>
+                    <div class="overflow-x-auto" data-sales-history></div>
+                    <div class="flex items-center gap-3"><button type="button" class="timeline-button" data-sales-prev>Trước</button><span class="text-sm" data-sales-page></span><button type="button" class="timeline-button" data-sales-next>Sau</button></div>
+                </section>
             <?php endif ?>
         <?php endif ?>
         <dialog class="timeline-dialog" data-sale-dialog aria-label="Đơn bán hàng và QR thanh toán"><div class="flex items-start justify-between gap-3 border-b border-[#e5dacb] p-4"><h2 class="font-sans text-lg font-semibold">Đơn bán hàng</h2><button type="button" class="timeline-button" data-sale-close>Đóng</button></div><div class="grid gap-3 p-4" data-sale-detail></div></dialog>

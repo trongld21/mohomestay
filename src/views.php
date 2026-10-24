@@ -144,6 +144,7 @@ function render_google_analytics(string $path, string $host): void
         <script defer src="<?= e(asset_url('/assets/admin-permissions.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-booking-filters.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin.js')) ?>"></script>
+        <script defer src="<?= e(asset_url('/assets/booking-continuation.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/booking-stay.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-inputs.js')) ?>"></script>
         <script defer src="<?= e(asset_url('/assets/admin-date-picker.js')) ?>"></script>
