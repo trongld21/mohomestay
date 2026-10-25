@@ -118,7 +118,7 @@ function render_google_analytics(string $path, string $host): void
             <?php render_header(); ?><main id="main"><?php $content(); ?></main><?php render_footer(); ?>
         <?php endif ?>
         <div class="ui-toast-region" data-toast-region aria-live="polite" aria-atomic="false"></div>
-        <div class="ui-dialog-root" data-dialog-root></div>
+        <dialog class="ui-dialog-root" data-dialog-root aria-labelledby="ui-dialog-title"></dialog>
         <?php $pagePath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
         if (!preg_match('#^/(admin|auth)(/|$)#', $pagePath)) render_contact_widget(); ?>
         <script>

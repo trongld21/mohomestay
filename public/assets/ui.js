@@ -12,18 +12,71 @@
     return {close,element:item};
   }
 
-  function confirm({title='Xác nhận thao tác',message='',confirmLabel='Xác nhận',cancelLabel='Quay lại',tone='danger'}={}){
-    return new Promise(resolve=>{
-      if(!dialogRoot){resolve(false);return}
-      const previous=document.activeElement;let settled=false;
-      dialogRoot.innerHTML=`<div class="ui-dialog-backdrop" data-dialog-cancel></div><section class="ui-dialog" role="dialog" aria-modal="true" aria-labelledby="ui-dialog-title"><button class="ui-dialog__close" type="button" data-dialog-cancel aria-label="Đóng">×</button><span class="ui-dialog__mark ui-dialog__mark--${escape(tone)}" aria-hidden="true">!</span><h2 id="ui-dialog-title">${escape(title)}</h2><p>${escape(message)}</p><div class="ui-dialog__actions"><button class="button outline" type="button" data-dialog-cancel>${escape(cancelLabel)}</button><button class="button ${tone==='danger'?'danger':''}" type="button" data-dialog-confirm>${escape(confirmLabel)}</button></div></section>`;
-      dialogRoot.classList.add('is-open');document.body.classList.add('dialog-open');
-      const panel=dialogRoot.querySelector('.ui-dialog'),confirmButton=dialogRoot.querySelector('[data-dialog-confirm]');
-      const finish=value=>{if(settled)return;settled=true;dialogRoot.classList.remove('is-open');document.body.classList.remove('dialog-open');dialogRoot.innerHTML='';previous?.focus?.();resolve(value)};
-      dialogRoot.querySelectorAll('[data-dialog-cancel]').forEach(button=>button.onclick=()=>finish(false));confirmButton.onclick=()=>finish(true);
-      dialogRoot.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();finish(false)}if(event.key==='Tab'){const focusable=[...panel.querySelectorAll('button:not([disabled])')];const first=focusable[0],last=focusable.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}};
-      requestAnimationFrame(()=>confirmButton.focus());
-    });
-  }
+    function confirm({ title = 'Xác nhận thao tác', message = '', confirmLabel = 'Xác nhận', cancelLabel = 'Quay lại', tone = 'danger' } = {}) {
+        return new Promise((resolve) => {
+            if (!dialogRoot) {
+                resolve(false);
+                return;
+            }
+            const previous = document.activeElement;
+            let settled = false;
+            dialogRoot.innerHTML = `
+                <div class="ui-dialog-backdrop" data-dialog-cancel></div>
+                <section class="ui-dialog" aria-labelledby="ui-dialog-title">
+                    <button class="ui-dialog__close" type="button" data-dialog-cancel aria-label="Đóng">×</button>
+                    <span class="ui-dialog__mark ui-dialog__mark--${escape(tone)}" aria-hidden="true">!</span>
+                    <h2 id="ui-dialog-title">${escape(title)}</h2>
+                    <p>${escape(message)}</p>
+                    <div class="ui-dialog__actions">
+                        <button class="button outline" type="button" data-dialog-cancel>${escape(cancelLabel)}</button>
+                        <button class="button ${tone === 'danger' ? 'danger' : ''}" type="button" data-dialog-confirm>${escape(confirmLabel)}</button>
+                    </div>
+                </section>`;
+            dialogRoot.classList.add('is-open');
+            dialogRoot.showModal();
+            document.body.classList.add('dialog-open');
+            const panel = dialogRoot.querySelector('.ui-dialog');
+            const confirmButton = dialogRoot.querySelector('[data-dialog-confirm]');
+            const finish = (value) => {
+                if (settled) return;
+                settled = true;
+                dialogRoot.close();
+                dialogRoot.classList.remove('is-open');
+                document.body.classList.remove('dialog-open');
+                dialogRoot.innerHTML = '';
+                previous?.focus?.();
+                resolve(value);
+            };
+            dialogRoot.querySelectorAll('[data-dialog-cancel]').forEach((button) => {
+                button.onclick = () => finish(false);
+            });
+            confirmButton.onclick = () => finish(true);
+            dialogRoot.oncancel = (event) => {
+                event.preventDefault();
+                finish(false);
+            };
+            dialogRoot.onkeydown = (event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    finish(false);
+                }
+                if (event.key === 'Tab') {
+                    const focusable = [...panel.querySelectorAll('button:not([disabled])')];
+                    const first = focusable[0];
+                    const last = focusable.at(-1);
+                    if (event.shiftKey && document.activeElement === first) {
+                        event.preventDefault();
+                        last.focus();
+                    } else if (!event.shiftKey && document.activeElement === last) {
+                        event.preventDefault();
+                        first.focus();
+                    }
+                }
+            };
+            requestAnimationFrame(() => {
+                if (!settled) confirmButton.focus();
+            });
+        });
+    }
   window.LangUI={toast,confirm};
 })();

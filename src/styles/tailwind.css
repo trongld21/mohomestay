@@ -3363,3 +3363,11 @@ a.timeline-primary:hover {
 .retail-page h3 {
     @apply m-0 font-sans text-base leading-6;
 }
+
+/* Native modal dialogs share the browser top layer, including nested confirmations. */
+dialog.ui-dialog-root {
+    @apply m-0 h-full max-h-none w-full max-w-none border-0 bg-transparent text-inherit;
+}
+dialog.ui-dialog-root::backdrop {
+    @apply bg-transparent;
+}

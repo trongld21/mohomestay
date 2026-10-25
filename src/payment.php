@@ -98,6 +98,65 @@ function refresh_payment_cancellation(PDO $pdo, array $booking, ?callable $fetch
     $stmt->execute([$key]);
 }
 
+function close_booking_payment(array $booking, ?callable $cancel = null, ?callable $fetch = null): void
+{
+    if (!empty($booking['is_test']) || ($booking['payment_method'] ?? '') !== 'payos'
+        || ($booking['payment_status'] ?? '') === 'PAID') {
+        return;
+    }
+    $orderCode = (string)($booking['order_code'] ?? '');
+    if (!preg_match('/^\d{10,20}$/', $orderCode)) {
+        throw new BookingException('Mã thanh toán không hợp lệ. Chưa thể hủy QR.', 409);
+    }
+    $matches = static function (array $data) use ($booking, $orderCode): bool {
+        return ($data['status'] ?? '') === 'CANCELLED'
+            && (string)($data['orderCode'] ?? '') === $orderCode
+            && isset($data['amount'], $data['amountPaid'])
+            && (float)$data['amount'] === (float)$booking['total_price']
+            && (float)$data['amountPaid'] === 0.0;
+    };
+    try {
+        $remote = ($cancel ?? 'cancel_payos_booking_payment')($orderCode);
+        if ($matches($remote)) return;
+    } catch (Throwable $error) {
+        // A timeout may occur after the provider has already cancelled the link.
+    }
+    try {
+        if ($matches(($fetch ?? 'payos_payment_status')($orderCode))) return;
+    } catch (Throwable $error) {
+        // Keep the reservation unchanged until cancellation is confirmed.
+    }
+    throw new BookingException('Chưa hủy được QR hoặc QR đã nhận tiền. Vui lòng kiểm tra thanh toán rồi thử hủy lại.', 409);
+}
+
+function cancel_payos_booking_payment(string $orderCode): array
+{
+    if (!config('payos.client_id') || !config('payos.api_key')) {
+        throw new RuntimeException('Chưa có cấu hình hủy thanh toán.');
+    }
+    $ch = curl_init('https://api-merchant.payos.vn/v2/payment-requests/' . $orderCode . '/cancel');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_TIMEOUT => 5,
+        CURLOPT_POSTFIELDS => json_encode(['cancellationReason' => 'Huy don dat phong']),
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'x-client-id: ' . config('payos.client_id'),
+            'x-api-key: ' . config('payos.api_key'),
+        ],
+    ]);
+    $raw = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+    $result = json_decode((string)$raw, true);
+    if ($status !== 200 || ($result['code'] ?? '') !== '00' || !is_array($result['data'] ?? null)) {
+        throw new RuntimeException('Chưa xác nhận được việc hủy QR.');
+    }
+    return $result['data'];
+}
+
 function create_payment(array $booking): array
 {
     $url = rtrim((string)config('app_url'), '/') . '/payment';
