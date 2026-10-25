@@ -16,7 +16,8 @@ if (is_file($envFile)) {
 }
 date_default_timezone_set((string) config('timezone', 'Asia/Ho_Chi_Minh'));
 
-if (PHP_SAPI !== 'cli') {
+// Integration uses its server key and must not create an interactive user session.
+if (PHP_SAPI !== 'cli' && rtrim((string)($requestedPath ?? ''), '/') !== '/api/integration/revenue') {
     start_app_session();
 }
 

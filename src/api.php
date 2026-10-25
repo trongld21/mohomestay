@@ -3,6 +3,10 @@
 function handle_api(string $path, string $method): never
 {
     try {
+        if ($path === '/api/integration/revenue') {
+            require_once APP_ROOT . '/src/revenue-integration.php';
+            mo_revenue_api($method);
+        }
         if (str_starts_with($path, '/api/admin/')) {
             require_admin();
             $body = $method === 'PATCH' && (str_contains($path, '/door-codes/') || $path === '/api/admin/bookings') ? json_body() : [];
