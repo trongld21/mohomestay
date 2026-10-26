@@ -95,6 +95,7 @@
             submit = one(".booking-submit", form),
             slotTools = window.MoBookingSlots;
         let availability = null,
+            submitting = false,
             selectedId = "",
             durationTime = query.time || "";
         const extraSection = one("[data-extra-hours-section]", form);
@@ -226,6 +227,7 @@
         }
 
         function renderSlots() {
+            if (submitting) return;
             form.date.min = slotTools.earliestBookingDate(room());
             const today = new Intl.DateTimeFormat("en-CA", {
                 timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
@@ -379,6 +381,7 @@
         };
         form.onsubmit = async (event) => {
             event.preventDefault();
+            if (submitting) return;
             message.innerHTML = "";
             if (!selectedSlot()) {
                 message.innerHTML = '<p class="notice error">Vui lòng chọn một gói còn trống.</p>';
@@ -400,8 +403,14 @@
             }
             upload.set('numberOfGuests', String(data.numberOfGuests));
             upload.set('acceptTerms', String(data.acceptTerms));
+            submitting = true;
             submit.disabled = true;
-            submit.textContent = "Đang lưu giấy tờ và giữ khung giờ…";
+            submit.setAttribute("aria-busy", "true");
+            submit.innerHTML = `
+                <span class="inline-flex items-center justify-center gap-2">
+                    <span class="size-4 shrink-0 rounded-full border-2 border-current border-r-transparent motion-safe:animate-spin" aria-hidden="true"></span>
+                    <span>Đang tạo đơn…</span>
+                </span>`;
             try {
                 const result = await request(testing ? "/api/dev/payments/create" : "/api/bookings", {
                     method: "POST",
@@ -426,17 +435,18 @@
                 location.href =
                     "/payment?code=" + encodeURIComponent(result.bookingCode) + "#" + result.token;
             } catch (error) {
+                submitting = false;
+                await loadAvailability();
                 message.innerHTML = `<p class="notice error">${esc(error.message)}</p>`;
                 LangUI.toast({
                     type: "error",
                     title: "Chưa thể đặt phòng",
                     message: error.message,
                 });
-                await loadAvailability();
             } finally {
-                if (selectedSlot()) {
-                    submit.disabled = false;
-                    submit.textContent = "Tiếp tục thanh toán →";
+                if (!submitting) {
+                    submit.setAttribute("aria-busy", "false");
+                    renderSlots();
                 }
             }
         };

@@ -46,7 +46,7 @@
             root.querySelector("[data-time-minute-label]").textContent = pad(minute) + " phút";
             exact.value = minute;
             exact.min = Math.max(0, Math.min(60, cutoff - hour * 60));
-            exact.disabled = exact.min > 59;
+            exact.disabled = disabled || !opened || Number(exact.min) > 59;
         }
 
         function set(value) {
@@ -59,6 +59,8 @@
 
         function reflectOpen(value) {
             opened = value;
+            // The hidden draft editor must not prevent the parent form from submitting.
+            exact.disabled = disabled || !opened || Number(exact.min) > 59;
             triggers.forEach((button) => button.setAttribute("aria-expanded", String(value)));
         }
 

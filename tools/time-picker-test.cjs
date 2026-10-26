@@ -25,8 +25,10 @@ const root = {
     querySelectorAll: () => [],
     querySelector: (selector) => selector === "[data-time-hour-label]" ? hourLabel : minuteLabel,
 };
+const panelListeners = {};
 const panel = {
-    addEventListener() {},
+    addEventListener(name, handler) { panelListeners[name] = handler; },
+    classList: { remove() {} },
     querySelector: (selector) => ({ "[data-time-hours]": hours, "[data-time-minutes]": minutes, "[data-time-exact]": exact })[selector],
 };
 const dialog = {
@@ -77,6 +79,16 @@ assert.doesNotMatch(hourButton(12), /disabled/, "The current hour still has futu
 assert.match(minuteButton(0), /disabled/);
 assert.doesNotMatch(minuteButton(20), /disabled/);
 assert.equal(exact.min, 20, "Exact-minute entry must use the same cutoff.");
+assert.equal(exact.disabled, true, "A closed minute editor must not block booking form validation.");
+panelListeners.toggle({ newState: "open" });
+assert.equal(exact.disabled, false, "Opening the picker must enable precise minute editing.");
+bookingPicker.setDisabled(true);
+assert.equal(exact.disabled, true, "Disabling the picker must disable its minute editor.");
+bookingPicker.setDisabled(false);
+assert.equal(exact.disabled, true, "Re-enabling a closed picker must leave its draft editor disabled.");
+panelListeners.toggle({ newState: "open" });
+bookingPicker.close();
+assert.equal(exact.disabled, true, "Closing the picker must exclude its draft from form validation.");
 bookingDate = "2026-10-25";
 bookingPicker.refresh();
 assert.doesNotMatch(hourButton(0), /disabled/, "Tomorrow must allow midnight.");

@@ -1551,6 +1551,21 @@ html:has(> body.admin-page) {
 .admin-navigation :is(.selected, [aria-current="page"]) {
     @apply bg-[#eee7dc] font-semibold text-[#79543e];
 }
+.admin-nav-group {
+    @apply min-w-0 border-0 bg-transparent;
+}
+.admin-nav-group > summary {
+    @apply flex min-h-12 list-none items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium leading-5 text-[#6e665b] transition-colors hover:bg-[#f2eee7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800 motion-reduce:transition-none;
+}
+.admin-nav-group > summary::-webkit-details-marker {
+    display: none;
+}
+.admin-nav-chevron {
+    @apply ml-auto size-4 shrink-0 transition-transform motion-reduce:transition-none;
+}
+.admin-nav-group[open] > summary .admin-nav-chevron {
+    @apply rotate-90;
+}
 .admin-nav-label-long {
     @apply inline;
 }
