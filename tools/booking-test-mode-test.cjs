@@ -3,8 +3,8 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 
 (async () => {
-    for (const testing of [true, false]) {
-        const node = () => ({ value: "", innerHTML: "", setAttribute() {}, dispatchEvent() {}, addEventListener() {}, querySelector: () => null });
+    for (const [testing, failure] of [[true, false], [false, false], [true, true], [false, true]]) {
+        const node = () => ({ value: "", innerHTML: "", attributes: {}, setAttribute(name, value) { this.attributes[name] = value; }, dispatchEvent() {}, addEventListener() {}, querySelector: () => null });
         const checkbox = { checked: testing, addEventListener() {} };
         const submit = node();
         const fields = { roomId: { ...node(), value: "pink" }, extraHours: { ...node(), value: "0" } };
@@ -62,6 +62,12 @@ const vm = require("node:vm");
                     return { ok: true, json: async () => ({ onlineBooking: true, rooms: [{ id: "pink", active: true, intervals: [] }] }) };
                 }
                 submissions.push({ url, options });
+                assert.equal(submit.disabled, true);
+                assert.equal(submit.attributes["aria-busy"], "true");
+                assert.match(submit.innerHTML, /Đang tạo đơn/);
+                if (failure) {
+                    return { ok: false, json: async () => ({ error: "Không có quyền tạo đơn." }) };
+                }
                 return { ok: true, json: async () => ({
                     paymentUrl: "/payment?code=MO-1234567890#mock-token",
                     bookingCode: "MO-1234567890", orderCode: "1234567890123", token: "real-token",
@@ -76,6 +82,13 @@ const vm = require("node:vm");
         assert.equal(request.url, testing ? "/api/dev/payments/create" : "/api/bookings");
         assert.equal(request.options.headers["Content-Type"], testing ? "application/json" : undefined);
         const body = testing ? JSON.parse(request.options.body) : Object.fromEntries(request.options.body);
+        if (failure) {
+            assert.match(nodes["[data-booking-message]"].innerHTML, /Không có quyền tạo đơn\./);
+            assert.equal(location.href, "");
+            assert.equal(submit.attributes["aria-busy"], "false");
+            continue;
+        }
+        assert.equal(submit.disabled, true, "Keep the button locked until payment navigation completes.");
         if (testing) {
             assert.equal(request.options.headers["X-CSRF-Token"], "csrf-test");
             assert.match(body.requestId, /^[a-f0-9]{32}$/);

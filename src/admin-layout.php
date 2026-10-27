@@ -54,9 +54,13 @@ function render_admin_navigation(string $path): void
                 <?php endif ?>
             <?php endforeach ?>
             <?php if (can_use('sales.view') || can_use('sales.create') || can_use('products.view') || can_use('inventory.view') || can_use('expenses.view')): ?>
-                <details class="rounded-lg border border-[#e5dacb]" <?= in_array($path, ['/admin/sales', '/admin/sales/history', '/admin/products', '/admin/inventory', '/admin/expenses'], true) ? 'open' : '' ?>>
-                    <summary class="<?= $link ?> cursor-pointer">Bán hàng</summary>
-                    <div class="grid gap-1 px-2 pb-2">
+                <details class="admin-nav-group" <?= in_array($path, ['/admin/sales', '/admin/sales/history', '/admin/products', '/admin/inventory', '/admin/expenses'], true) ? 'open' : '' ?>>
+                    <summary class="<?= $link ?> cursor-pointer">
+                        <svg class="admin-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l2.4 12h11.2l2-8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
+                        <span class="min-w-0 flex-1">Bán hàng</span>
+                        <svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                    </summary>
+                    <div class="grid gap-1 pb-1 pl-8">
                         <?php if (can_use('sales.create')): ?>
                             <a class="<?= $link ?>" href="/admin/sales" <?= $path === '/admin/sales' ? 'aria-current="page"' : '' ?>>Bán hàng</a>
                         <?php endif ?>
@@ -76,14 +80,18 @@ function render_admin_navigation(string $path): void
                 </details>
             <?php endif ?>
             <?php if (can_use('accounts')): ?>
-                <details class="rounded-lg border border-[#e5dacb]" <?= in_array($path, ['/admin/accounts', '/admin/permissions'], true) ? 'open' : '' ?>>
-                    <summary class="<?= $link ?> cursor-pointer"><?= admin_icon('user') ?><span>Tài khoản & phân quyền</span></summary>
-                    <div class="grid gap-1 px-2 pb-2">
+                <details class="admin-nav-group" <?= in_array($path, ['/admin/accounts', '/admin/permissions'], true) ? 'open' : '' ?>>
+                    <summary class="<?= $link ?> cursor-pointer">
+                        <?= admin_icon('user') ?>
+                        <span class="min-w-0 flex-1">Tài khoản & phân quyền</span>
+                        <svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                    </summary>
+                    <div class="grid gap-1 pb-1 pl-8">
                         <a class="<?= $link ?>" href="/admin/accounts" <?= $path === '/admin/accounts' ? 'aria-current="page"' : '' ?>>
-                            <?= admin_icon('user') ?><span>Quản lý tài khoản</span>
+                            <span>Quản lý tài khoản</span>
                         </a>
                         <a class="<?= $link ?>" href="/admin/permissions" <?= $path === '/admin/permissions' ? 'aria-current="page"' : '' ?>>
-                            <?= admin_icon('shield-check') ?><span>Phân quyền tài khoản</span>
+                            <span>Phân quyền tài khoản</span>
                         </a>
                     </div>
                 </details>
