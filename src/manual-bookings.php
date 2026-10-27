@@ -85,7 +85,7 @@ function quote_manual_custom_booking(array $room, array $input, ?DateTimeImmutab
     ] + booking_guest_details($room, $input, true);
 }
 
-function create_manual_booking(PDO $pdo, array $input, bool $test = false): array
+function create_manual_booking(PDO $pdo, array $input, bool $test = false, array $identity = []): array
 {
     $requestId = (string)($input['requestId'] ?? '');
     if (!preg_match('/^[a-f0-9]{32}$/', $requestId)) {
@@ -184,6 +184,7 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false): arra
         if (!$test && $quote['paymentStatus'] === 'PAID') {
             record_manual_payment($pdo, $values['id'], $quote['total'], $quote['paymentMethod']);
         }
+        if ($identity !== []) save_booking_identity($pdo, $values['id'], $identity, false);
         if (!$test && $values['status'] === 'CONFIRMED') queue_staff_notification($pdo, $values, 'BOOKED');
         $pdo->commit();
         return $values;

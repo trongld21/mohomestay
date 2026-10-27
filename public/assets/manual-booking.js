@@ -30,8 +30,8 @@
     async function request(url, body) {
         const response = await fetch(url, body ? {
             method: "POST",
-            headers: { "Content-Type": "application/json", "X-CSRF-Token": LANG_HOME.csrf },
-            body: JSON.stringify(body),
+            headers: { ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }), "X-CSRF-Token": LANG_HOME.csrf },
+            body: body instanceof FormData ? body : JSON.stringify(body),
         } : {});
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Không thể kết nối máy chủ.");
@@ -272,7 +272,15 @@
         controls.forEach((control) => { control.disabled = true; });
         form.setAttribute("aria-busy", "true");
         try {
-            const data = await request("/api/admin/bookings", payload);
+            const upload = new FormData();
+            Object.entries(payload).forEach(([key, value]) => {
+                if (!(value instanceof File)) upload.append(key, String(value));
+            });
+            ["identity_front", "identity_back"].forEach((name) => {
+                const file = payload[name];
+                if (file instanceof File && file.size > 0) upload.append(name, file);
+            });
+            const data = await request("/api/admin/bookings", upload);
             dirty = false;
             if (data.guestUrl) {
                 window.location.assign(data.guestUrl);

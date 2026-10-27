@@ -50,13 +50,16 @@ function validate_booking_identity_file(array $file): array
     return ['mime' => $mime, 'bytes' => $bytes];
 }
 
-function read_booking_identity_uploads(array $files): array
+function read_booking_identity_uploads(array $files, bool $required = true): array
 {
-    booking_identity_key();
     $images = [];
     foreach (['front', 'back'] as $side) {
+        if (!$required && ($files['identity_' . $side]['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            continue;
+        }
         $images[$side] = validate_booking_identity_file($files['identity_' . $side] ?? []);
     }
+    if ($images !== []) booking_identity_key();
     return $images;
 }
 
@@ -71,9 +74,10 @@ function booking_form_body(): array
     return $body;
 }
 
-function save_booking_identity(PDO $pdo, string $bookingId, array $images): void
+function save_booking_identity(PDO $pdo, string $bookingId, array $images, bool $required = true): void
 {
-    if (array_keys($images) !== ['front', 'back']) throw new RuntimeException('Thiếu hai mặt CCCD.');
+    if (($required && array_keys($images) !== ['front', 'back']) || array_diff(array_keys($images), ['front', 'back'])) throw new RuntimeException('Thiếu hai mặt CCCD.');
+    if ($images === []) return;
     $insert = $pdo->prepare('INSERT INTO booking_identity_images(booking_id,side,mime_type,encrypted_image) VALUES(?,?,?,?)');
     foreach ($images as $side => $image) {
         $insert->execute([$bookingId, $side, $image['mime'], encrypt_booking_identity($image['bytes'], $bookingId . ':' . $side)]);
@@ -100,15 +104,15 @@ function admin_booking_identity_image(string $bookingId, string $side): never
     exit;
 }
 
-function render_booking_identity_fields(): void
+function render_booking_identity_fields(bool $required = true): void
 {
     ?>
     <fieldset data-identity-upload class="col-span-full grid gap-3 rounded-xl border border-stone-200 bg-stone-50 p-4 sm:grid-cols-2">
-        <legend class="px-1 text-base font-semibold">CCCD người thuê nhận phòng bắt buộc</legend>
-        <p class="text-sm text-stone-600 sm:col-span-2">Tải đủ 2 mặt của cùng một CCCD, rõ chữ và đủ góc. Ảnh được lưu bảo mật cùng đơn để Mơ quản lý lưu trú; chỉ nhân viên được phân quyền mới xem được. JPG, PNG hoặc WebP, tối đa 3 MiB mỗi ảnh.</p>
+        <legend class="px-1 text-base font-semibold">CCCD người thuê nhận phòng <?= $required ? 'bắt buộc' : '(không bắt buộc)' ?></legend>
+        <p class="text-sm text-stone-600 sm:col-span-2"><?= $required ? 'Tải đủ 2 mặt của cùng một CCCD, rõ chữ và đủ góc.' : 'Có thể bỏ trống hoặc tải từng mặt CCCD, rõ chữ và đủ góc.' ?> Ảnh được lưu bảo mật cùng đơn để Mơ quản lý lưu trú; chỉ nhân viên được phân quyền mới xem được. JPG, PNG hoặc WebP, tối đa 3 MiB mỗi ảnh.</p>
         <?php foreach (['front' => 'Mặt trước', 'back' => 'Mặt sau'] as $side => $label): ?>
-            <label class="grid content-start gap-2 text-sm font-medium"><?= e($label) ?> *
-                <input type="file" name="identity_<?= e($side) ?>" accept="image/jpeg,image/png,image/webp" required class="min-h-11 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">
+            <label class="grid content-start gap-2 text-sm font-medium"><?= e($label) ?> <?= $required ? '*' : '' ?>
+                <input type="file" name="identity_<?= e($side) ?>" accept="image/jpeg,image/png,image/webp" <?= $required ? 'required' : '' ?> class="min-h-11 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">
                 <img data-identity-preview hidden alt="Xem trước CCCD <?= e(mb_strtolower($label)) ?>" class="max-h-40 w-full rounded-lg object-contain">
             </label>
         <?php endforeach ?>

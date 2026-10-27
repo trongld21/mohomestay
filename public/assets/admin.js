@@ -329,7 +329,7 @@
         if (successLink) {
             actions += `<button type="button" data-copy-booking-link="${esc(booking.id)}" class="timeline-button gap-2" title="Sao chép link xác nhận đặt phòng" aria-label="Sao chép link xác nhận đơn ${esc(booking.booking_code)}">${icon("copy")} Sao chép link</button>`;
         }
-        const identity = Number(booking.identity_image_count) === 2
+        const identity = Number(booking.identity_image_count) > 0
             ? (LANG_HOME.abilities.includes('bookings.identity')
                 ? `<button type="button" data-view-identity="${esc(booking.id)}" class="min-h-10 rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Xem CCCD</button>`
                 : '<span class="text-xs text-stone-500">Đã lưu CCCD</span>')

@@ -129,11 +129,14 @@ function handle_api(string $path, string $method): never
         if ($path === '/api/admin/bookings' && $method === 'POST') {
             require_admin();
             require_csrf();
-            $body = json_body();
+            $multipart = str_starts_with(strtolower($_SERVER['CONTENT_TYPE'] ?? ''), 'multipart/form-data');
+            $body = $multipart ? booking_form_body() : json_body();
+            $body['guestCheckout'] = filter_var($body['guestCheckout'] ?? false, FILTER_VALIDATE_BOOL);
+            $identity = $multipart ? read_booking_identity_uploads($_FILES, false) : [];
             if (($body['paymentStatus'] ?? 'UNPAID') === 'PAID') {
                 require_permission('bookings.payment');
             }
-            $booking = create_manual_booking(db(), $body);
+            $booking = create_manual_booking(db(), $body, false, $identity);
             try_dispatch_staff_notifications(db(), $booking['id']);
             $result = ['bookingCode' => $booking['booking_code']];
             if (($body['guestCheckout'] ?? false) === true) {
