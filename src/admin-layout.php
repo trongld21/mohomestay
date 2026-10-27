@@ -21,9 +21,14 @@ function render_admin_navigation(string $path): void
         </div>
         <p class="admin-nav-label">QUẢN LÝ KHÔNG GIAN</p>
         <nav class="admin-navigation" aria-label="Khu vực quản lý">
+            <?php if (can_use('bookings.overview')): ?>
+                <a class="<?= $link ?>" href="/admin/overview" <?= $path === '/admin/overview' ? 'aria-current="page"' : '' ?>>
+                    <?= admin_icon('layout-dashboard') ?><span>Tổng quan</span>
+                </a>
+            <?php endif ?>
             <?php foreach (account_permissions() as $key => $label): ?>
                 <?php
-                if (in_array($key, ['sales', 'products', 'inventory', 'expenses'], true) || !can_use($key)) {
+                if (in_array($key, ['sales', 'products', 'inventory', 'expenses'], true) || !can_use($key) || ($key === 'bookings' && !can_use('bookings.view'))) {
                     continue;
                 }
                 $shortLabel = match ($key) {
@@ -109,6 +114,7 @@ function render_admin_topbar(): void
 {
     $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
     $title = match ($path) {
+        '/admin/overview' => 'Tổng quan',
         '/admin/door-codes' => 'Mã mở cửa',
         '/admin/availability' => 'Tìm phòng trống',
         '/admin/sales' => 'Bán hàng',

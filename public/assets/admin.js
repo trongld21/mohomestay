@@ -76,7 +76,7 @@
         );
         history.replaceState(null, "", "#" + name);
         one("[data-admin-crumb]").textContent =
-            name === "rooms" ? "Quản lý phòng" : "Tổng quan & đặt phòng";
+            name === "rooms" ? "Quản lý phòng" : "Đặt phòng";
         if (name === "rooms") loadRooms();
         else loadBookings();
     }
@@ -114,19 +114,8 @@
         if (!bookingPanel) return;
         bookingPanel.setAttribute("aria-busy", "true");
         try {
-            let overviewHtml = "";
-            if (LANG_HOME.abilities.includes("bookings.overview")) {
-                const { overview } = await request("/api/admin/booking-overview");
-                const stats = [
-                    ["Doanh thu", cash(overview.paid), "Đặt phòng và bán hàng đã thanh toán"],
-                    ["Đã xác nhận", overview.confirmed, "Sẵn sàng đón khách"],
-                    ["Trong giờ lưu trú", overview.staying, "Theo giờ đặt hoặc xác nhận của admin"],
-                    ["Cần đối soát", overview.reconcile, "Đơn đã hủy nhưng đã nhận tiền"],
-                ];
-                overviewHtml = `<div class="admin-stats">${stats.map(([label, value, hint]) => `<div class="panel"><p>${esc(label)}</p><h2>${esc(value)}</h2><small>${esc(hint)}</small></div>`).join("")}</div>`;
-            }
             if (!LANG_HOME.abilities.includes("bookings.view")) {
-                bookingPanel.innerHTML = overviewHtml;
+                bookingPanel.innerHTML = '<p class="notice">Bạn chưa được cấp quyền xem danh sách đặt phòng.</p>';
                 return;
             }
             const data = await request("/api/admin/bookings");
@@ -135,7 +124,7 @@
             }
             bookings = data.bookings;
             const roomNames = [...new Set(bookings.map((item) => item.room_name))];
-            bookingPanel.innerHTML = `${overviewHtml}
+            bookingPanel.innerHTML = `
               <section class="admin-booking-panel" aria-labelledby="booking-list-title">
                   <div class="admin-table-heading"><div><h2 id="booking-list-title">Danh sách đặt phòng <span class="admin-count">${bookings.length}</span></h2></div><span>${bookings.length} đơn</span></div>
                   <div class="admin-filters">

@@ -5,7 +5,7 @@ declare(strict_types=1);
 function account_permissions(): array
 {
     return [
-        'bookings' => 'Tổng quan & đặt phòng',
+        'bookings' => 'Đặt phòng',
         'availability' => 'Tìm phòng trống',
         'rooms' => 'Quản lý phòng',
         'door-codes' => 'Quản lý mã mở cửa',
@@ -87,6 +87,9 @@ function account_login(string $email, string $password): bool
 
 function account_home(): string
 {
+    if (!can_use('bookings.view') && can_use('bookings.overview')) {
+        return '/admin/overview';
+    }
     foreach (account_permissions() as $key => $label) {
         if (can_use($key)) {
             if ($key === 'sales' && !can_use('sales.create')) return '/admin/sales/history';

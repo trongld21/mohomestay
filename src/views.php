@@ -77,7 +77,7 @@ function render_google_analytics(string $path, string $host): void
             {
                 $fullTitle = e($title) . ' | Mơ Home';
                 $adminPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-                $adminLayout = in_array($adminPath, ['/admin', '/admin/availability', '/admin/door-codes', '/admin/accounts', '/admin/permissions', '/admin/no-access', '/admin/sales', '/admin/sales/history', '/admin/products', '/admin/inventory'], true);
+                $adminLayout = in_array($adminPath, ['/admin', '/admin/overview', '/admin/availability', '/admin/door-codes', '/admin/accounts', '/admin/permissions', '/admin/no-access', '/admin/sales', '/admin/sales/history', '/admin/products', '/admin/inventory'], true);
                 if ($adminLayout) require_once APP_ROOT . '/src/admin-layout.php';
                 $robots = ($options['robots'] ?? true) ? 'index,follow' : 'noindex,nofollow';
                 ?>
@@ -831,7 +831,7 @@ function render_admin(): void
             <div class="admin-page-heading">
                 <div>
                     <span class="eyebrow">MỖI LƯỢT GHÉ, MỘT NIỀM VUI</span>
-                    <h1>Tổng quan & đặt phòng</h1>
+                    <h1 class="text-3xl font-semibold text-stone-800">Đặt phòng</h1>
                 </div>
                 <div class="admin-heading-actions flex flex-wrap items-center gap-3">
                     <button type="button" class="button outline" data-refresh-bookings><?= admin_icon('refresh') ?> Làm mới</button>

@@ -155,6 +155,13 @@ elseif (in_array($path, ['/admin/sales', '/admin/sales/history', '/admin/product
 elseif ($path === '/sale-payment') {
     render_page('Thanh toán bán hàng', fn() => print('<section class="mx-auto my-12 max-w-lg rounded-2xl border border-stone-200 bg-[#fffdf9] p-6"><h1 class="text-2xl font-semibold">Thanh toán bán hàng</h1><p class="mt-3">Mơ sẽ đối soát giao dịch và xác nhận đơn bán hàng. Bạn có thể nhờ nhân viên kiểm tra trạng thái thanh toán.</p></section>'), ['robots' => false]);
 }
+elseif ($path === '/admin/overview') {
+    if (!is_admin()) redirect('/auth/login');
+    require_permission('bookings.overview');
+    header('Cache-Control: no-store');
+    require_once APP_ROOT . '/src/overview-view.php';
+    render_page('Tổng quan', fn() => render_overview_page(), ['robots' => false]);
+}
 elseif ($path === '/admin') {
     if (!is_admin()) redirect('/auth/login');
     if (!can_use('bookings') && !can_use('rooms')) redirect(account_home());

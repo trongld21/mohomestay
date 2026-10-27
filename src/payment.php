@@ -65,7 +65,7 @@ function payos_payment_status(string $orderCode): array
     return $result['data'];
 }
 
-function refresh_payment_cancellation(PDO $pdo, array $booking, ?callable $fetch = null): void
+function refresh_payment_cancellation(PDO $pdo, array $booking, ?callable $fetch = null, ?callable $apply = null): void
 {
     if ($booking['status'] !== 'PENDING' || $booking['payment_status'] === 'PAID'
         || !empty($booking['is_test']) || ($booking['payment_method'] ?? '') !== 'payos') {
@@ -86,11 +86,27 @@ function refresh_payment_cancellation(PDO $pdo, array $booking, ?callable $fetch
         error_log('Payment status check unavailable for booking ' . $key);
         return;
     }
-    if (($remote['status'] ?? '') !== 'CANCELLED'
-        || (string)($remote['orderCode'] ?? '') !== (string)$booking['order_code']
+    if ((string)($remote['orderCode'] ?? '') !== (string)$booking['order_code']
         || !isset($remote['amount'], $remote['amountPaid'])
-        || (float)$remote['amount'] !== (float)$booking['total_price']
-        || (float)$remote['amountPaid'] !== 0.0) {
+        || (float)$remote['amount'] !== (float)$booking['total_price']) {
+        return;
+    }
+    if (($remote['status'] ?? '') === 'PAID'
+        && (float)$remote['amountPaid'] >= (float)$booking['total_price']) {
+        // Only the authenticated server API can supply this fallback, never returnUrl parameters.
+        // Reuse webhook locking, idempotency and expired/conflicting booking handling.
+        $reference = $remote['transactions'][0]['reference'] ?? null;
+        if (!is_string($reference) || trim($reference) === '') {
+            return;
+        }
+        ($apply ?? 'apply_payment_callback')($pdo, [
+            'orderCode' => (string)$booking['order_code'],
+            'amount' => (int)$booking['total_price'],
+            'reference' => $reference,
+        ]);
+        return;
+    }
+    if (($remote['status'] ?? '') !== 'CANCELLED' || (float)$remote['amountPaid'] !== 0.0) {
         return;
     }
     // Conditional update also protects a payment committed while payOS was queried.
