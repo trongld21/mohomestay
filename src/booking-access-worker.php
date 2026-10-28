@@ -7,11 +7,13 @@ if (PHP_SAPI !== 'cli') {
     exit;
 }
 require __DIR__ . '/bootstrap.php';
+$pdo = db();
+// Payment recovery must also run when TTLock is disabled or not configured.
+reconcile_pending_payments($pdo);
 if (!config('ttlock.enabled') || !ttlock_configured()) {
     fwrite(STDERR, "TTLock chưa bật hoặc chưa cấu hình đủ.\n");
     exit(1);
 }
-$pdo = db();
 // Run every minute. Retain records for audit; expired codes are removed from the lock.
 $query = $pdo->query("SELECT b.id FROM bookings b LEFT JOIN booking_access_codes a ON a.booking_id=b.id
     WHERE (a.last_attempt_at IS NULL OR a.last_attempt_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 MINUTE))

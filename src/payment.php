@@ -114,6 +114,24 @@ function refresh_payment_cancellation(PDO $pdo, array $booking, ?callable $fetch
     $stmt->execute([$key]);
 }
 
+function reconcile_pending_payments(PDO $pdo, ?callable $fetch = null, ?callable $apply = null): void
+{
+    // Recover missed webhooks even when the guest closes the payment page.
+    // Bound provider traffic; leave expired/conflicting payment decisions to the callback.
+    $query = $pdo->prepare("SELECT * FROM bookings WHERE status='PENDING'
+        AND payment_status<>'PAID' AND payment_method='payos' AND is_test=0
+        AND check_out>? ORDER BY created_at DESC LIMIT 30");
+    $query->execute([gmdate('Y-m-d H:i:s')]);
+    foreach ($query->fetchAll(PDO::FETCH_ASSOC) as $booking) {
+        try {
+            refresh_payment_cancellation($pdo, $booking, $fetch, $apply);
+        } catch (Throwable $error) {
+            // Keep processing other bookings without exposing provider data or credentials.
+            error_log('Payment reconciliation failed for booking ' . (string)$booking['id']);
+        }
+    }
+}
+
 function close_booking_payment(array $booking, ?callable $cancel = null, ?callable $fetch = null): void
 {
     if (!empty($booking['is_test']) || ($booking['payment_method'] ?? '') !== 'payos'
