@@ -19,5 +19,5 @@ CREATE TABLE IF NOT EXISTS people_counter_events (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO people_counter_cameras (id, name)
-SELECT 'entrance', 'Lễ tân / cửa chính'
-WHERE NOT EXISTS (SELECT 1 FROM people_counter_cameras WHERE id = 'entrance');
+VALUES ('entrance', 'Lễ tân / cửa chính')
+ON DUPLICATE KEY UPDATE id = id;

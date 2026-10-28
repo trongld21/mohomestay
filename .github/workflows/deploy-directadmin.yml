@@ -13,6 +13,20 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
+    services:
+      mariadb:
+        image: mariadb:10.3.16
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_ROOT_HOST: '%'
+          MYSQL_DATABASE: counter_migration_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -24,6 +38,12 @@ jobs:
           coverage: none
       - name: Check PHP syntax
         run: find src public tools -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Verify SQL migrations on hosting MariaDB version
+        env:
+          COUNTER_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=counter_migration_test;charset=utf8mb4
+          COUNTER_TEST_USER: root
+          COUNTER_TEST_PASSWORD: ''
+        run: php tools/people-counter-migration-test.php
       - name: Run unit tests
         run: |
           php tools/test.php

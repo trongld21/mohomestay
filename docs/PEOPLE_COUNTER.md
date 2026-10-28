@@ -1,5 +1,15 @@
 # Đếm lượt vào / ra Mơ Home
 
+**Tương thích hosting MariaDB 10.3.16:** migration 026 dùng
+`VALUES ... ON DUPLICATE KEY UPDATE id = id` để tạo camera mặc định.
+Câu `INSERT ... SELECT ... WHERE NOT EXISTS` không có `FROM` trước đây báo
+SQL 1064 trên phiên bản này, dù qua được MariaDB 10.4/MySQL 8.4 local.
+Nếu deploy cũ đã tạo hai bảng nhưng schema vẫn ở 025, push bản sửa để Cron
+chạy lại 026/027; không xóa bảng hoặc tự đánh dấu migration đã hoàn tất.
+CI chạy `tools/people-counter-migration-test.php` với MariaDB 10.3.16 riêng,
+kiểm tra tạo mới, chạy lại và giữ nguyên cấu hình/lượt cũ. Script test từ chối
+DSN ngoài database thử nghiệm `counter_migration_test` trên loopback.
+
 **Cập nhật ghi lịch sử 28/10/2026:** SDK pilot có `--record-trial` để lưu
 các lượt mới vào journal SQLite và gửi có chữ ký vào bảng thử nghiệm riêng
 `people_counter_trial_events` (migration 027). Trang trực tiếp mặc định xem
