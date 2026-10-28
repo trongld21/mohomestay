@@ -28,7 +28,8 @@ function render_admin_navigation(string $path): void
             <?php endif ?>
             <?php foreach (account_permissions() as $key => $label): ?>
                 <?php
-                if (in_array($key, ['sales', 'products', 'inventory', 'expenses'], true) || !can_use($key) || ($key === 'bookings' && !can_use('bookings.view'))) {
+                if (in_array($key, ['sales', 'products', 'inventory', 'expenses', 'people-counter'], true)
+                    || !can_use($key) || ($key === 'bookings' && !can_use('bookings.view'))) {
                     continue;
                 }
                 $shortLabel = match ($key) {
@@ -53,6 +54,12 @@ function render_admin_navigation(string $path): void
                     </a>
                 <?php endif ?>
             <?php endforeach ?>
+            <?php if (can_use('people-counter.view')): ?>
+                <a class="<?= $link ?>" href="/admin/people-counter" <?= $path === '/admin/people-counter' ? 'aria-current="page"' : '' ?>>
+                    <?= admin_icon('user') ?>
+                    <span>Lượt vào / ra</span>
+                </a>
+            <?php endif ?>
             <?php if (can_use('sales.view') || can_use('sales.create') || can_use('products.view') || can_use('inventory.view') || can_use('expenses.view')): ?>
                 <details class="admin-nav-group" <?= in_array($path, ['/admin/sales', '/admin/sales/history', '/admin/products', '/admin/inventory', '/admin/expenses'], true) ? 'open' : '' ?>>
                     <summary class="<?= $link ?> cursor-pointer">
@@ -129,6 +136,7 @@ function render_admin_topbar(): void
         '/admin/sales/history' => 'Lịch sử bán hàng',
         '/admin/products' => 'Quản lý sản phẩm',
         '/admin/expenses' => 'Phiếu chi',
+        '/admin/people-counter' => 'Lượt vào / ra',
         '/admin/inventory' => 'Nhập kho & tồn kho',
         '/admin/accounts' => 'Quản lý tài khoản',
         '/admin/permissions' => 'Phân quyền tài khoản',

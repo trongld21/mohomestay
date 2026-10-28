@@ -1,0 +1,15 @@
+{
+  "camera_id": "entrance",
+  "calibrated": false,
+  "model": ".deploy/counter-smoke/yolo11n.pt",
+  "confidence": 0.4,
+  "image_size": 512,
+  "device": "cpu",
+  "detection_roi": [0, 0, 0.65, 1],
+  "line_start": [0.04, 0.52],
+  "line_end": [0.3, 0.98],
+  "inside_side": -1,
+  "margin": 0.025,
+  "stable_frames": 2,
+  "max_gap_seconds": 1.5
+}

@@ -13,6 +13,7 @@ function account_permissions(): array
         'products' => 'Quản lý sản phẩm',
         'inventory' => 'Nhập kho & tồn kho',
         'expenses' => 'Phiếu chi',
+        'people-counter' => 'Lượt vào / ra',
     ];
 }
 
@@ -42,6 +43,11 @@ function can_use(string $permission): bool
     }
     if ($account['root']) {
         return true;
+    }
+    // Camera imagery and occupancy reports are reserved for the root account,
+    // including accounts that still carry a permission from an older release.
+    if ($permission === 'people-counter' || str_starts_with($permission, 'people-counter.')) {
+        return false;
     }
     if ($permission === 'bookings' && in_array('bookings.overview', expanded_account_permissions(json_decode($account['permissions'], true) ?: []), true)) {
         return true;
@@ -93,7 +99,7 @@ function account_home(): string
     foreach (account_permissions() as $key => $label) {
         if (can_use($key)) {
             if ($key === 'sales' && !can_use('sales.create')) return '/admin/sales/history';
-            return in_array($key, ['door-codes', 'availability', 'sales', 'products', 'inventory', 'expenses'], true) ? '/admin/' . $key : '/admin#' . $key;
+            return in_array($key, ['door-codes', 'availability', 'sales', 'products', 'inventory', 'expenses', 'people-counter'], true) ? '/admin/' . $key : '/admin#' . $key;
         }
     }
     if (can_use('sales.create')) return '/admin/sales';
@@ -245,6 +251,7 @@ function admin_api_permission(string $path, string $method, array $body = []): s
 {
     $feature = explode('/', substr($path, strlen('/api/admin/')))[0];
     return match ($feature) {
+        'people-counter' => $method === 'GET' ? 'people-counter.view' : 'accounts',
         'expenses' => $method === 'GET' ? 'expenses.view' : 'expenses.create',
         'inventory' => $method === 'GET' ? 'inventory.view' : 'inventory.receive',
         'sales' => match (true) {

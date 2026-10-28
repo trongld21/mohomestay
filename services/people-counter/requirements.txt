@@ -1,0 +1,3 @@
+ultralytics==8.4.190
+requests>=2.32.4,<3
+lap>=0.5.12,<0.6

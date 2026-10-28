@@ -3,6 +3,10 @@
 function handle_api(string $path, string $method): never
 {
     try {
+        if ($path === '/api/integration/people-counter') {
+            require_once APP_ROOT . '/src/people-counter.php';
+            people_counter_api($method, true);
+        }
         if ($path === '/api/integration/revenue') {
             require_once APP_ROOT . '/src/revenue-integration.php';
             mo_revenue_api($method);
@@ -29,6 +33,14 @@ function handle_api(string $path, string $method): never
                 throw new BookingException('Mail server từ chối gửi. Kiểm tra MAIL_FROM và log mail hosting.', 503);
             }
             json_response(['message' => 'Mail server đã nhận email thử gửi tới mohomestay01@gmail.com. Kiểm tra Hộp thư đến và Spam.']);
+        }
+        if ($path === '/api/admin/people-counter/preview') {
+            require_once APP_ROOT . '/src/people-counter.php';
+            people_counter_preview_api($method);
+        }
+        if ($path === '/api/admin/people-counter') {
+            require_once APP_ROOT . '/src/people-counter.php';
+            people_counter_api($method, false);
         }
         if ($path === '/api/admin/expenses') {
             require_once APP_ROOT . '/src/expenses.php';
