@@ -303,9 +303,12 @@
             FAILED: "Thanh toán lỗi", REFUNDED: "Đã hoàn tiền",
         }[booking.payment_status] || "Chưa thanh toán";
         const method = { cash: "Tiền mặt", bank_transfer: "Chuyển khoản", payos: "payOS" }[booking.payment_method] || "";
-        const canCollect = booking.payment_status === "UNPAID"
-            && ["PHONE", "ZALO"].includes(booking.booking_source)
-            && ["CONFIRMED", "CHECKED_IN", "CHECKED_OUT"].includes(booking.status);
+        const canCollect = LANG_HOME.abilities.includes("bookings.payment")
+            && !Number(booking.is_test)
+            && booking.payment_status !== "REFUNDED"
+            && (booking.payment_status !== "PAID" || booking.status === "CANCELLED")
+            && (["PENDING", "CONFIRMED", "CHECKED_IN", "CANCELLED"].includes(booking.status)
+                || (["PHONE", "ZALO"].includes(booking.booking_source) && booking.status === "CHECKED_OUT"));
         const action = (status, label, symbol, danger = false) => `
             <button type="button" ${danger ? 'class="booking-cancel"' : ""} data-booking-action="${status}" data-id="${esc(booking.id)}" aria-label="${label} đơn ${esc(booking.booking_code)}">${icon(symbol)} ${label}</button>`;
         let actions = "";
@@ -359,7 +362,7 @@
                 <strong class="booking-amount">${cash(booking.total_price)}</strong>
                 <span class="booking-payment-status" data-payment="${esc(booking.payment_status)}">${icon(booking.payment_status === "PAID" ? "check" : "clock")} ${payment}</span>
                 ${method ? `<span class="booking-meta">${icon("wallet")} ${method}</span>` : ""}
-                ${canCollect ? `<button type="button" class="button outline small booking-collect" data-booking-payment="${esc(booking.id)}">${icon("wallet")} Xác nhận thu tiền</button>` : ""}
+                ${canCollect ? `<button type="button" class="button outline small booking-collect" data-booking-payment="${esc(booking.id)}">${icon("wallet")} Xác nhận nhận tiền</button>` : ""}
                 ${booking.failure_reason ? `<span class="admin-reconcile">${esc(booking.failure_reason)}</span>` : ""}
             </div></td>
             <td class="booking-status-cell"><div class="booking-cell"><span class="admin-booking-status booking-status-label" data-status="${esc(booking.status)}"><span class="booking-status-dot" aria-hidden="true"></span>${esc(booking.isOverdue ? "Quá giờ · Chưa trả phòng" : statusNames[booking.status] || booking.status)}</span>${MoBookingFilters.needsAttention(booking) ? '<strong class="text-sm text-red-800">Cần đối soát thanh toán</strong>' : ''}<span class="booking-meta">${icon(booking.statusSource === "MANUAL" ? "user" : "clock")}${booking.statusSource === "MANUAL" ? "Admin cập nhật" : "Tự động theo giờ"}</span></div></td>
@@ -431,7 +434,7 @@
         if (paymentButton) {
             const booking = bookings.find((item) => item.id === paymentButton.dataset.bookingPayment);
             if (!booking) return;
-            const method = booking.payment_method === "bank_transfer" ? "Chuyển khoản" : "Tiền mặt";
+            const method = booking.payment_method === "cash" ? "Tiền mặt" : "Chuyển khoản";
             const confirmed = await LangUI["confirm"]({
                 title: "Xác nhận đã nhận đủ tiền?",
                 message: `${booking.booking_code} · ${cash(booking.total_price)} · ${method}. Chỉ xác nhận sau khi đã nhận đủ tiền của khách.`,
@@ -440,10 +443,13 @@
             if (!confirmed) return;
             paymentButton.disabled = true;
             try {
-                await request(`/api/admin/bookings/${encodeURIComponent(booking.id)}/payment`, mutation("POST", {
-                    paymentMethod: booking.payment_method,
+                const result = await request(`/api/admin/bookings/${encodeURIComponent(booking.id)}/payment`, mutation("POST", {
+                    paymentMethod: booking.payment_method || "bank_transfer",
+                    received: true,
                 }));
-                LangUI.toast({ type: "success", title: "Đã ghi nhận thanh toán", message: booking.booking_code });
+                LangUI.toast({ type: "success", title: "Đã ghi nhận thanh toán", message: result.accessReady
+                    ? `${booking.booking_code} · Đã giữ lịch và có mã cổng.`
+                    : `${booking.booking_code} · Đã lưu thanh toán; mã cổng/email đang chờ xử lý. Có thể thử lại ở Mã mở cửa.` });
                 await loadBookings();
             } catch (error) {
                 LangUI.toast({ type: "error", title: "Chưa ghi nhận thanh toán", message: error.message });
@@ -684,7 +690,7 @@
             const percent = own === "" ? shared : Number(own);
             const preview = one("[data-package-discount-preview]", row);
             preview.textContent = Number.isFinite(base) && Number.isInteger(percent) && percent >= 0 && percent <= 99
-                ? `Sau ưu đãi: ${cash(percent === 0 ? base : Math.round(base * (100 - percent) / 100000) * 1000)}` : "";
+                ? `Trong ngày nhận phòng được ưu đãi: ${cash(percent === 0 ? base : Math.round(base * (100 - percent) / 100000) * 1000)}` : "";
         }
     }
     form.addEventListener("input", updateDiscountPreviews);
@@ -767,6 +773,8 @@
             "bathrooms",
             "sortOrder",
             "discountPercent",
+            "discountStart",
+            "discountEnd",
         ])
             if (form.elements[key])
                 form.elements[key].value = room?.[key] ?? form.elements[key].defaultValue;

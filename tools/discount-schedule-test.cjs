@@ -1,0 +1,12 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const context = { Date, Intl };
+vm.createContext(context);
+vm.runInContext(fs.readFileSync('public/assets/booking-slots.js', 'utf8'), context);
+const room = { discountPercent: 20, discountStart: '2027-01-28', discountEnd: '2027-01-28' };
+const slot = { price: 240000, basePrice: 300000, discountPercent: null };
+assert.equal(typeof context.MoBookingSlots.priceForArrival, 'function', 'Browser must price the selected arrival date.');
+assert.equal(context.MoBookingSlots.priceForArrival(room, slot, '2027-01-30').price, 300000);
+assert.equal(context.MoBookingSlots.priceForArrival(room, slot, '2027-01-28').price, 240000);
+console.log('Browser arrival-date discount prices: OK');

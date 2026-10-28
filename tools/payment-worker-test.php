@@ -9,6 +9,9 @@ $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 $pdo->exec('CREATE TABLE bookings (id TEXT, status TEXT, payment_status TEXT, payment_method TEXT, is_test INTEGER, order_code TEXT, total_price INTEGER, created_at TEXT, check_out TEXT)');
 $insert = $pdo->prepare('INSERT INTO bookings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+$pdo->exec('ALTER TABLE bookings ADD COLUMN payment_checked_at TEXT');
+$pdo->exec('ALTER TABLE bookings ADD COLUMN payment_next_check_at TEXT');
+$insert = $pdo->prepare('INSERT INTO bookings (id,status,payment_status,payment_method,is_test,order_code,total_price,created_at,check_out) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
 foreach ([
     ['outage', 'PENDING', 'UNPAID', 'payos', 0],
     ['overnight', 'PENDING', 'UNPAID', 'payos', 0],
@@ -34,9 +37,12 @@ if (!function_exists('reconcile_pending_payments')) {
     throw new RuntimeException('Background worker cannot reconcile pending payOS bookings.');
 }
 reconcile_pending_payments($pdo, $fetch, $apply);
-if (count($calls) !== 2 || count($applied) !== 1 || $applied[0]['amount'] !== 223000) {
+if (count($calls) !== 3 || count($applied) !== 2 || $applied[0]['amount'] !== 223000) {
     throw new RuntimeException('Reconcile real pending payments and continue after a provider failure.');
 }
+$_SESSION['payment_status_checked'] = [];
+reconcile_pending_payments($pdo, $fetch, $apply);
+if (count($calls) !== 3) throw new RuntimeException('Persistent backoff must survive a new guest/cron session.');
 [$start, $end] = package_window(['mode' => 'FIXED_TIME', 'checkInTime' => '21:00', 'checkOutTime' => '09:00'], '2026-10-28', '');
 if ($start->format('Y-m-d H:i') !== '2026-10-28 21:00' || $end->format('Y-m-d H:i') !== '2026-10-29 09:00'
     || mysql_datetime($start) !== '2026-10-28 14:00:00' || mysql_datetime($end) !== '2026-10-29 02:00:00') {

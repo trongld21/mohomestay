@@ -121,6 +121,7 @@ function timeline_available_packages(PDO $pdo, array $room, string $date, string
         try {
             $package = resolve_bookable_slot($room, (string)$configured['id']);
             [$start, $end] = bookable_package_window($package, $date, $arrival->format('H:i'), $now);
+            $package = package_with_discount($package, (int)($room['discountPercent'] ?? 0), $start->format('Y-m-d'), $room);
             if ($start < $clicked || $start >= $hourEnd) {
                 continue;
             }

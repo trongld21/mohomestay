@@ -4,10 +4,12 @@
     document.querySelectorAll("[data-room-quote-hold]").forEach((root) => {
         const date = root.querySelector("[data-hold-date]");
         const time = root.querySelector("[data-hold-time]");
+        const endDate = root.querySelector("[data-hold-end-date]");
+        const endTime = root.querySelector("[data-hold-end-time]");
         const button = root.querySelector("[data-hold-create]");
         const status = root.querySelector("[data-hold-status]");
         button.addEventListener("click", async () => {
-            if (!date.reportValidity() || !time.reportValidity()) return;
+            if (!date.reportValidity() || !time.reportValidity() || !endDate.reportValidity() || !endTime.reportValidity()) return;
             button.disabled = true;
             try {
                 const response = await fetch("/api/admin/room-operations/hold", {
@@ -17,6 +19,8 @@
                         roomId: root.dataset.roomId,
                         date: date.value,
                         time: time.value,
+                        endDate: endDate.value,
+                        endTime: endTime.value,
                     }),
                 });
                 const result = await response.json();

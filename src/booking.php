@@ -13,18 +13,18 @@ function assert_room_bookable(array $room): void
     if (($room['status'] ?? '') !== 'ACTIVE') throw new BookingException('Phòng đang tạm ngưng nhận khách.', 409);
 }
 
-function resolve_bookable_package(array $room, string $packageId): array
+function resolve_bookable_package(array $room, string $packageId, ?string $arrivalDate = null): array
 {
     assert_room_bookable($room);
     foreach ((array)($room['packages'] ?? []) as $package) {
-        if (($package['id'] ?? '') === $packageId && ($package['enabled'] ?? false)) return package_with_discount($package, (int)($room['discountPercent'] ?? 0));
+        if (($package['id'] ?? '') === $packageId && ($package['enabled'] ?? false)) return package_with_discount($package, (int)($room['discountPercent'] ?? 0), $arrivalDate, $room);
     }
     throw new BookingException('Gói giá không hợp lệ hoặc đã tạm tắt.', 409);
 }
 
-function resolve_bookable_slot(array $room, string $packageId): array
+function resolve_bookable_slot(array $room, string $packageId, ?string $arrivalDate = null): array
 {
-    $package = resolve_bookable_package($room, $packageId);
+    $package = resolve_bookable_package($room, $packageId, $arrivalDate);
     if (!in_array(($package['mode'] ?? ''), ['FIXED_TIME','DURATION'], true)) {
         throw new BookingException('Kiểu thời gian của gói không hợp lệ.', 409);
     }
@@ -32,11 +32,13 @@ function resolve_bookable_slot(array $room, string $packageId): array
 }
 
 // Resolve the payable price from the rows locked by the booking transaction.
-function locked_booking_package(array $room, array $package): array
+function locked_booking_package(array $room, array $package, ?string $arrivalDate = null): array
 {
     return resolve_bookable_slot([
         'status' => $room['status'],
         'discountPercent' => (int)$room['discount_percent'],
+        'discountStart' => $room['discount_start'] ?? null,
+        'discountEnd' => $room['discount_end'] ?? null,
         'packages' => [[
             'id' => $package['id'],
             'name' => $package['name'],
@@ -46,9 +48,11 @@ function locked_booking_package(array $room, array $package): array
             'checkOutTime' => $package['check_out_time'] === null ? null : substr((string)$package['check_out_time'], 0, 5),
             'price' => (int)$package['price'],
             'discountPercent' => $package['discount_percent'] === null ? null : (int)$package['discount_percent'],
+            'discountStart' => $package['discount_start'] ?? null,
+            'discountEnd' => $package['discount_end'] ?? null,
             'enabled' => (bool)$package['is_enabled'],
         ]],
-    ], (string)$package['id']);
+    ], (string)$package['id'], $arrivalDate);
 }
 
 function booking_package_snapshot(array $package): array
@@ -110,6 +114,7 @@ function quote_booking_for_room(array $room, array $input, bool $manual = false,
         ? package_window($package, (string)($input['date'] ?? ''), (string)($input['time'] ?? ''))
         : bookable_package_window($package, (string)($input['date'] ?? ''), (string)($input['time'] ?? ''));
     $now = new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
+    $package = package_with_discount($package, (int)($room['discountPercent'] ?? 0), $start->format('Y-m-d'), $room);
     if (!$unrestricted && $start > $now->modify('+366 days')) throw new BookingException('Chỉ nhận đặt phòng trong vòng 12 tháng.');
     $guestDetails = booking_guest_details($room, $input, $manual);
     $requestedDate = ($package['mode'] ?? '') === 'FIXED_TIME'

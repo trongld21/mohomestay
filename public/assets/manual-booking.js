@@ -43,7 +43,9 @@
     }
 
     function selectedPackage() {
-        return selectedRoom()?.packages.find((item) => item.id === fields.packageId.value);
+        const room = selectedRoom();
+        const slot = room?.packages.find((item) => item.id === fields.packageId.value);
+        return slot ? MoBookingSlots.priceForArrival(room, slot, fields.date.value) : null;
     }
 
     function setArrivalTime(value) {
@@ -80,10 +82,12 @@
 
     function updatePackages() {
         const room = selectedRoom();
-        const packages = MoBookingSlots.configuredSlots(room);
+        const previous = fields.packageId.value;
+        const packages = MoBookingSlots.configuredSlots(room).map((slot) => MoBookingSlots.priceForArrival(room, slot, fields.date.value));
         fields.packageId.innerHTML = packages.length
             ? packages.map((item) => `<option value="${escape(item.id)}">${escape(item.name)} · ${cash(item.price)}</option>`).join("")
             : '<option value="">Phòng chưa có gói đang bật</option>';
+        if (packages.some((slot) => slot.id === previous)) fields.packageId.value = previous;
         fields.numberOfGuests.max = room?.maxGuests || 50;
         fields.numberOfGuests.value = Math.min(Number(fields.numberOfGuests.value) || 1, room?.maxGuests || 1);
         fields.agreedPrice.value = isCustom() ? "" : (selectedPackage()?.price ?? "");
@@ -227,7 +231,7 @@
         if (total) total.textContent = fields.agreedPrice.value === "" ? "Chưa nhập giá" : cash(fields.agreedPrice.value);
     });
     form.addEventListener("change", (event) => {
-        if (event.target.name === "roomId") updatePackages();
+        if (["roomId", "date"].includes(event.target.name)) updatePackages();
         if (event.target.name === "timingMode" && isCustom()) {
             fields.startNow.checked = false;
             fields.date.value = "";
@@ -242,7 +246,7 @@
             fields.endHour.value = "";
             fields.endMinute.value = "";
         }
-        if (event.target.name === "packageId" || event.target.name === "timingMode") {
+        if (["packageId", "timingMode", "date"].includes(event.target.name)) {
             fields.agreedPrice.value = isCustom() ? "" : (selectedPackage()?.price ?? "");
         }
         if (["arrivalHour", "arrivalMinute"].includes(event.target.name)) {

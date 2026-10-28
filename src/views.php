@@ -540,7 +540,7 @@ function render_room(array $r): void
                     <?php if (can_use('availability.hold') && !$coming && !$hidden): ?>
                         <section class="my-4 rounded-xl border border-sky-200 bg-sky-50 p-4" data-room-quote-hold data-room-id="<?= e($r['id']) ?>">
                             <h2 class="font-sans text-base font-semibold">Khóa phòng khẩn cấp</h2>
-                            <p class="mt-1 text-sm text-stone-600">Chọn ngày và giờ bắt đầu, phòng sẽ được giữ trong 1 giờ kể từ mốc đã chọn. Tự mở khi hết hạn hoặc nhân viên mở khóa sớm.</p>
+                            <p class="mt-1 text-sm text-stone-600">Chọn ngày giờ bắt đầu và kết thúc để giữ toàn bộ khoảng đó. Tự mở khi hết hạn hoặc nhân viên mở khóa sớm.</p>
                             <div class="mt-3 grid gap-3 sm:grid-cols-2">
                                 <label class="grid gap-1 text-sm">Ngày bắt đầu khóa
                                     <input class="timeline-input" type="date" data-hold-date value="<?= e(date('Y-m-d')) ?>" min="<?= e(date('Y-m-d')) ?>" required>
@@ -549,7 +549,15 @@ function render_room(array $r): void
                                     <input class="timeline-input" type="time" data-hold-time value="<?= e(date('H:i')) ?>" step="60" required>
                                 </label>
                             </div>
-                            <button class="timeline-button mt-3" type="button" data-hold-create>Khóa 1 giờ từ mốc đã chọn</button>
+                            <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                                <label class="grid gap-1 text-sm">Ngày kết thúc khóa
+                                    <input class="timeline-input" type="date" required data-hold-end-date value="<?= e((new DateTimeImmutable('+1 hour'))->format('Y-m-d')) ?>">
+                                </label>
+                                <label class="grid gap-1 text-sm">Giờ kết thúc khóa
+                                    <input class="timeline-input" type="time" required data-hold-end-time value="<?= e((new DateTimeImmutable('+1 hour'))->format('H:i')) ?>">
+                                </label>
+                            </div>
+                            <button class="timeline-button mt-3" type="button" data-hold-create>Khóa khung giờ đã chọn</button>
                             <p class="mt-2 text-sm text-stone-700" data-hold-status role="status"></p>
                         </section>
                         <script defer src="<?= e(asset_url('/assets/room-quote-hold.js')) ?>"></script>
@@ -1006,6 +1014,13 @@ function render_admin(): void
                     <label class="mb-4 grid max-w-sm gap-2 text-sm font-medium">Ưu đãi chung của căn (%)
                         <input name="discountPercent" type="number" min="0" max="99" step="1" value="0" required class="min-h-11 rounded-lg border border-stone-300 px-3 py-2 focus-visible:outline-2 focus-visible:outline-amber-800">
                     </label>
+                    <label class="field">Ngày nhận phòng bắt đầu ưu đãi
+                        <input name="discountStart" type="date" class="timeline-input">
+                    </label>
+                    <label class="field">Ngày nhận phòng kết thúc ưu đãi
+                        <input name="discountEnd" type="date" class="timeline-input">
+                        <span class="text-xs text-stone-600">Tính cả hai ngày; để trống cả hai nếu áp dụng mọi ngày.</span>
+                    </label>
                     <div class="package-editor" data-package-list></div>
                     <template data-package-template>
                         <div class="package-row">
@@ -1057,6 +1072,12 @@ function render_admin(): void
                                 <label class="field">
                                     Ưu đãi riêng (%)
                                     <input data-package-field="discountPercent" type="number" min="0" max="99" step="1" placeholder="VD: 20">
+                                </label>
+                                <label class="field">Ngày nhận phòng bắt đầu
+                                    <input data-package-field="discountStart" type="date" class="timeline-input">
+                                </label>
+                                <label class="field">Ngày nhận phòng kết thúc
+                                    <input data-package-field="discountEnd" type="date" class="timeline-input">
                                 </label>
                             </div>
                             <div class="package-row-actions">

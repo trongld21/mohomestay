@@ -1,5 +1,36 @@
 # Mơ Home — PHP cho DirectAdmin
 
+## Xác nhận nhận tiền, khóa theo khoảng và lịch khuyến mãi
+
+Chạy migration `028_booking_recovery_and_discount_dates.sql` trước khi dùng bản cập nhật.
+Người có quyền **Xác nhận thu tiền** có nút **Xác nhận nhận tiền** cho đơn chưa ghi nhận thanh toán,
+kể cả đơn website hết hạn giữ chỗ. Chỉ xác nhận khi đã nhận đủ tiền. Hệ thống kiểm tra lại lịch,
+ghi nhận người xác nhận trong `booking_payment_receipts`, giữ phòng và thử cấp mã/email.
+Khóa tạm hoặc lịch trùng phải được xử lý trước. Lỗi TTLock/email không hủy khoản tiền đã ghi nhận.
+
+Khóa phòng trên trang chi tiết cho chọn ngày giờ bắt đầu và kết thúc, bao gồm nhiều ngày.
+Khóa tự hết hiệu lực đúng giờ kết thúc; người có quyền có thể mở sớm.
+
+Ưu đãi chung và ưu đãi riêng từng gói có ngày bắt đầu/kết thúc, tính cả hai ngày theo **ngày nhận phòng ở Việt Nam**.
+Qua đêm lấy ngày bắt đầu. Ngày tạo đơn không quyết định ưu đãi. Để trống cả hai ngày để áp dụng mọi ngày.
+Ưu đãi riêng ghi đè ưu đãi chung, không cộng dồn; giá đã lưu của đơn cũ được giữ nguyên.
+
+### Đối soát khi khách đóng trang
+
+Thêm cron mỗi phút trên hosting, bằng đúng PHP CLI đang dùng cho ứng dụng:
+
+```sh
+php "$HOME/domains/mohomestay.vn/src/payment-reconciliation-worker.php" >> "$HOME/domains/mohomestay.vn/logs/payment-reconciliation.log" 2>&1
+```
+
+Đây là tác vụ độc lập với trình duyệt và cấu hình TTLock. Mỗi lượt đối soát tối đa 10 đơn,
+ưu tiên đơn chưa kiểm tra, lưu thời gian kiểm tra và thử lại sau ít nhất một phút.
+Giữ cron `booking-access-worker.php` hiện có; cả hai dùng cơ chế khóa chống cấp mã trùng.
+Chỉ trạng thái/số tiền/mã giao dịch được API payOS xác nhận mới được tự ghi nhận.
+Nếu hết hạn giữ chỗ nhưng phòng còn trống, đơn chờ được khôi phục. Nếu xung đột hoặc đơn đã hủy,
+vẫn ghi nhận tiền và yêu cầu đối soát thủ công; không đè lịch hay tự khôi phục đơn đã hủy.
+Kiểm tra trạng thái `PAID`, lịch phòng, mã `READY` và email trên hosting sau khi bật cron.
+
 Website đặt phòng chạy bằng PHP 8.1+ và MySQL/MariaDB, không cần Node.js hoặc Composer trên server.
 
 ## Đếm lượt người vào / ra

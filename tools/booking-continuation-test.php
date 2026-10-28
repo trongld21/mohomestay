@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require dirname(__DIR__) . '/src/booking.php';
+require dirname(__DIR__) . '/src/payment.php';
 require dirname(__DIR__) . '/src/rooms.php';
 require dirname(__DIR__) . '/src/manual-bookings.php';
 require dirname(__DIR__) . '/src/room-operations.php';

@@ -204,7 +204,7 @@ function account_permission_groups(): array
         'availability' => [
             'availability.view' => 'Xem ma trận và tìm phòng trống',
             'availability.lock' => 'Khóa khẩn cấp phòng khách ở quá giờ',
-            'availability.hold' => 'Giữ khung giờ báo giá trong 1 giờ và mở lại',
+            'availability.hold' => 'Khóa phòng theo khoảng ngày giờ và mở lại',
             'availability.checkout' => 'Xác nhận trả phòng và tạo QR phụ thu',
         ],
         'rooms' => [

@@ -164,8 +164,10 @@ function handle_api(string $path, string $method): never
             require_admin();
             require_csrf();
             $body = json_body();
-            confirm_manual_payment(db(), $matches[1], (string)($body['paymentMethod'] ?? ''));
-            json_response(['ok' => true]);
+            require_permission('bookings.payment');
+            if (($body['received'] ?? false) !== true) throw new BookingException('Cần xác nhận đã nhận đủ tiền.', 422);
+            $booking = confirm_booking_receipt(db(), $matches[1], (string)($body['paymentMethod'] ?? ''), (string)current_account()['id']);
+            json_response(['ok' => true, 'status' => $booking['status']] + provision_paid_booking($matches[1]));
         }
         if ($path === '/api/admin/bookings' && $method === 'PATCH') update_booking_api();
         json_response(['error'=>'Không tìm thấy API.'], 404);
@@ -193,15 +195,15 @@ function create_booking_api(): never
     $identity = read_booking_identity_uploads($_FILES);
     $pdo = db(); $pdo->beginTransaction();
     try {
-        $lock = $pdo->prepare("SELECT id,status,max_guests,discount_percent,(status='ACTIVE') is_active FROM rooms WHERE id=? FOR UPDATE");
+        $lock = $pdo->prepare("SELECT id,status,max_guests,discount_percent,discount_start,discount_end,(status='ACTIVE') is_active FROM rooms WHERE id=? FOR UPDATE");
         $lock->execute([$q['room']['id']]);
         $room = $lock->fetch();
         if ($q['guests'] > (int)($room['max_guests'] ?? 0)) throw new BookingException('Sức chứa phòng vừa được cập nhật. Vui lòng chọn lại số khách.', 409);
-        $packageLock = $pdo->prepare('SELECT id,name,timing_mode,duration_minutes,check_in_time,check_out_time,price,discount_percent,is_enabled FROM room_packages WHERE id=? AND room_id=? FOR UPDATE');
+        $packageLock = $pdo->prepare('SELECT id,name,timing_mode,duration_minutes,check_in_time,check_out_time,price,discount_percent,discount_start,discount_end,is_enabled FROM room_packages WHERE id=? AND room_id=? FOR UPDATE');
         $packageLock->execute([$q['packageId'], $q['room']['id']]);
         $freshPackage = $packageLock->fetch();
         if (!$freshPackage || !(bool)$freshPackage['is_enabled']) throw new BookingException('Gói giá vừa được thay đổi. Vui lòng chọn lại.', 409);
-        $freshPackageDto = locked_booking_package($room, $freshPackage);
+        $freshPackageDto = locked_booking_package($room, $freshPackage, $q['start']->format('Y-m-d'));
         [$freshStart,$freshEnd]=bookable_package_window($freshPackageDto,$q['requestedDate'],$freshPackageDto['mode']==='DURATION'?$q['start']->format('H:i'):'');
         $q['package'] = $freshPackageDto;
         $q['start'] = $freshStart;
@@ -248,7 +250,7 @@ function lookup_booking_api(): never
         $b = $stmt->fetch();
     }
     if(empty($b['is_test'])&&$b['status']==='CONFIRMED'&&in_array($b['confirmation_email_status']??'PENDING',['PENDING','FAILED'],true)){
-        dispatch_confirmation_email((string)$b['id']);
+        provision_paid_booking((string)$b['id']);
         $email=db()->prepare('SELECT confirmation_email_status FROM bookings WHERE id=?');$email->execute([$b['id']]);$b['confirmation_email_status']=$email->fetchColumn()?:'PENDING';
     }
     $b = booking_lifecycle($b);
@@ -294,7 +296,7 @@ function payment_webhook_api(): never
     $booking = apply_payment_callback(db(), $data);
     if ($booking) {
         try_dispatch_staff_notifications(db(), (string)$booking['id']);
-        dispatch_confirmation_email((string)$booking['id']);
+        provision_paid_booking((string)$booking['id']);
     }
     json_response(['ok'=>true]);
 }

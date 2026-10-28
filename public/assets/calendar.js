@@ -33,7 +33,11 @@
     let version = 0;
     const now = () => new Date(Date.now() + clockOffset);
     const selectedRoom = () => rooms.find((room) => room.id === roomSelect.value) || rooms[0];
-    const selectedPackage = () => MoBookingSlots.configuredSlots(selectedRoom()).find((pkg) => pkg.id === packageSelect.value);
+    const selectedPackage = () => {
+        const room = selectedRoom();
+        const slot = MoBookingSlots.configuredSlots(room).find((pkg) => pkg.id === packageSelect.value);
+        return slot ? MoBookingSlots.priceForArrival(room, slot, date) : null;
+    };
     const labels = { available: "Còn trống", booked: "Đã có lịch", past: "Đã qua giờ", unknown: "Chưa kiểm tra", inactive: "Tạm ngưng" };
 
     function state(day, data) {
@@ -56,12 +60,15 @@
     }
 
     function updatePackages(initial = false) {
-        const list = MoBookingSlots.configuredSlots(selectedRoom());
+        const previous = packageSelect.value;
+        const room = selectedRoom();
+        const list = MoBookingSlots.configuredSlots(room).map((slot) => MoBookingSlots.priceForArrival(room, slot, date));
         packageSelect.innerHTML = list.length ? list.map((pkg) => {
             const timing = pkg.mode === "FIXED_TIME" ? `${pkg.checkInTime} – ${pkg.checkOutTime}` : `${pkg.durationMinutes / 60} giờ`;
             return `<option value="${escape(pkg.id)}">${escape(pkg.name)} · ${escape(timing)} · ${Number(pkg.price).toLocaleString("vi-VN")}đ</option>`;
         }).join("") : '<option value="">Chưa có gói đặt online</option>';
         if (initial && list.some((pkg) => pkg.id === query.get("package"))) packageSelect.value = query.get("package");
+        else if (list.some((pkg) => pkg.id === previous)) packageSelect.value = previous;
         updateTime();
     }
 
@@ -87,6 +94,7 @@
     }
 
     function render() {
+        updatePackages();
         const room = selectedRoom();
         const pkg = selectedPackage();
         const status = state(date, snapshot);

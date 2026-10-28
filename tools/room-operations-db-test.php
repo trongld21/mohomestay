@@ -35,6 +35,19 @@ CREATE TABLE staff_email_notifications (id TEXT PRIMARY KEY,booking_id TEXT,even
 INSERT INTO rooms VALUES ('r',1,'ACTIVE','Room');");
 $selectedStart = new DateTimeImmutable('tomorrow 19:00', new DateTimeZone('Asia/Ho_Chi_Minh'));
 $holdInput = ['roomId' => 'r', 'date' => $selectedStart->format('Y-m-d'), 'time' => '19:00'];
+$rangeInput = $holdInput + ['endDate' => $selectedStart->modify('+1 day')->format('Y-m-d'), 'endTime' => '09:00'];
+$range = create_room_quote_hold($pdo, $rangeInput, 'staff');
+operation_check($range['ends_at'] === mysql_datetime($selectedStart->modify('+1 day')->setTime(9, 0)), 'Explicit end must hold the entire overnight interval.');
+release_room_quote_hold($pdo, $range['id'], 'staff');
+$pdo->exec('DELETE FROM room_quote_holds');
+foreach ([['endDate'=>$holdInput['date']], ['endTime'=>'20:00'], ['endDate'=>$holdInput['date'],'endTime'=>'18:00'], ['endDate'=>'2027-02-30','endTime'=>'09:00']] as $invalidEnd) {
+    try {
+        create_room_quote_hold($pdo, $holdInput + $invalidEnd, 'staff');
+        throw new RuntimeException('Invalid end of hold accepted.');
+    } catch (BookingException $error) {
+        operation_check($error->httpStatus === 422, 'Invalid hold end must return 422.');
+    }
+}
 $scheduledHold = create_room_quote_hold($pdo, $holdInput, 'staff');
 $holdStart = strtotime($scheduledHold['starts_at'] . ' UTC');
 operation_check($holdStart === $selectedStart->getTimestamp(), 'Hold must start at the selected local time without a package.');

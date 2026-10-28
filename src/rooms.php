@@ -22,11 +22,39 @@ function room_discount_price(int $price, int $percent): int
     return (int)(round($price * (100 - $percent) / 100000) * 1000);
 }
 
-function package_with_discount(array $package, int $roomPercent = 0): array
+function validate_discount_schedule(mixed $start, mixed $end): array
+{
+    $dates = [];
+    foreach ([$start, $end] as $value) {
+        if ($value === null || $value === '') {
+            $dates[] = null;
+            continue;
+        }
+        if (!is_string($value)) throw new BookingException('Ngày khuyến mãi không hợp lệ.', 422);
+        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $value, new DateTimeZone('Asia/Ho_Chi_Minh'));
+        if (!$parsed || $parsed->format('Y-m-d') !== $value) throw new BookingException('Ngày khuyến mãi không hợp lệ.', 422);
+        $dates[] = $value;
+    }
+    if (($dates[0] === null) !== ($dates[1] === null) || ($dates[0] !== null && $dates[1] < $dates[0])) {
+        throw new BookingException('Nhập đủ ngày bắt đầu và kết thúc khuyến mãi; ngày kết thúc không được trước ngày bắt đầu.', 422);
+    }
+    return ['discountStart' => $dates[0], 'discountEnd' => $dates[1]];
+}
+
+function package_with_discount(array $package, int $roomPercent = 0, ?string $arrivalDate = null, array $roomSchedule = []): array
 {
     $base = (int)($package['basePrice'] ?? $package['price']);
     $percent = $package['discountPercent'] ?? $roomPercent;
+    $roomStart = $roomSchedule['discountStart'] ?? $package['roomDiscountStart'] ?? null;
+    $roomEnd = $roomSchedule['discountEnd'] ?? $package['roomDiscountEnd'] ?? null;
+    $own = isset($package['discountPercent']);
+    $start = $own ? ($package['discountStart'] ?? null) : $roomStart;
+    $end = $own ? ($package['discountEnd'] ?? null) : $roomEnd;
+    $arrivalDate ??= (new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh')))->format('Y-m-d');
+    if (($start !== null && $arrivalDate < $start) || ($end !== null && $arrivalDate > $end)) $percent = 0;
     return array_replace($package, [
+        'roomDiscountStart' => $roomStart,
+        'roomDiscountEnd' => $roomEnd,
         'basePrice' => $base,
         'effectiveDiscountPercent' => (int)$percent,
         'price' => room_discount_price($base, (int)$percent),
@@ -58,7 +86,7 @@ function validate_room_input(array $input): array
     }
     if (count($tags) > 30) throw new BookingException('Mỗi phòng có tối đa 30 tag.', 422);
 
-    return [
+    return validate_discount_schedule($input['discountStart'] ?? null, $input['discountEnd'] ?? null) + [
         'name'=>$name,'slug'=>$slug,
         'subtitle'=>limited_text($input['subtitle'] ?? '', 255, 'Mô tả ngắn'),
         'tag'=>array_key_exists('tag', $input) ? limited_text($input['tag'], 100, 'Nhãn trên ảnh') : null,
@@ -110,6 +138,7 @@ function validate_packages(array $packages): array
             'price'=>(int)$price,'enabled'=>filter_var($raw['enabled'] ?? true, FILTER_VALIDATE_BOOL),
             'sortOrder'=>bounded_integer($raw['sortOrder'] ?? ($index + 1) * 10, -100000, 100000, 'Thứ tự gói'),
         ];
+        $package += validate_discount_schedule($raw['discountStart'] ?? null, $raw['discountEnd'] ?? null);
         if ($mode === 'DURATION') {
             $duration = filter_var($raw['durationMinutes'] ?? null, FILTER_VALIDATE_INT);
             if ($duration === false || $duration < 30 || $duration > 43200) throw new BookingException('Thời lượng phải từ 30 phút đến 30 ngày.', 422);

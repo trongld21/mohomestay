@@ -67,7 +67,8 @@ function payos_payment_status(string $orderCode): array
 
 function refresh_payment_cancellation(PDO $pdo, array $booking, ?callable $fetch = null, ?callable $apply = null): void
 {
-    if ($booking['status'] !== 'PENDING' || $booking['payment_status'] === 'PAID'
+    if (!in_array($booking['status'], ['PENDING', 'CANCELLED'], true)
+        || !in_array($booking['payment_status'], ['UNPAID', 'PENDING', 'FAILED'], true)
         || !empty($booking['is_test']) || ($booking['payment_method'] ?? '') !== 'payos') {
         return;
     }
@@ -118,11 +119,17 @@ function reconcile_pending_payments(PDO $pdo, ?callable $fetch = null, ?callable
 {
     // Recover missed webhooks even when the guest closes the payment page.
     // Bound provider traffic; leave expired/conflicting payment decisions to the callback.
-    $query = $pdo->prepare("SELECT * FROM bookings WHERE status='PENDING'
-        AND payment_status<>'PAID' AND payment_method='payos' AND is_test=0
-        AND check_out>? ORDER BY created_at DESC LIMIT 30");
-    $query->execute([gmdate('Y-m-d H:i:s')]);
+    $query = $pdo->prepare("SELECT * FROM bookings WHERE status IN ('PENDING','CANCELLED')
+        AND payment_status IN ('UNPAID','PENDING','FAILED') AND payment_method='payos' AND is_test=0
+        AND check_out>? AND (payment_next_check_at IS NULL OR payment_next_check_at<=?)
+        ORDER BY COALESCE(payment_checked_at, '1970-01-01'),created_at LIMIT 10");
+    $now = gmdate('Y-m-d H:i:s');
+    $query->execute([$now, $now]);
     foreach ($query->fetchAll(PDO::FETCH_ASSOC) as $booking) {
+        // Persistent claim prevents concurrent cron workers checking the same booking.
+        $claim = $pdo->prepare('UPDATE bookings SET payment_checked_at=?,payment_next_check_at=? WHERE id=? AND (payment_next_check_at IS NULL OR payment_next_check_at<=?)');
+        $claim->execute([$now, gmdate('Y-m-d H:i:s', time() + 60), $booking['id'], $now]);
+        if ($claim->rowCount() !== 1) continue;
         try {
             refresh_payment_cancellation($pdo, $booking, $fetch, $apply);
         } catch (Throwable $error) {

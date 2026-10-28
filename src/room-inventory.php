@@ -88,6 +88,14 @@ function create_room_quote_hold(PDO $pdo, array $input, string $actor): array
             throw new BookingException('Chỉ khóa phòng trong vòng 12 tháng.', 422);
         }
         $end = $start->modify('+1 hour');
+        if (array_key_exists('endDate', $input) || array_key_exists('endTime', $input)) {
+            $endValue = (string)($input['endDate'] ?? '') . ' ' . (string)($input['endTime'] ?? '');
+            $end = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $endValue, $zone);
+            if (!$end || $end->format('Y-m-d H:i') !== $endValue || $end <= $start) {
+                throw new BookingException('Ngày giờ kết thúc phải hợp lệ và sau thời điểm bắt đầu.', 422);
+            }
+            if ($end > $now->modify('+366 days')) throw new BookingException('Chỉ khóa phòng trong vòng 12 tháng.', 422);
+        }
         $a = mysql_datetime($start);
         $b = mysql_datetime($end);
         assert_room_inventory($pdo, $roomId, $a, $b);

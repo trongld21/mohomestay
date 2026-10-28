@@ -42,31 +42,50 @@ function mock_payment_api(string $action): never
 
 function apply_payment_callback(PDO $pdo, array $data, bool $test = false): ?array
 {
+    $find = $pdo->prepare('SELECT room_id FROM bookings WHERE order_code=?');
+    $find->execute([(string)$data['orderCode']]);
+    $roomId = $find->fetchColumn();
+    if (!$roomId) return null;
     $pdo->beginTransaction();
     try {
-        $find = $pdo->prepare('SELECT room_id FROM bookings WHERE order_code=?');
-        $find->execute([(string)$data['orderCode']]);
-        $roomId = $find->fetchColumn();
-        if (!$roomId) { $pdo->commit(); return null; }
-        $lock = $pdo->prepare('SELECT id FROM rooms WHERE id=? FOR UPDATE');
+        $lock = $pdo->prepare('SELECT id,status FROM rooms WHERE id=?' . room_operation_lock_suffix($pdo));
         $lock->execute([$roomId]);
-        $stmt = $pdo->prepare('SELECT * FROM bookings WHERE order_code=? FOR UPDATE');
+        $room = $lock->fetch();
+        $stmt = $pdo->prepare('SELECT * FROM bookings WHERE order_code=?' . room_operation_lock_suffix($pdo));
         $stmt->execute([(string)$data['orderCode']]);
         $booking = $stmt->fetch();
         if (!$booking) { $pdo->commit(); return null; }
+        if ($booking['room_id'] !== $roomId) throw new BookingException('Đơn vừa đổi phòng. Cần thử đối soát lại.', 409);
         if ((bool)$booking['is_test'] !== $test) throw new BookingException('Callback không phù hợp với loại đơn.', 403);
         if ((int)$data['amount'] !== (int)$booking['total_price']) throw new BookingException('Số tiền không khớp đơn đặt phòng.', 422);
+        if ($booking['payment_status'] === 'REFUNDED') {
+            $pdo->commit();
+            return $booking;
+        }
         if ($booking['payment_status'] !== 'PAID') {
-            $valid = $booking['status'] === 'PENDING'
-                && strtotime($booking['hold_expires_at'] . ' UTC') > time()
-                && !room_booking_conflict($pdo, (string)$roomId, $booking['check_in'], $booking['check_out'], $booking['id'])
-                && !room_has_emergency_lock($pdo, (string)$roomId, $booking['check_in'], $booking['check_out'])
-                && !room_quote_hold_conflict($pdo, (string)$roomId, $booking['check_in'], $booking['check_out']);
+            // A verified payment may be discovered after its reservation hold expires.
+            // Recover only a pending booking with inventory still available.
+            $valid = $booking['status'] === 'PENDING' && ($room['status'] ?? '') === 'ACTIVE'
+                && (!$test || strtotime($booking['hold_expires_at'] . ' UTC') > time());
+            if ($valid) {
+                try {
+                    assert_payment_booking_inventory($pdo, $booking);
+                } catch (BookingException $error) {
+                    $valid = false;
+                }
+            }
             $status = $valid ? 'CONFIRMED' : 'CANCELLED';
-            $reason = $valid ? null : 'Đã nhận tiền sau thời hạn hoặc đơn đã hủy. Cần đối soát/hoàn tiền.';
+            $reason = $valid ? null : 'Đã nhận tiền nhưng đơn đã hủy, quá giờ trả hoặc phòng đang bận/khóa. Cần đối soát thủ công.';
             $pdo->prepare("UPDATE bookings SET payment_status='PAID',status=?,transaction_id=? WHERE id=?")->execute([$status, $data['reference'], $booking['id']]);
-            $pdo->prepare("INSERT INTO payments(id,booking_id,amount,payment_method,status,transaction_id,paid_at,failure_reason) VALUES(?,?,?,?,'PAID',?,UTC_TIMESTAMP(),?) ON DUPLICATE KEY UPDATE status='PAID',transaction_id=VALUES(transaction_id),paid_at=VALUES(paid_at),failure_reason=VALUES(failure_reason)")
-                ->execute([uuid(), $booking['id'], (int)$data['amount'], $test ? 'mock' : 'payos', $data['reference'], $reason]);
+            $payment = $pdo->prepare('SELECT id FROM payments WHERE booking_id=?');
+            $payment->execute([$booking['id']]);
+            if ($payment->fetchColumn()) {
+                $pdo->prepare("UPDATE payments SET status='PAID',transaction_id=?,paid_at=?,failure_reason=? WHERE booking_id=?")
+                    ->execute([$data['reference'], gmdate('Y-m-d H:i:s'), $reason, $booking['id']]);
+            } else {
+                $pdo->prepare("INSERT INTO payments(id,booking_id,amount,payment_method,status,transaction_id,paid_at,failure_reason) VALUES(?,?,?,?,'PAID',?,?,?)")
+                    ->execute([uuid(), $booking['id'], (int)$data['amount'], $test ? 'mock' : 'payos', $data['reference'], gmdate('Y-m-d H:i:s'), $reason]);
+            }
             $booking['status'] = $status;
             $booking['payment_status'] = 'PAID';
         }

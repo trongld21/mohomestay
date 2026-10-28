@@ -56,7 +56,7 @@
             submit = one('[type="submit"]', form);
         const refresh = () => {
             const room = activeRooms.find((item) => item.id === roomSelect.value) || activeRooms[0],
-                slots = bookableSlots(room);
+                slots = bookableSlots(room).map((slot) => window.MoBookingSlots.priceForArrival(room, slot, form.elements.date.value));
             packageSelect.innerHTML = slots.length
                 ? slots
                       .map(
@@ -73,6 +73,7 @@
                 .map((room) => `<option value="${esc(room.id)}">${esc(room.name)}</option>`)
                 .join("");
         roomSelect.onchange = refresh;
+        form.elements.date.addEventListener("change", refresh);
         refresh();
         form.onsubmit = (event) => {
             event.preventDefault();
@@ -118,7 +119,7 @@
 
         const room = () =>
             activeRooms.find((item) => item.id === roomSelect.value) || activeRooms[0];
-        const slots = () => slotTools.configuredSlots(room());
+        const slots = () => slotTools.configuredSlots(room()).map((slot) => slotTools.priceForArrival(room(), slot, form.date.value));
         const selectedSlot = () => slots().find((slot) => slot.id === selectedId);
         const availabilityForRoom = () =>
             availability?.rooms?.find((item) => item.id === room()?.id);

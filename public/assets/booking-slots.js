@@ -5,6 +5,17 @@
         return (room?.packages || []).filter(slot => slot.enabled && ['FIXED_TIME', 'DURATION'].includes(slot.mode));
     }
 
+    function priceForArrival(room, slot, date) {
+        const base = Number(slot.basePrice ?? slot.price);
+        const own = slot.discountPercent !== null && slot.discountPercent !== undefined;
+        let percent = Number(own ? slot.discountPercent : (room?.discountPercent || 0));
+        const start = own ? slot.discountStart : room?.discountStart;
+        const end = own ? slot.discountEnd : room?.discountEnd;
+        if (!date || (start && date < start) || (end && date > end)) percent = 0;
+        return { ...slot, basePrice: base, effectiveDiscountPercent: percent,
+            price: percent === 0 ? base : Math.round(base * (100 - percent) / 100000) * 1000 };
+    }
+
     function earliestBookingDate(room, now = new Date()) {
         const today = new Intl.DateTimeFormat('en-CA', {
             timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -72,5 +83,5 @@
         return 'booked';
     }
 
-    scope.MoBookingSlots = { configuredSlots, earliestBookingDate, slotWindow, extendedWindow, slotState, durationDayState };
+    scope.MoBookingSlots = { configuredSlots, priceForArrival, earliestBookingDate, slotWindow, extendedWindow, slotState, durationDayState };
 })(typeof window === 'undefined' ? globalThis : window);

@@ -99,6 +99,7 @@ function booking_continuation_context(PDO $pdo, string $bookingId): array
         try {
             $package = resolve_bookable_slot($room, $configured['id']);
             [$start, $end] = package_window($package, $date->format('Y-m-d'), $date->format('H:i'));
+            $package = package_with_discount($package, (int)($room['discountPercent'] ?? 0), $start->format('Y-m-d'), $room);
             if (mysql_datetime($start) !== $parent['check_out']) continue;
             assert_room_inventory($pdo, $room['id'], mysql_datetime($start), mysql_datetime($end), $parent['id']);
             $query = $pdo->prepare('SELECT id FROM room_availability WHERE room_id=? AND available=0 AND `date` BETWEEN ? AND ? LIMIT 1');
