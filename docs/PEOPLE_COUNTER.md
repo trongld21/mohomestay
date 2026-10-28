@@ -43,7 +43,8 @@ PHP xác thực HMAC → MySQL → báo cáo quản trị. Hosting PHP không ch
 - API chỉ nhận camera đã đăng ký, mỗi lượt có ID chống cộng trùng khi gửi lại.
 - Lưu giờ UTC, lọc và trình bày ngày theo Asia/Ho_Chi_Minh.
 - Báo cáo có tổng vào/ra, số liệu từng giờ, lịch sử phân trang, tình trạng kết nối.
-- Quyền `people-counter.view` riêng, không cấp mặc định cho nhân viên.
+- Chỉ Super Admin được xem module, camera và API báo cáo. Quyền
+  `people-counter.view` không thể cấp cho nhân viên; quyền cũ đã lưu cũng bị chặn.
 - Không có dữ liệu / lỗi API / chưa migration phải hiển thị rõ, không giả số liệu.
 - Trang quản trị xem khung hình đã có khung người, vạch đếm và nhãn IN/OUT,
   cập nhật khoảng 1 lần/giây. Chỉ giữ khung JPEG gần nhất trong `storage/people-counter/`

@@ -50,7 +50,10 @@ vẫn đọc bảng cũ. Gói gửi đặt `trial: true`, không đổi `calibra
 File riêng cấu hình `COUNTER_ENDPOINT` và `PEOPLE_COUNTER_KEY` (tối thiểu 32 ký tự).
 Endpoint phải HTTPS; HTTP chỉ cho loopback khi chạy local. Trên máy hiện tại PHP
 nghe `::1:8080`, do đó dùng `http://[::1]:8080/api/integration/people-counter`.
-Không commit file cấu hình khóa. Sender không tải lại video và không gửi JPEG.
+Không commit file cấu hình khóa. Sender không tải lại video. Mặc định chỉ gửi
+lượt và heartbeat; bật `--send-preview` để gửi thêm JPEG cùng tổng phiên có chữ ký,
+tối đa khoảng một ảnh/giây lên website. Ảnh được lưu riêng ngoài public_html,
+chỉ người có quyền `people-counter.view` được đọc qua API.
 
 Phiên chuyển đổi ngày 28/10 giữ 7 lượt vào / 10 lượt ra từ summary cuối của
 tiến trình cũ. Các tổng này không có thời điểm từng lượt nên không tạo lại lịch sử
@@ -110,8 +113,41 @@ kiểm thử lại callback thật. Không thay DLL hệ thống hoặc nới ki
     --stop-file .deploy/sdk-native/stop.request
 
 .deploy\counter-venv\Scripts\python.exe services/people-counter/sdk_pilot.py `
-    --config .deploy/sdk-pilot/config.json --source-port 19456 --seconds 0
+    --config .deploy/sdk-pilot/config.json --source-port 19456 --seconds 0 `
+    --record-trial --env-file .deploy/sdk-pilot/delivery.env
 ```
+
+## Hiển thị trên hosting bằng máy AI hiện tại
+
+DirectAdmin chạy PHP/MySQL, không chạy SDK Windows hoặc YOLO. PC vẫn phải bật;
+server hiển thị ảnh và báo cáo do PC gửi qua HTTPS. Không cần mở cổng router.
+
+1. Trong `.env` riêng trên hosting, đặt `PEOPLE_COUNTER_KEY` giống khóa trong
+   file cấu hình gửi riêng của PC. Không dùng AppSecret Imou hoặc khóa deploy.
+2. Tạo `.deploy/sdk-pilot/delivery-server.env` trên PC, không commit:
+
+```ini
+COUNTER_ENDPOINT=https://mohomestay.vn/api/integration/people-counter
+PEOPLE_COUNTER_KEY=<cùng khóa riêng tối thiểu 32 ký tự với hosting>
+```
+
+3. Dừng worker cũ bằng `.deploy/sdk-pilot/stop.request`, đợi thoát sạch rồi bỏ
+   marker. Giữ nguồn native SDK đang chạy. Chạy worker với file gửi mới:
+
+```powershell
+.deploy\counter-venv\Scripts\python.exe services/people-counter/sdk_pilot.py `
+    --config .deploy/sdk-pilot/config.json --source-port 19456 --seconds 0 `
+    --record-trial --send-preview --env-file .deploy/sdk-pilot/delivery-server.env
+```
+
+4. Mở trang đếm trên hosting, kiểm tra có ảnh mới, tổng phiên, rồi kiểm chứng một
+   lượt đi qua cửa và bản ghi thời gian tương ứng. HTTP 401 nghĩa là khóa hai đầu
+   chưa khớp; hàng đợi giữ lại lượt chưa được server xác nhận. Hosting có thể cần
+   quyền ghi cho thư mục riêng `storage/people-counter` bên cạnh `src`.
+
+Đổi endpoint chỉ gửi các lượt đang chờ và lượt mới. Lượt đã được localhost xác
+nhận không được tự nhân bản lên hosting, và tổng 17 lượt cũ không có thời điểm
+vẫn không thể dựng thành lịch sử. Đây chưa phải triển khai AI độc lập 24/7.
 
 Tạo `.deploy/sdk-native/stop.request` để dừng nguồn native; tạo
 `.deploy/sdk-pilot/stop.request` để dừng AI. Bỏ đúng marker trước khi chạy lại.

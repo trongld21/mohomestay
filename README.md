@@ -15,8 +15,9 @@ Luồng trực tiếp:
 
 Trang `/admin/people-counter` hiển thị lượt vào/ra, biểu đồ theo giờ và lịch sử
 qua cửa. Cần migration `026_people_counter.sql` và `027_people_counter_trials.sql`, khóa `PEOPLE_COUNTER_KEY` riêng
-và dịch vụ AI Python chạy trên máy chủ khác. Nhân viên cần quyền
-`people-counter.view`. Khi chưa kết nối camera, trang hiển thị trạng thái chờ.
+và dịch vụ AI Python chạy trên máy xử lý riêng. Chỉ tài khoản Super Admin được
+xem camera/báo cáo này; quyền không cấp cho nhân viên. Khi chưa kết nối camera,
+trang hiển thị trạng thái chờ.
 Chi tiết cấu hình, kiểm thử video, giới hạn và cách vận hành:
 [docs/PEOPLE_COUNTER.md](docs/PEOPLE_COUNTER.md).
 

@@ -49,6 +49,8 @@ $_SESSION = [];
 account_check(!can_use('rooms'), 'Anonymous must be denied');
 $_SESSION = ['admin_until' => time() + 3600];
 account_check(can_use('accounts') && can_use('rooms') && can_use('door-codes'), 'Root must have all permissions');
+account_check(can_use('people-counter') && can_use('people-counter.view'), 'Super Admin must retain camera access');
+account_check(!array_key_exists('people-counter.view', account_permission_labels()), 'Camera access must not be assignable to staff');
 save_account(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'test-password-123', 'is_active' => 'on'], false);
 $row = db()->query('SELECT * FROM accounts')->fetch();
 account_check(password_verify('test-password-123', $row['password_hash']), 'Passwords must be hashed');
@@ -158,7 +160,7 @@ foreach ([
     }
 }
 unset($_SESSION['account_id'], $_SESSION['account_version']);
-save_account(['id' => $id, 'permissions' => ['rooms.view', 'bookings.view', 'door-codes.view', 'availability.view', 'sales.view', 'products.view', 'inventory.view', 'expenses.view', 'people-counter.view']], true);
+save_account(['id' => $id, 'permissions' => ['rooms.view', 'bookings.view', 'door-codes.view', 'availability.view', 'sales.view', 'products.view', 'inventory.view', 'expenses.view']], true);
 $_SESSION['account_id'] = $id;
 $_SESSION['account_version'] = 2;
 foreach (array_keys(account_permission_labels()) as $permission) {
@@ -207,10 +209,34 @@ account_check(admin_api_permission('/api/admin/sales/a/complete', 'POST') === 's
 account_check(admin_api_permission('/api/admin/bookings/a/continuation', 'GET') === 'bookings.create', 'Continuation context requires booking creation permission');
 account_check(!can_use('people-counter.view'), 'Booking-only staff must not gain camera reports');
 unset($_SESSION['account_id'], $_SESSION['account_version']);
-save_account(['id' => $id, 'permissions' => ['people-counter.view']], true);
+try {
+    save_account(['id' => $id, 'permissions' => ['people-counter.view']], true);
+    throw new LogicException('Camera permission must not be grantable to staff');
+} catch (BookingException $error) {
+    account_check($error->httpStatus === 422, 'Granting root-only camera access must return 422');
+}
+$legacy = db()->prepare('UPDATE accounts SET permissions = ? WHERE id = ?');
+$legacy->execute([json_encode(['people-counter', 'people-counter.view', 'bookings.view']), $id]);
 $_SESSION['account_id'] = $id;
 $_SESSION['account_version'] = 2;
-account_check(can_use('people-counter.view') && !can_use('bookings.view'), 'Counter-only staff permissions must remain isolated');
-account_check(account_home() === '/admin/people-counter', 'Counter-only staff landing page is wrong');
+account_check(!can_use('people-counter') && !can_use('people-counter.view'), 'Legacy staff camera grants must no longer allow access');
+account_check(can_use('bookings.view'), 'Restricting cameras must preserve unrelated staff permissions');
+account_check(account_home() !== '/admin/people-counter', 'Staff landing page must not expose cameras');
+foreach (['/api/admin/people-counter', '/api/admin/people-counter/preview'] as $path) {
+    try {
+        require_permission(admin_api_permission($path, 'GET'));
+        throw new LogicException('Legacy staff account reached protected camera API');
+    } catch (RuntimeException $error) {
+        account_check($error->getMessage() === '403', 'Camera APIs must reject staff with 403');
+    }
+}
+try {
+    require_permission('people-counter.view');
+    throw new LogicException('Legacy staff account reached protected camera page');
+} catch (RuntimeException $error) {
+    account_check($error->getMessage() === '403', 'Camera page must reject staff with 403');
+}
+unset($_SESSION['account_id'], $_SESSION['account_version']);
+account_check(can_use('people-counter.view'), 'Super Admin must remain allowed after staff denial');
 
 echo "Account authorization tests: OK\n";

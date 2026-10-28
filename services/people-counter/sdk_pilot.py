@@ -163,6 +163,9 @@ def run(args):
                     preview = encode_preview(image, at, max_side=1280, quality=85)
                     if preview:
                         preview['session'] = session.copy()
+                        if args.send_preview:
+                            with health_lock:
+                                health['preview'] = preview
                         try:
                             save_atomic(private / 'entrance.json', json.dumps(preview).encode())
                         except PermissionError:
@@ -205,8 +208,11 @@ def main():
     parser.add_argument('--seconds', type=int, default=90, help='0 for continuous local trial')
     parser.add_argument('--source-port', type=int, default=19454, help='Loopback SDK video port')
     parser.add_argument('--record-trial', action='store_true', help='Persist new trial events and deliver signed batches')
+    parser.add_argument('--send-preview', action='store_true', help='Upload signed camera previews to the configured website')
     parser.add_argument('--env-file', help='Private delivery settings file; no credentials in arguments')
     args = parser.parse_args()
+    if args.send_preview and not args.record_trial:
+        parser.error('--send-preview requires --record-trial and private delivery settings')
     if not 0 <= args.seconds <= 3600:
         parser.error('Use 0, or a duration of 1..3600 seconds')
     if not 1024 <= args.source_port <= 65535:

@@ -44,6 +44,11 @@ function can_use(string $permission): bool
     if ($account['root']) {
         return true;
     }
+    // Camera imagery and occupancy reports are reserved for the root account,
+    // including accounts that still carry a permission from an older release.
+    if ($permission === 'people-counter' || str_starts_with($permission, 'people-counter.')) {
+        return false;
+    }
     if ($permission === 'bookings' && in_array('bookings.overview', expanded_account_permissions(json_decode($account['permissions'], true) ?: []), true)) {
         return true;
     }
@@ -167,9 +172,6 @@ function save_account(array $data, bool $permissionsOnly): void
 function account_permission_groups(): array
 {
     return [
-        'people-counter' => [
-            'people-counter.view' => 'Xem lượt vào / ra và tình trạng camera',
-        ],
         'expenses' => [
             'expenses.view' => 'Xem phiếu chi và tổng tiền chi',
             'expenses.create' => 'Lập phiếu chi',

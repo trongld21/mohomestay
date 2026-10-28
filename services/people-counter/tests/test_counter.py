@@ -121,7 +121,7 @@ class DeliveryTests(unittest.TestCase):
             def ack(self, events):
                 self.acknowledged = True
 
-        for status, receipt, expected in [(500, {}, False), (302, {}, False), (200, {'accepted': 0}, False), (200, {'accepted': True}, False), (200, {'accepted': 1}, True)]:
+        for status, receipt, expected in [(401, {}, False), (500, {}, False), (302, {}, False), (200, {'accepted': 0}, False), (200, {'accepted': True}, False), (200, {'accepted': 1}, True)]:
             queue = Queue()
             response = SimpleNamespace(status_code=status, json=lambda: receipt)
             transport = SimpleNamespace(post=lambda *args, **kwargs: response)
@@ -146,6 +146,38 @@ class DeliveryTests(unittest.TestCase):
             send_loop(queue, 'https://example.test/counter', 's' * 32, 'entrance', health, threading.Lock(), stop, True)
         self.assertTrue(payloads[0]['trial'])
         self.assertNotIn('preview', payloads[0])
+
+    def test_sdk_preview_delivery_retains_image_and_session_metadata(self):
+        import json
+        import time
+        stop = threading.Event()
+        payloads = []
+        preview = {'jpeg': 'synthetic-jpeg', 'frameAt': '2026-10-28T06:00:00Z',
+                   'session': {'id': 'a' * 32, 'startedAt': '2026-10-28T05:00:00Z',
+                               'in': 7, 'out': 10, 'trial': True}}
+
+        def post(url, **kwargs):
+            payloads.append(json.loads(kwargs['data']))
+            self.assertFalse(kwargs['allow_redirects'])
+            stop.set()
+            return SimpleNamespace(status_code=200, json=lambda: {'accepted': 0})
+
+        queue = SimpleNamespace(pending=lambda: [], ack=lambda events: None)
+        health = {'status': 'RUNNING', 'frameAt': preview['frameAt'],
+                  'monotonic': time.monotonic(), 'preview': preview}
+        with patch.dict(sys.modules, {'requests': SimpleNamespace(post=post)}):
+            send_loop(queue, 'https://example.test/counter', 's' * 32, 'entrance', health, threading.Lock(), stop, True)
+        self.assertEqual(payloads[0]['preview'], preview)
+        self.assertTrue(payloads[0]['trial'])
+
+    def test_sdk_preview_upload_requires_signed_recording_mode(self):
+        import contextlib
+        import io
+        from sdk_pilot import main
+        with patch('sys.argv', ['sdk_pilot', '--config', 'unused', '--send-preview']), contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as error:
+                main()
+        self.assertEqual(error.exception.code, 2)
 
     def test_capture_keeps_latest_frame_and_stops_on_gap(self):
         ready = threading.Event()
