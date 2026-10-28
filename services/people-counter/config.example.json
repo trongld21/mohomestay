@@ -1,0 +1,16 @@
+{
+  "camera_id": "entrance",
+  "calibrated": false,
+  "send_preview": true,
+  "line_start": [0.2, 0.5],
+  "line_end": [0.8, 0.5],
+  "inside_side": 1,
+  "margin": 0.025,
+  "stable_frames": 2,
+  "max_gap_seconds": 1.5,
+  "model": "yolo11n.pt",
+  "confidence": 0.4,
+  "image_size": 640,
+  "device": "cpu",
+  "state_directory": "data"
+}

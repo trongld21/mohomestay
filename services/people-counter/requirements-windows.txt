@@ -1,0 +1,2 @@
+-r requirements.txt
+windows-capture==2.0.1; sys_platform == 'win32'

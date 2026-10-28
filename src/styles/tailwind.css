@@ -5,6 +5,15 @@
 @source "../*.php";
 @source "../../public/assets/*.js";
 
+.admin-page [data-counter-tabs] a[aria-current="page"] {
+    @apply text-white;
+}
+
+.admin-page [data-counter-tabs] a[aria-current="page"]:hover,
+.admin-page [data-counter-tabs] a[aria-current="page"]:focus-visible {
+    @apply text-white;
+}
+
 .room-product-card {
     @apply relative cursor-pointer motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out;
 }

@@ -21,6 +21,7 @@ coverage/
 .agents/
 node_modules/
 .npm-cache/
+__pycache__/
 
 # Private hosting pull-deploy credentials and state
 /deploy-agent.ini
@@ -31,3 +32,4 @@ node_modules/
 
 # Private PHP session data
 /storage/sessions/
+/storage/people-counter/

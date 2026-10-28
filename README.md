@@ -2,6 +2,24 @@
 
 Website đặt phòng chạy bằng PHP 8.1+ và MySQL/MariaDB, không cần Node.js hoặc Composer trên server.
 
+## Đếm lượt người vào / ra
+
+Trang quản trị có hai tab riêng: **Trực tiếp** và **Video đã ghi**. Trực tiếp
+giữ nguồn SDK/AI chạy nền trên máy hiện tại; máy cần bật khi sử dụng luồng này.
+Tab Video đã ghi mở file `report.json` trên trình duyệt, không gọi luồng camera
+hay tải file lên máy chủ. Để xử lý video theo ca/ngày, xuất MP4 từ Imou, mở
+`tools/Dem-video.cmd`, nhận CSV, báo cáo và video có vạch đếm. Hướng dẫn:
+[docs/PEOPLE_COUNTER_OFFLINE.md](docs/PEOPLE_COUNTER_OFFLINE.md).
+
+Luồng trực tiếp:
+
+Trang `/admin/people-counter` hiển thị lượt vào/ra, biểu đồ theo giờ và lịch sử
+qua cửa. Cần migration `026_people_counter.sql` và `027_people_counter_trials.sql`, khóa `PEOPLE_COUNTER_KEY` riêng
+và dịch vụ AI Python chạy trên máy chủ khác. Nhân viên cần quyền
+`people-counter.view`. Khi chưa kết nối camera, trang hiển thị trạng thái chờ.
+Chi tiết cấu hình, kiểm thử video, giới hạn và cách vận hành:
+[docs/PEOPLE_COUNTER.md](docs/PEOPLE_COUNTER.md).
+
 ## Chạy local
 
 ```bash

@@ -38,6 +38,11 @@ jobs:
           php tools/upload-test.php
           php tools/ui-test.php
           php tools/check.php
+          php tools/account-test.php
+          php tools/people-counter-test.php
+          php tools/people-counter-preview-test.php
+          php tools/people-counter-deploy-test.php
+          php tools/imou-test.php
           node --check public/assets/app.js
           node --check public/assets/ui.js
           node --check public/assets/admin.js
@@ -46,6 +51,9 @@ jobs:
           node --check public/assets/rooms.js
           node --check public/assets/booking-identity.js
           node --check public/assets/door-codes.js
+          node --check public/assets/people-counter.js
+          node --check public/assets/people-counter-offline.js
+          node tools/people-counter-offline-test.cjs
       - name: Build DirectAdmin upload package
         run: |
           mkdir -p .deploy/public_html

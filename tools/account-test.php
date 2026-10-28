@@ -158,7 +158,7 @@ foreach ([
     }
 }
 unset($_SESSION['account_id'], $_SESSION['account_version']);
-save_account(['id' => $id, 'permissions' => ['rooms.view', 'bookings.view', 'door-codes.view', 'availability.view', 'sales.view', 'products.view', 'inventory.view', 'expenses.view']], true);
+save_account(['id' => $id, 'permissions' => ['rooms.view', 'bookings.view', 'door-codes.view', 'availability.view', 'sales.view', 'products.view', 'inventory.view', 'expenses.view', 'people-counter.view']], true);
 $_SESSION['account_id'] = $id;
 $_SESSION['account_version'] = 2;
 foreach (array_keys(account_permission_labels()) as $permission) {
@@ -176,7 +176,7 @@ save_account(['id' => $id, 'permissions' => ['bookings.overview']], true);
 $_SESSION['account_id'] = $id;
 $_SESSION['account_version'] = 2;
 account_check(can_use('bookings.overview') && can_use('bookings') && !can_use('bookings.view'), 'Overview-only grant must not expose booking list');
-account_check(account_home() === '/admin#bookings', 'Overview-only user must be able to open dashboard');
+account_check(account_home() === '/admin/overview', 'Overview-only user must be able to open dashboard');
 account_check(admin_api_permission('/api/admin/booking-overview', 'GET') === 'bookings.overview', 'Overview API must require its own permission');
 try {
     require_permission(admin_api_permission('/api/admin/bookings', 'GET'));
@@ -205,4 +205,12 @@ account_check(admin_api_permission('/api/admin/inventory', 'POST') === 'inventor
 account_check(admin_api_permission('/api/admin/sales/a/cancel', 'POST') === 'sales.cancel', 'Cancellation requires separate permission');
 account_check(admin_api_permission('/api/admin/sales/a/complete', 'POST') === 'sales.complete', 'Manual completion requires separate permission');
 account_check(admin_api_permission('/api/admin/bookings/a/continuation', 'GET') === 'bookings.create', 'Continuation context requires booking creation permission');
+account_check(!can_use('people-counter.view'), 'Booking-only staff must not gain camera reports');
+unset($_SESSION['account_id'], $_SESSION['account_version']);
+save_account(['id' => $id, 'permissions' => ['people-counter.view']], true);
+$_SESSION['account_id'] = $id;
+$_SESSION['account_version'] = 2;
+account_check(can_use('people-counter.view') && !can_use('bookings.view'), 'Counter-only staff permissions must remain isolated');
+account_check(account_home() === '/admin/people-counter', 'Counter-only staff landing page is wrong');
+
 echo "Account authorization tests: OK\n";
