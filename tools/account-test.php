@@ -145,6 +145,7 @@ foreach ([
     ['/api/admin/manual-access', 'POST', [], 'door-codes.create'],
     ['/api/admin/manual-access/a/retry', 'POST', [], 'door-codes.retry'],
     ['/api/admin/booking-access/b/retry', 'POST', [], 'door-codes.retry'],
+    ['/api/admin/booking-access/b/regenerate', 'POST', [], 'door-codes.retry'],
     ['/api/admin/expenses', 'GET', [], 'expenses.view'],
     ['/api/admin/expenses', 'POST', [], 'expenses.create'],
     ['/api/admin/unknown', 'POST', [], 'accounts'],

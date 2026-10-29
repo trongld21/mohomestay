@@ -16,7 +16,7 @@
         ["[data-door-edit]", "door-codes.edit"],
         ["[data-door-toggle]", "door-codes.toggle"],
         ["[data-door-delete]", "door-codes.delete"],
-        ["[data-access-retry], [data-manual-retry]", "door-codes.retry"],
+        ["[data-access-retry], [data-access-regenerate], [data-manual-retry]", "door-codes.retry"],
     ];
 
     function deny(element, denied) {

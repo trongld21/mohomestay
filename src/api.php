@@ -95,6 +95,7 @@ function handle_api(string $path, string $method): never
             admin_door_codes_api($method, $matches[1]);
         }
         if (preg_match('#^/api/admin/booking-access/([a-f0-9]{32})/retry$#', $path, $matches) && $method === 'POST') admin_booking_access_retry($matches[1]);
+        if (preg_match('#^/api/admin/booking-access/([a-f0-9]{32})/regenerate$#', $path, $matches) && $method === 'POST') admin_booking_access_retry($matches[1], true);
         if ($path === '/api/admin/booking-rooms' && $method === 'GET') admin_rooms_api();
         if ($path === '/api/admin/rooms' && $method === 'GET') admin_rooms_api();
         if ($path === '/api/admin/rooms' && $method === 'POST') create_room_api();

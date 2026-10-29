@@ -51,6 +51,8 @@
         dirty = false;
     let returnFocus = null,
         statusSignature = "";
+    const accessRequests = new Set();
+    const accessMessages = new Map();
 
     async function request(url, method = "GET", body) {
         const response = await fetch(url, {
@@ -155,13 +157,22 @@
                 ? 'TTLock chưa bật. Web đang dùng luồng email và mã thủ công hiện tại.'
                 : data.ttlockConfigured ? 'TTLock đã bật và có đủ cấu hình. Cần kiểm tra thực tế trên khóa khi kích hoạt lần đầu.' : 'TTLock đang bật nhưng thiếu cấu hình. Email có mã đang chờ xử lý.';
             root.querySelector('[data-booking-access-list]').innerHTML = data.bookingCodes.length
-                ? data.bookingCodes.map(row => `<article class="rounded-xl border border-stone-200 p-4">
+                ? data.bookingCodes.map(row => `<article data-access-card="${escape(row.booking_id)}" class="rounded-xl border border-stone-200 p-4">
                     <h3 class="font-semibold">${escape(row.booking_code)} · ${escape(row.guest_name)}</h3>
                     <p class="mt-2 text-sm">${escape(row.code_mode === 'GENERATED' && row.sync_status === 'REVOKED' ? 'Đã hết thời hạn' : syncLabels[row.sync_status] || row.sync_status)} · Email: ${escape(mailLabels[row.email_status] || row.email_status)}</p>
                     ${row.sync_status === 'READY' ? `<p class="mt-2 break-all font-mono text-xl font-semibold">${escape(row.code)}</p>` : ''}
                     <p class="mt-2 text-sm">${escape(localTime(row.starts_at))} → ${escape(localTime(row.ends_at))}</p>
                     ${row.sync_error ? `<p class="mt-2 text-sm text-red-800">${escape(row.sync_error)}</p>` : ''}
-                    ${data.ttlockEnabled && data.ttlockConfigured && row.sync_status !== 'REVOKED' ? `<button type="button" data-access-retry="${escape(row.booking_id)}" class="mt-3 min-h-11 rounded-xl border border-stone-300 px-4 py-2 enabled:hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800 disabled:opacity-50">Đối soát / thử lại</button>` : ''}
+                    ${data.ttlockEnabled && data.ttlockConfigured && row.sync_status !== 'REVOKED' ? `
+                        <div class="mt-3 flex flex-wrap gap-3">
+                            <button type="button" data-access-retry="${escape(row.booking_id)}" ${accessRequests.has(row.booking_id) ? 'disabled' : ''} class="min-h-11 rounded-xl border border-stone-300 px-4 py-2 enabled:hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800 disabled:opacity-50">Đối soát / thử lại</button>
+                            ${!row.code && ['PENDING', 'FAILED', 'UNKNOWN'].includes(row.sync_status)
+                                && ['CONFIRMED', 'CHECKED_IN'].includes(row.booking_status)
+                                && row.payment_status === 'PAID' && !Number(row.is_test)
+                                && new Date(row.ends_at.replace(' ', 'T') + 'Z').getTime() > Date.now()
+                                ? `<button type="button" data-access-regenerate="${escape(row.booking_id)}" ${accessRequests.has(row.booking_id) ? 'disabled' : ''} class="min-h-11 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-white enabled:hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800 disabled:opacity-50">Tạo lại mã</button>` : ''}
+                        </div>` : ''}
+                    <p data-access-feedback role="status" class="mt-2 text-sm" ${accessMessages.has(row.booking_id) ? '' : 'hidden'}>${escape(accessMessages.get(row.booking_id) || '')}</p>
                 </article>`).join('') : '<p class="text-sm text-stone-600">Chưa có mã riêng theo đơn.</p>';
             root.querySelector('[data-manual-access-panel]').hidden = !(data.manualCodes || []).length;
             root.querySelector('[data-manual-access-list]').innerHTML = (data.manualCodes || []).map(row => `<article class="rounded-xl border border-stone-200 p-4">
@@ -399,17 +410,41 @@
         }
     });
     root.querySelector('[data-booking-access-list]').addEventListener('click', async event => {
-        const button = event.target.closest('[data-access-retry]');
+        const button = event.target.closest('[data-access-retry], [data-access-regenerate]');
         if (!button) return;
-        button.disabled = true;
+        const id = button.dataset.accessRegenerate || button.dataset.accessRetry;
+        if (accessRequests.has(id)) return;
+        const action = button.hasAttribute('data-access-regenerate') ? 'regenerate' : 'retry';
+        const showFeedback = message => {
+            accessMessages.set(id, message);
+            const card = [...root.querySelectorAll('[data-access-card]')]
+                .find(item => item.dataset.accessCard === id);
+            const feedback = card?.querySelector('[data-access-feedback]');
+            if (feedback) {
+                feedback.textContent = message;
+                feedback.hidden = false;
+            }
+        };
+        accessRequests.add(id);
+        const controls = button.closest('[data-access-card]').querySelectorAll('button');
+        controls.forEach(control => { control.disabled = true; });
+        showFeedback(action === 'regenerate' ? 'Đang kiểm tra mã cũ và tạo lại mã…' : 'Đang đối soát với TTLock…');
         try {
-            await request(`/api/admin/booking-access/${encodeURIComponent(button.dataset.accessRetry)}/retry`, 'POST', {});
+            const data = await request(`/api/admin/booking-access/${encodeURIComponent(id)}/${action}`, 'POST', {});
+            showFeedback(data.message || 'Mã đã sẵn sàng.');
+            accessRequests.delete(id);
             await load();
         } catch (error) {
-            notice.textContent = error.message;
-            notice.hidden = false;
+            showFeedback(error.message);
+            accessRequests.delete(id);
+            await load();
         } finally {
-            button.disabled = false;
+            accessRequests.delete(id);
+            controls.forEach(control => { control.disabled = false; });
+            root.querySelectorAll('[data-access-retry], [data-access-regenerate]').forEach(control => {
+                const controlId = control.dataset.accessRegenerate || control.dataset.accessRetry;
+                control.disabled = accessRequests.has(controlId);
+            });
         }
     });
     const manualForm = root.querySelector('[data-manual-access-form]');

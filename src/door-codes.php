@@ -84,7 +84,7 @@ function admin_door_codes_api(string $method, ?string $id = null): never
         $now = gmdate('Y-m-d H:i:s');
         foreach ($rows as &$row) $row['effectiveStatus'] = door_code_status($row, $now);
         unset($row);
-        $access = db()->query('SELECT a.*,b.booking_code,b.guest_name,b.status booking_status,b.confirmation_email_status email_status FROM booking_access_codes a JOIN bookings b ON b.id=a.booking_id ORDER BY a.created_at DESC LIMIT 100')->fetchAll();
+        $access = db()->query('SELECT a.*,b.booking_code,b.guest_name,b.status booking_status,b.payment_status,b.is_test,b.confirmation_email_status email_status FROM booking_access_codes a JOIN bookings b ON b.id=a.booking_id ORDER BY a.created_at DESC LIMIT 100')->fetchAll();
         json_response([
             'manualCodes' => db()->query('SELECT * FROM manual_access_codes ORDER BY created_at DESC,id DESC LIMIT 100')->fetchAll(),
             'codes' => $rows, 'bookingCodes' => $access, 'csrf' => csrf_token(),

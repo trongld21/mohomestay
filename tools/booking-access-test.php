@@ -24,6 +24,7 @@ function db(): PDO { global $testDb; return $testDb; }
 function config(string $key, mixed $default = null): mixed { global $settings; return $settings[$key] ?? $default; }
 function verify_access(bool $ok, string $message): void { if (!$ok) throw new RuntimeException($message); }
 require dirname(__DIR__) . '/src/ttlock.php';
+require dirname(__DIR__) . '/src/booking.php';
 require dirname(__DIR__) . '/src/booking-access.php';
 require dirname(__DIR__) . '/src/mail.php';
 $testDb->exec("CREATE TABLE bookings (id TEXT PRIMARY KEY, room_id TEXT, booking_code TEXT, guest_name TEXT, guest_email TEXT, room_name TEXT, package_name_snapshot TEXT, stay_package TEXT, check_in TEXT, check_out TEXT, number_of_guests INT, total_price INT, status TEXT, payment_status TEXT, confirmation_email_status TEXT DEFAULT 'PENDING', confirmation_email_attempts INT DEFAULT 0, confirmation_email_sent_at TEXT, confirmation_email_error TEXT);
@@ -108,5 +109,51 @@ $customAccess = sync_booking_access($customBooking['id'], $customClient);
 verify_access($customAccess['code_mode'] === 'CUSTOM' && $customAccess['starts_at'] === '2099-01-15 07:30:00', 'Custom mode must preserve exact check-in.');
 verify_access($customStart === strtotime('2099-01-15 07:30:00 UTC') * 1000, 'Gateway must receive exact activation milliseconds.');
 
-echo "Booking access integration tests: OK (SQLite; MySQL locking not exercised)
-";
+// Explicit recovery is allowed only after remote reconciliation, never by cron.
+$settings['ttlock.code_mode'] = 'GENERATED';
+$testDb->exec('DELETE FROM booking_access_codes');
+$testDb->exec("UPDATE bookings SET status='CONFIRMED',payment_status='PAID'");
+$remote = [];
+$testDb->prepare("INSERT INTO booking_access_codes(booking_id,lock_id,code,starts_at,ends_at,code_mode,sync_status) VALUES(?,7,NULL,?,?,'GENERATED','UNKNOWN')")
+    ->execute([$id, '2099-01-15 07:00:00', '2099-01-16 06:00:00']);
+$before = $adds;
+verify_access(sync_booking_access($id, $client, true) === null && $adds === $before, 'Ordinary retry must not recreate uncertain code');
+$recreated = sync_booking_access($id, $client, true, true);
+verify_access($recreated !== null && $recreated['sync_status'] === 'READY' && $adds === $before + 1, 'Explicit regeneration recovers UNKNOWN after complete empty scan');
+verify_access(sync_booking_access($id, $client, true, true)['code'] === $recreated['code'] && $adds === $before + 1, 'Repeated regeneration preserves READY code');
+$testDb->exec("UPDATE booking_access_codes SET code=NULL,remote_id=NULL,sync_status='UNKNOWN'");
+verify_access(sync_booking_access($id, $client, true, true)['code'] === $recreated['code'] && $adds === $before + 1, 'Regeneration recovers remote code without creating a duplicate');
+$testDb->exec("UPDATE booking_access_codes SET code=NULL,remote_id=NULL,sync_status='UNKNOWN'");
+$remote = [];
+verify_access(sync_booking_access($id, $listTimeout, true, true) === null && $adds === $before + 1, 'Failed remote listing must never permit creation');
+verify_access($testDb->query('SELECT sync_status FROM booking_access_codes')->fetchColumn() === 'UNKNOWN', 'Failed explicit recovery must preserve uncertainty for cron');
+try {
+    retry_booking_access($id, false, $client);
+    throw new LogicException('Retry must not report success while code is missing');
+} catch (BookingException $error) {
+    verify_access($error->httpStatus === 409 && str_contains($error->getMessage(), 'Chưa tìm thấy mã'), 'API reports actual reconciliation failure');
+}
+$retryResult = retry_booking_access($id, true, $client);
+verify_access($retryResult['sync_status'] === 'READY' && $adds === $before + 2, 'API regeneration returns persisted READY result');
+foreach ([['CANCELLED', 'PAID'], ['CONFIRMED', 'PENDING']] as [$status, $payment]) {
+    $testDb->prepare('UPDATE bookings SET status=?,payment_status=? WHERE id=?')->execute([$status, $payment, $id]);
+    try {
+        retry_booking_access($id, true, $client);
+        throw new LogicException('API must reject ineligible booking');
+    } catch (BookingException $error) {
+        verify_access($error->httpStatus === 422 && $adds === $before + 2, 'Regeneration API checks eligibility before contacting TTLock');
+    }
+}
+$testDb->prepare("UPDATE bookings SET status='CONFIRMED',payment_status='PAID' WHERE id=?")->execute([$id]);
+$testDb->exec("UPDATE booking_access_codes SET code=NULL,remote_id=NULL,sync_status='UNKNOWN'");
+$before = $adds;
+$remote = [];
+foreach ([['CANCELLED', 'PAID'], ['CONFIRMED', 'PENDING']] as [$status, $payment]) {
+    $testDb->prepare('UPDATE bookings SET status=?,payment_status=? WHERE id=?')->execute([$status, $payment, $id]);
+    verify_access(sync_booking_access($id, $client, true, true) === null && $adds === $before, 'Regeneration must reject cancelled or unpaid bookings');
+}
+$testDb->prepare("UPDATE bookings SET status='CONFIRMED',payment_status='PAID' WHERE id=?")->execute([$id]);
+$testDb->exec("UPDATE booking_access_codes SET ends_at='2020-01-01 00:00:00'");
+verify_access(sync_booking_access($id, $client, true, true) === null && $adds === $before, 'Regeneration must reject expired access');
+
+echo "Booking access integration tests: OK (SQLite; MySQL locking not exercised)\n";
