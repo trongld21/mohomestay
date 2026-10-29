@@ -1,5 +1,13 @@
 # Mơ Home — PHP cho DirectAdmin
 
+## Khôi phục mã TTLock bị trùng PIN
+
+Migration `029_booking_access_reused_pins.sql` bỏ ràng buộc duy nhất theo khóa/PIN,
+giữ nguyên toàn bộ mã và ràng buộc mỗi đơn chỉ có một bản ghi cấp mã. PIN do TTLock
+trả về có thể lặp lại giữa các đơn; không dùng PIN làm định danh đơn.
+Nếu đơn đang `UNKNOWN` do lỗi trùng dữ liệu, chọn **Đối soát / thử lại** hoặc để cron
+đối soát mã đã có trên TTLock. Không cần tạo mã mới hay xóa mã của đơn khác.
+
 ## Xác nhận nhận tiền, khóa theo khoảng và lịch khuyến mãi
 
 Chạy migration `028_booking_recovery_and_discount_dates.sql` trước khi dùng bản cập nhật.

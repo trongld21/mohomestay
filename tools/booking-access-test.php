@@ -30,7 +30,8 @@ require dirname(__DIR__) . '/src/mail.php';
 $testDb->exec("CREATE TABLE bookings (id TEXT PRIMARY KEY, room_id TEXT, booking_code TEXT, guest_name TEXT, guest_email TEXT, room_name TEXT, package_name_snapshot TEXT, stay_package TEXT, check_in TEXT, check_out TEXT, number_of_guests INT, total_price INT, status TEXT, payment_status TEXT, confirmation_email_status TEXT DEFAULT 'PENDING', confirmation_email_attempts INT DEFAULT 0, confirmation_email_sent_at TEXT, confirmation_email_error TEXT);
     CREATE TABLE rooms (id TEXT PRIMARY KEY, name TEXT);
     INSERT INTO rooms VALUES ('pink','Pink');
-    CREATE TABLE booking_access_codes (booking_id TEXT PRIMARY KEY, lock_id INT, code TEXT, starts_at TEXT, ends_at TEXT, remote_id INT, code_mode TEXT DEFAULT 'CUSTOM', sync_status TEXT DEFAULT 'PENDING', sync_error TEXT, attempts INT DEFAULT 0, last_attempt_at TEXT, UNIQUE(lock_id,code));");
+    CREATE TABLE booking_access_codes (booking_id TEXT PRIMARY KEY, lock_id INT, code TEXT, starts_at TEXT, ends_at TEXT, remote_id INT, code_mode TEXT DEFAULT 'CUSTOM', sync_status TEXT DEFAULT 'PENDING', sync_error TEXT, attempts INT DEFAULT 0, last_attempt_at TEXT);
+    CREATE INDEX booking_access_pin_lookup ON booking_access_codes(lock_id,code);");
 $booking = ['id' => str_repeat('b',32), 'room_id' => 'pink', 'booking_code' => 'MO-TEST', 'guest_name' => 'An', 'guest_email' => 'an@example.com', 'room_name' => 'Pink', 'package_name_snapshot' => 'Qua đêm', 'stay_package' => 'overnight', 'check_in' => '2099-01-15 07:00:00', 'check_out' => '2099-01-16 05:00:00', 'number_of_guests' => 2, 'total_price' => 200000, 'status' => 'CONFIRMED', 'payment_status' => 'PAID'];
 $testDb->prepare('INSERT INTO bookings (' . implode(',', array_keys($booking)) . ') VALUES (' . implode(',', array_fill(0,count($booking),'?')) . ')')->execute(array_values($booking));
 $remote = [];
@@ -155,5 +156,25 @@ foreach ([['CANCELLED', 'PAID'], ['CONFIRMED', 'PENDING']] as [$status, $payment
 $testDb->prepare("UPDATE bookings SET status='CONFIRMED',payment_status='PAID' WHERE id=?")->execute([$id]);
 $testDb->exec("UPDATE booking_access_codes SET ends_at='2020-01-01 00:00:00'");
 verify_access(sync_booking_access($id, $client, true, true) === null && $adds === $before, 'Regeneration must reject expired access');
+
+// TTLock may return a PIN already recorded for another booking on the same lock.
+// Booking identity, rather than PIN uniqueness, owns provisioning idempotency.
+$testDb->exec('DELETE FROM booking_access_codes');
+$testDb->prepare("UPDATE bookings SET status='CONFIRMED',payment_status='PAID' WHERE id=?")->execute([$id]);
+$remote = [];
+$firstAccess = sync_booking_access($id, $client, true);
+verify_access($firstAccess !== null && $firstAccess['sync_status'] === 'READY', 'First generated PIN is persisted');
+$secondBooking = array_replace($booking, [
+    'id' => str_repeat('d', 32), 'booking_code' => 'MO-REUSED-PIN',
+    'check_in' => '2099-02-15 07:00:00', 'check_out' => '2099-02-16 05:00:00',
+]);
+$testDb->prepare('INSERT INTO bookings (' . implode(',', array_keys($secondBooking)) . ') VALUES ('
+    . implode(',', array_fill(0, count($secondBooking), '?')) . ')')->execute(array_values($secondBooking));
+$secondAccess = sync_booking_access($secondBooking['id'], $client, true);
+verify_access($secondAccess !== null && $secondAccess['sync_status'] === 'READY', 'A reused TTLock PIN must not strand a second paid booking');
+verify_access($secondAccess['code'] === $firstAccess['code'], 'Regression must exercise identical PINs');
+verify_access((int)$testDb->query("SELECT COUNT(*) FROM booking_access_codes WHERE sync_status='READY'")->fetchColumn() === 2, 'Both booking access records are retained');
+$before = $adds;
+verify_access(sync_booking_access($secondBooking['id'], $client, true)['code'] === $secondAccess['code'] && $adds === $before, 'Repeated sync keeps each booking idempotent even when PINs repeat');
 
 echo "Booking access integration tests: OK (SQLite; MySQL locking not exercised)\n";

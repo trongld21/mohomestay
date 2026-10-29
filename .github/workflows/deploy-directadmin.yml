@@ -43,7 +43,12 @@ jobs:
           COUNTER_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=counter_migration_test;charset=utf8mb4
           COUNTER_TEST_USER: root
           COUNTER_TEST_PASSWORD: ''
-        run: php tools/people-counter-migration-test.php
+          ACCESS_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=counter_migration_test;charset=utf8mb4
+          ACCESS_TEST_USER: root
+          ACCESS_TEST_PASSWORD: ''
+        run: |
+          php tools/people-counter-migration-test.php
+          php tools/booking-access-migration-test.php
       - name: Run unit tests
         run: |
           php tools/test.php
