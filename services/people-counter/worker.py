@@ -123,8 +123,7 @@ def annotate(frame, boxes, counter, config, totals):
             cv2.putText(image, label, (x1, max(20, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
     start = tuple(int(v * dimension) for v, dimension in zip(config['line_start'], (width, height)))
     end = tuple(int(v * dimension) for v, dimension in zip(config['line_end'], (width, height)))
-    cv2.arrowedLine(image, start, end, (0, 200, 255), 2)
-    cv2.putText(image, f"SESSION IN {totals['IN']} / OUT {totals['OUT']}", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+    cv2.line(image, start, end, (0, 200, 255), 2)
     return image
 
 

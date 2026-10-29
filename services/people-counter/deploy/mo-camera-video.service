@@ -1,0 +1,20 @@
+[Unit]
+Description=Copy encoded video to private HLS segments
+Wants=mo-camera-relay.service
+After=mo-camera-relay.service
+
+[Service]
+Slice=mo-camera.slice
+WorkingDirectory=%h/mo-camera
+RuntimeDirectory=mo-camera-video
+RuntimeDirectoryMode=0700
+Environment=LD_LIBRARY_PATH=%h/mo-camera/video-tools/root/usr/lib/x86_64-linux-gnu:%h/mo-camera/video-tools/root/usr/lib/x86_64-linux-gnu/blas:%h/mo-camera/video-tools/root/usr/lib/x86_64-linux-gnu/lapack
+ExecStart=%h/mo-camera/video-tools/root/usr/bin/ffmpeg -nostdin -hide_banner -loglevel error -analyzeduration 1000000 -probesize 262144 -threads 1 -i udp://127.0.0.1:19459?fifo_size=4096&localaddr=127.0.0.1&overrun_nonfatal=1 -map 0:v:0 -an -r 20 -fps_mode cfr -c:v libx264 -preset ultrafast -tune zerolatency -crf 20 -g 20 -keyint_min 20 -sc_threshold 0 -bf 0 -threads 1 -f hls -hls_time 1 -hls_list_size 6 -hls_start_number_source epoch -hls_flags delete_segments+temp_file+omit_endlist+program_date_time+independent_segments -hls_segment_filename %t/mo-camera-video/segment%%d.ts %t/mo-camera-video/index.m3u8
+Restart=always
+RestartSec=5
+MemoryMax=192M
+NoNewPrivileges=yes
+UMask=0077
+
+[Install]
+WantedBy=default.target

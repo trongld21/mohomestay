@@ -13,10 +13,13 @@ try {
     $files = agent_read_archive($archive);
     $required = [
         'public_html/assets/people-counter.js',
+        'public_html/assets/hls-light.js',
+        'public_html/assets/counter-video-overlay.js',
         'public_html/assets/people-counter-offline.js',
         'public_html/assets/tailwind.css',
         'src/people-counter.php',
         'src/people-counter-preview.php',
+        'src/people-counter-video.php',
         'src/people-counter-view.php',
         'src/people-counter-offline-view.php',
         'database/migrations/026_people_counter.sql',

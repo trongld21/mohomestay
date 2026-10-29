@@ -2,6 +2,32 @@
 
 declare(strict_types=1);
 
+function people_counter_overlay_validate(mixed $overlay, int $frameTime): array
+{
+    $fail = static fn() => throw new BookingException('Dữ liệu nhận diện không hợp lệ.', 422);
+    if (!is_array($overlay) || !is_int($overlay['atMs'] ?? null)
+        || abs($overlay['atMs'] - $frameTime * 1000) > 3000
+        || !is_array($overlay['line'] ?? null) || !array_is_list($overlay['line']) || count($overlay['line']) !== 2
+        || !is_array($overlay['boxes'] ?? null) || !array_is_list($overlay['boxes']) || count($overlay['boxes']) > 20) $fail();
+    $coordinates = static function (mixed $values, int $count) use ($fail): array {
+        if (!is_array($values) || !array_is_list($values) || count($values) !== $count) $fail();
+        foreach ($values as $value) {
+            if ((!is_int($value) && !is_float($value)) || !is_finite((float)$value) || $value < 0 || $value > 1) $fail();
+        }
+        return $values;
+    };
+    $line = array_map(static fn($point) => $coordinates($point, 2), $overlay['line']);
+    $boxes = [];
+    foreach ($overlay['boxes'] as $box) {
+        if (!is_array($box) || !is_int($box['id'] ?? null) || $box['id'] < 0 || $box['id'] > 2147483647
+            || !array_key_exists('direction', $box) || !in_array($box['direction'], ['IN', 'OUT', null], true)) $fail();
+        $rect = $coordinates($box['rect'] ?? null, 4);
+        if ($rect[0] >= $rect[2] || $rect[1] >= $rect[3]) $fail();
+        $boxes[] = ['id' => $box['id'], 'rect' => $rect, 'direction' => $box['direction']];
+    }
+    return ['atMs' => $overlay['atMs'], 'line' => $line, 'boxes' => $boxes];
+}
+
 function people_counter_preview_validate(mixed $preview, int $now): ?array
 {
     if ($preview === null) return null;
@@ -18,6 +44,9 @@ function people_counter_preview_validate(mixed $preview, int $now): ?array
         throw new BookingException('Khung hình phải là JPEG tối đa 1280 px mỗi cạnh.', 422);
     }
     $result = ['jpeg' => base64_encode($jpeg), 'frameAt' => $preview['frameAt']];
+    if (isset($preview['overlay'])) {
+        $result['overlay'] = people_counter_overlay_validate($preview['overlay'], strtotime($at . ' UTC'));
+    }
     if (isset($preview['session'])) {
         $session = $preview['session'];
         $started = is_array($session) && is_string($session['startedAt'] ?? null)

@@ -34,6 +34,10 @@ function handle_api(string $path, string $method): never
             }
             json_response(['message' => 'Mail server đã nhận email thử gửi tới mohomestay01@gmail.com. Kiểm tra Hộp thư đến và Spam.']);
         }
+        if ($path === '/api/admin/people-counter/video') {
+            require_once APP_ROOT . '/src/people-counter-video.php';
+            people_counter_video_api($method);
+        }
         if ($path === '/api/admin/people-counter/preview') {
             require_once APP_ROOT . '/src/people-counter.php';
             people_counter_preview_api($method);

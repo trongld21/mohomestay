@@ -72,6 +72,8 @@ jobs:
           node --check public/assets/booking-identity.js
           node --check public/assets/door-codes.js
           node --check public/assets/people-counter.js
+          node --check public/assets/counter-video-overlay.js
+          node tools/counter-video-overlay-test.cjs
           node --check public/assets/people-counter-offline.js
           node tools/people-counter-offline-test.cjs
       - name: Build DirectAdmin upload package

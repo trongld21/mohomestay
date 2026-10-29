@@ -16,6 +16,17 @@ $payload = ['frameAt' => gmdate('Y-m-d\TH:i:s\Z', $now), 'jpeg' => base64_encode
 // A checked-in synthetic JPEG keeps CI independent of the optional GD extension.
 $validated = people_counter_preview_validate($payload, $now);
 preview_check($validated['jpeg'] === $payload['jpeg'], 'Valid JPEG changed.');
+$overlay = ['atMs' => $now * 1000, 'line' => [[0.04, 0.52], [0.3, 0.98]],
+    'boxes' => [['id' => 12, 'rect' => [0.1, 0.2, 0.3, 0.8], 'direction' => 'IN']]];
+preview_check(people_counter_preview_validate([...$payload, 'overlay' => $overlay], $now)['overlay'] === $overlay, 'Detection metadata must survive ingest.');
+foreach ([['atMs' => ($now - 10) * 1000], ['boxes' => array_fill(0, 21, $overlay['boxes'][0])],
+    ['line' => [[-1, 0], [1, 1]]], ['boxes' => [['id' => 1, 'rect' => [0.4, 0.2, 0.1, 0.8], 'direction' => null]]]] as $invalid) {
+    try {
+        people_counter_preview_validate([...$payload, 'overlay' => array_replace($overlay, $invalid)], $now);
+        throw new RuntimeException('Invalid overlay accepted.');
+    } catch (BookingException) {
+    }
+}
 $session = ['id' => str_repeat('a', 32), 'startedAt' => gmdate('Y-m-d\TH:i:s\Z', $now - 3600), 'in' => 7, 'out' => 10, 'trial' => true];
 $withSession = people_counter_preview_validate([...$payload, 'session' => $session], $now);
 preview_check($withSession['session'] === $session, 'Live totals must remain separate from operational totals.');

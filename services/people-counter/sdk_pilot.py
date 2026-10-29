@@ -16,6 +16,7 @@ from worker import LatestFrames, annotate, encode_preview, make_counter, send_lo
 from detection_region import DetectionRegion
 from live_session import load_session
 from trial_journal import TrialJournal, delivery_settings
+from overlay import detection_overlay
 
 
 def write_heartbeat(path, state):
@@ -157,12 +158,10 @@ def run(args):
                 processed += 1
                 if now - last_preview >= 1 / 3:
                     image = annotate(image, boxes, counter, config, totals)
-                    label = 'AI TRIAL / HISTORY ENABLED' if journal else 'SDK PILOT / TEST LINE / NO OPERATIONAL EVENTS'
-                    cv2.putText(image, label,
-                                (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 220, 255), 2)
                     preview = encode_preview(image, at, max_side=1280, quality=85)
                     if preview:
                         preview['session'] = session.copy()
+                        preview['overlay'] = detection_overlay(boxes, counter, config, image.shape, received)
                         if args.send_preview:
                             with health_lock:
                                 health['preview'] = preview

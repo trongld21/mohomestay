@@ -27,7 +27,7 @@ function render_people_counter_page(): void
     $button = 'min-h-11 rounded-xl border border-[#d8c9b8] bg-white px-4 py-2 text-sm font-semibold text-[#624734] enabled:hover:bg-[#f4ece1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] disabled:cursor-not-allowed disabled:opacity-40';
     $input = 'box-border min-h-11 w-full min-w-0 max-w-full rounded-xl border border-[#d8c9b8] bg-white px-3 py-2 text-base text-[#45382f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e] sm:text-sm';
     ?>
-    <section class="mx-auto grid w-full min-w-0 max-w-[1680px] gap-4 text-[#45382f] sm:gap-5" data-people-counter>
+    <section class="mx-auto grid w-full min-w-0 max-w-[1680px] gap-4 text-[#45382f] sm:gap-5" data-people-counter data-counter-video-enabled="<?= env_value('PEOPLE_COUNTER_VIDEO_ORIGIN', '') !== '' ? '1' : '0' ?>">
         <header class="grid gap-3">
             <p class="text-xs font-semibold tracking-widest text-[#79543e]">MƠ HOME · VẬN HÀNH</p>
             <div class="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -69,6 +69,8 @@ function render_people_counter_page(): void
                 </header>
                 <div class="relative flex aspect-video min-h-44 w-full max-h-[60svh] items-center justify-center overflow-hidden bg-stone-900 sm:min-h-52 lg:max-h-[45svh] 2xl:max-h-[50svh]" data-counter-screen>
                     <img class="absolute inset-0 hidden h-full w-full object-contain" alt="Camera với khung theo dõi người và vạch đếm vào ra" data-counter-image>
+                    <video class="absolute inset-0 hidden h-full w-full object-contain" muted playsinline controls aria-label="Video trực tiếp camera lễ tân" data-counter-video></video>
+                    <canvas class="pointer-events-none absolute inset-0 hidden h-full w-full" aria-hidden="true" data-counter-overlay></canvas>
                     <p class="max-w-md px-4 py-3 text-center text-xs leading-relaxed text-stone-200 sm:px-6 sm:text-sm" data-counter-camera-empty>Đang chờ hình từ dịch vụ lấy video.</p>
                 </div>
                 <footer class="flex min-w-0 flex-wrap justify-between gap-2 p-3 text-xs text-stone-600 sm:p-4">
@@ -141,6 +143,8 @@ function render_people_counter_page(): void
             </footer>
         </section>
     </section>
+    <script defer src="<?= e(asset_url('/assets/hls-light.js')) ?>"></script>
+    <script defer src="<?= e(asset_url('/assets/counter-video-overlay.js')) ?>"></script>
     <script defer src="<?= e(asset_url('/assets/people-counter.js')) ?>"></script>
     <?php
 }

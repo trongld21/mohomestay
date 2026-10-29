@@ -16,6 +16,101 @@
     let previewCamera = form.elements.cameraId.value;
     let previewLastAt = null;
     let sessionSnapshot = null;
+    const video = find('video');
+    let videoReady = false;
+    let videoPlayer = null;
+    let videoRetry = null;
+    const overlayCanvas = find('overlay');
+    let detectionFrames = [];
+    let detectionLine = null;
+    let overlayAnimation = null;
+
+    function drawOverlay() {
+        if (!videoReady || previewPaused || document.hidden) return;
+        const at = videoPlayer?.playingDate?.getTime()
+            ?? (typeof video.getStartDate === 'function' ? video.getStartDate().getTime() + video.currentTime * 1000 : NaN);
+        const frame = CounterVideoOverlay.nearestFrame(detectionFrames, at);
+        CounterVideoOverlay.draw(overlayCanvas, video, detectionLine, frame);
+        overlayAnimation = requestAnimationFrame(drawOverlay);
+    }
+
+    function rememberOverlay(overlay) {
+        if (!overlay || !Number.isFinite(overlay.atMs) || !Array.isArray(overlay.line) || !Array.isArray(overlay.boxes)) return;
+        detectionLine = overlay.line;
+        if (!detectionFrames.some(frame => frame.atMs === overlay.atMs)) detectionFrames.push(overlay);
+        detectionFrames = detectionFrames.filter(frame => frame.atMs > Date.now() - 45000).slice(-150);
+    }
+
+    function stopVideo() {
+        cancelAnimationFrame(overlayAnimation);
+        overlayCanvas.classList.add('hidden');
+        clearTimeout(videoRetry);
+        videoPlayer?.destroy();
+        videoPlayer = null;
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+        video.classList.add('hidden');
+        videoReady = false;
+    }
+
+    function startVideo() {
+        if (root.dataset.counterVideoEnabled !== '1' || previewPaused || document.hidden) return;
+        stopVideo();
+        const source = `/api/admin/people-counter/video?${new URLSearchParams({cameraId: form.elements.cameraId.value})}`;
+        if (window.Hls?.isSupported()) {
+            videoPlayer = new Hls({
+                liveSyncDuration: 2,
+                liveMaxLatencyDuration: 5,
+                liveSyncOnStallIncrease: 0.5,
+                maxLiveSyncPlaybackRate: 1.2,
+                backBufferLength: 4,
+                maxBufferLength: 4,
+                maxMaxBufferLength: 8,
+                maxBufferSize: 4 * 1024 * 1024,
+                capLevelToPlayerSize: true
+            });
+            videoPlayer.on(Hls.Events.ERROR, (_event, data) => {
+                if (!data.fatal) return;
+                stopVideo();
+                loadPreview();
+                videoRetry = setTimeout(startVideo, 10000);
+            });
+            videoPlayer.loadSource(source);
+            videoPlayer.attachMedia(video);
+            videoPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
+                video.play().catch(() => {
+                    video.classList.remove('hidden');
+                });
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = source;
+            video.play().catch(() => video.classList.remove('hidden'));
+        }
+    }
+
+    video.addEventListener('playing', () => {
+        videoReady = true;
+        video.classList.remove('hidden');
+        find('image').classList.add('hidden');
+        find('image').removeAttribute('src');
+        find('camera-empty').classList.add('hidden');
+        find('frame-status').textContent = `Video trực tiếp · ${video.videoWidth} × ${video.videoHeight}`;
+        overlayCanvas.classList.remove('hidden');
+        cancelAnimationFrame(overlayAnimation);
+        drawOverlay();
+    });
+    video.addEventListener('error', () => {
+        if (!video.getAttribute('src')) return;
+        stopVideo();
+        loadPreview();
+        videoRetry = setTimeout(startVideo, 10000);
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) stopVideo();
+        else startVideo();
+    });
+    window.addEventListener('pagehide', stopVideo);
     const previewStates = {
         STARTING: ['Đang khởi động cầu nối hình ảnh trên PC. Vui lòng chờ.', 'Đang khởi động cầu nối'],
         MINIMIZED: ['Imou PC đang thu nhỏ. Mở lại cửa sổ Imou để tiếp tục hình ảnh; không cần tải lại trang.', 'Chờ mở lại Imou PC'],
@@ -27,6 +122,7 @@
     };
 
     function clearPreview(message) {
+        if (videoReady && !previewPaused) return;
         find('image').classList.add('hidden');
         find('image').removeAttribute('src');
         find('camera-empty').textContent = message;
@@ -64,7 +160,7 @@
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 10000);
         try {
-            const metadataOnly = previewPaused;
+            const metadataOnly = previewPaused || videoReady;
             const response = await fetch(`/api/admin/people-counter/preview?${new URLSearchParams({cameraId: camera, metadataOnly: metadataOnly ? '1' : '0'})}`, {cache: 'no-store', signal: controller.signal});
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Chưa tải được hình ảnh camera.');
@@ -88,6 +184,7 @@
                 throw new Error('Khung hình không hợp lệ hoặc đã quá cũ.');
             }
             renderSession(data.session);
+            rememberOverlay(data.overlay);
             previewLastAt = at.getTime();
             if (previewPaused || metadataOnly) return;
             find('image').src = `data:image/jpeg;base64,${data.jpeg}`;
@@ -113,13 +210,21 @@
         find('pause').setAttribute('aria-pressed', String(previewPaused));
         find('pause').textContent = previewPaused ? 'Tiếp tục hình ảnh' : 'Tạm dừng hình ảnh';
         if (previewPaused) {
+            stopVideo();
             clearPreview('Hình ảnh đã tạm dừng. Số lượt vẫn cập nhật khi dịch vụ AI đang chạy.');
             find('frame-status').textContent = 'Đã tạm dừng xem';
         } else {
+            startVideo();
             loadPreview();
         }
     });
-    form.elements.cameraId.addEventListener('change', loadPreview);
+    form.elements.cameraId.addEventListener('change', () => {
+        detectionFrames = [];
+        detectionLine = null;
+        stopVideo();
+        startVideo();
+        loadPreview();
+    });
     setInterval(() => {
         if (previewLastAt && Date.now() - previewLastAt > 30000) {
             renderSession(null);
@@ -273,4 +378,5 @@
     }, 5000);
     load();
     loadPreview();
+    startVideo();
 })();
