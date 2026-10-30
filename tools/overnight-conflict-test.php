@@ -66,6 +66,12 @@ foreach (['22:00', '10:00'] as $checkIn) {
     $matrixFixtures[] = ['room' => $snapshot['rooms'][0], 'checks' => $checks];
 }
 
+$pdo->exec('DELETE FROM bookings');
+$insert->execute(['unpaid-hold', 'pink', $a, $b, 'PENDING', gmdate('Y-m-d H:i:s', time() + 900)]);
+conflict_expect(room_booking_conflict($pdo, 'pink', $a, $b), 'An active unpaid hold must block another booking of the exact same room and stay.');
+$pdo->prepare('UPDATE bookings SET hold_expires_at=?')->execute([gmdate('Y-m-d H:i:s', time() - 1)]);
+conflict_expect(!room_booking_conflict($pdo, 'pink', $a, $b), 'An expired unpaid request is retained in history without blocking a new request.');
+
 if (in_array('--json', $argv, true)) {
     echo json_encode($matrixFixtures, JSON_THROW_ON_ERROR);
     exit;

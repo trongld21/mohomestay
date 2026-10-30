@@ -9,6 +9,8 @@ assert.equal(matches({...stay, status: 'CHECKED_OUT'}, filters), false, 'Complet
 assert.equal(matches({...stay, status: 'CHECKED_OUT'}, {...filters, showFinished: true}), true, 'History remains available');
 assert.equal(matches({...stay, status: 'CHECKED_OUT'}, {...filters, status: 'CHECKED_OUT'}), true, 'Explicit status filter can retrieve finished stays');
 assert.equal(isFinished({...stay, status: 'CANCELLED'}), true, 'Cancelled stays belong to hidden history');
+assert.equal(matches({...stay, status: 'EXPIRED', payment_status: 'PENDING'}, filters), false, 'Expired unpaid holds must not remain in the pending list');
+assert.equal(matches({...stay, status: 'EXPIRED', payment_status: 'PENDING'}, {...filters, showFinished: true}), true, 'Expired requests remain available in history');
 for (const payment_status of ['PAID', 'UNPAID', 'REFUNDED']) {
     const cancelled = {...stay, status: 'CANCELLED', payment_status};
     assert.equal(matches(cancelled, filters), false, 'All cancelled stays hidden by default');

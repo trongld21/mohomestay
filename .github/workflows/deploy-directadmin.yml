@@ -59,6 +59,8 @@ jobs:
           php tools/booking-identity-test.php
           php tools/manual-access-test.php
           php tools/room-test.php
+          php tools/room-operations-test.php
+          php tools/overnight-conflict-test.php
           php tools/room-discount-test.php
           php tools/upload-test.php
           php tools/ui-test.php
@@ -73,6 +75,7 @@ jobs:
           node --check public/assets/admin.js
           node --check public/assets/admin-booking-filters.js
           node tools/admin-booking-filters-test.cjs
+          node tools/admin-expired-booking-test.cjs
           node --check public/assets/rooms.js
           node --check public/assets/booking-identity.js
           node --check public/assets/door-codes.js

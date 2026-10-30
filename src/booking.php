@@ -174,6 +174,13 @@ function booking_lifecycle(array $booking, ?int $now = null): array
     $now ??= time();
     $status = (string)$booking['status'];
     $source = in_array($status, ['CHECKED_IN', 'CHECKED_OUT', 'CANCELLED'], true) ? 'MANUAL' : 'AUTO';
+    $holdDeadline = !empty($booking['hold_expires_at']) ? strtotime($booking['hold_expires_at'] . ' UTC') : false;
+    if ($status === 'PENDING' && ($booking['payment_status'] ?? '') !== 'PAID'
+        && $holdDeadline !== false && $holdDeadline <= $now) {
+        // Display the same expiry that inventory already uses; keep persisted state
+        // available for late payment reconciliation instead of cancelling the order.
+        $status = 'EXPIRED';
+    }
     if (in_array($status, ['CONFIRMED', 'CHECKED_IN'], true)) {
         if ($status === 'CONFIRMED' && $now >= strtotime($booking['check_in'] . ' UTC')) {
             $status = 'CHECKED_IN';
@@ -202,6 +209,7 @@ function booking_transition_allowed(string $from, string $to, bool $superAdmin):
     }
     $allowed = [
         'PENDING' => ['CANCELLED'],
+        'EXPIRED' => ['CANCELLED'],
         'CONFIRMED' => ['CHECKED_IN', 'CANCELLED'],
         'CHECKED_IN' => ['CHECKED_OUT'],
     ];

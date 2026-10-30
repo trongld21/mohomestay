@@ -93,7 +93,7 @@
         CHECKED_IN: "Đang lưu trú",
         CHECKED_OUT: "Đã kết thúc",
         CANCELLED: "Đã hủy",
-        EXPIRED: "Hết hạn",
+        EXPIRED: "Hết hạn giữ chỗ",
     };
     function bookingDate(value) {
         if (!value) return "—";
@@ -307,12 +307,12 @@
             && !Number(booking.is_test)
             && booking.payment_status !== "REFUNDED"
             && (booking.payment_status !== "PAID" || booking.status === "CANCELLED")
-            && (["PENDING", "CONFIRMED", "CHECKED_IN", "CANCELLED"].includes(booking.status)
+            && (["PENDING", "EXPIRED", "CONFIRMED", "CHECKED_IN", "CANCELLED"].includes(booking.status)
                 || (["PHONE", "ZALO"].includes(booking.booking_source) && booking.status === "CHECKED_OUT"));
         const action = (status, label, symbol, danger = false) => `
             <button type="button" ${danger ? 'class="booking-cancel"' : ""} data-booking-action="${status}" data-id="${esc(booking.id)}" aria-label="${label} đơn ${esc(booking.booking_code)}">${icon(symbol)} ${label}</button>`;
         let actions = "";
-        if (booking.status === "PENDING") actions = action("CANCELLED", "Hủy đơn", "x", true);
+        if (["PENDING", "EXPIRED"].includes(booking.status)) actions = action("CANCELLED", "Hủy đơn", "x", true);
         if (booking.status === "CONFIRMED") actions = action("CHECKED_IN", "Nhận sớm", "key") + action("CANCELLED", "Hủy", "x", true);
         if (booking.status === "CHECKED_IN" && LANG_HOME.abilities.includes("availability.checkout")) {
             actions = `<a class="timeline-button" href="/admin/availability#booking-${encodeURIComponent(booking.id)}">Trả phòng & phụ thu</a>`;
@@ -325,7 +325,7 @@
             && !booking.continued_from_booking_id && !booking.continued_to_booking_id) {
             actions += `<button type="button" class="timeline-button" data-booking-stay="${esc(booking.id)}">Đổi phòng / sửa lịch</button>`;
         }
-        if (LANG_HOME.isSuperAdmin === true && ["CHECKED_IN", "CHECKED_OUT", "EXPIRED"].includes(booking.status)
+        if (LANG_HOME.isSuperAdmin === true && ["CHECKED_IN", "CHECKED_OUT"].includes(booking.status)
             && !booking.continued_to_booking_id) {
             actions += action("CANCELLED", "Hủy đơn", "x", true);
         }
