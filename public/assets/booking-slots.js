@@ -61,7 +61,7 @@
 
     function overlaps(window, interval) {
         const needsCleaning = ['CONFIRMED', 'CHECKED_IN', 'PENDING'].includes(interval.status);
-        const occupiedEnd = new Date(window.end.getTime() + (needsCleaning ? 3600000 : 0));
+        const occupiedEnd = new Date(window.end.getTime() + (needsCleaning ? 1800000 : 0));
         return window.start < new Date(interval.end) && occupiedEnd > new Date(interval.start);
     }
 

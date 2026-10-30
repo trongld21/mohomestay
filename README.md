@@ -434,7 +434,7 @@ quá khứ theo giờ Việt Nam. Ngày tạo đơn, gói/giá đã chốt và t
 Nhân viên không được gọi API này dù đã có quyền cập nhật đơn thông thường.
 
 Thao tác dùng chung kiểm tra tồn phòng với ma trận **Tìm phòng trống**, gồm lịch
-khách, 1 giờ dọn phòng, khóa phòng và giữ báo giá. Sau khi lưu, ma trận giải phóng
+khách, 30 phút dọn phòng, khóa phòng và giữ báo giá. Sau khi lưu, ma trận giải phóng
 phòng cũ và tính lại lịch cùng thời gian dọn ở phòng mới. Lý do và dữ liệu trước/sau
 được ghi trong `booking_stay_changes`; chạy migration `013_booking_stay_changes`
 bằng `php tools/migrate.php` trước khi dùng tính năng.

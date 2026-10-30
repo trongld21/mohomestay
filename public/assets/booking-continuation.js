@@ -18,7 +18,7 @@
         </div>
         <form class="grid gap-4 p-4" data-continuation-form>
             <p class="text-sm font-semibold" data-continuation-title></p>
-            <p class="text-sm text-stone-600">Nối đúng giờ trả gói trước cho cùng khách và cùng phòng. Không dọn giữa hai gói; vẫn chừa 1 giờ dọn sau gói cuối.</p>
+            <p class="text-sm text-stone-600">Nối đúng giờ trả gói trước cho cùng khách và cùng phòng. Không dọn giữa hai gói; vẫn chừa 30 phút dọn sau gói cuối.</p>
             <label class="grid gap-1 text-sm">Gói ở tiếp<select class="timeline-input" name="packageId" required></select></label>
             <p class="text-sm font-semibold" data-continuation-summary></p>
             <label class="grid gap-1 text-sm">Thanh toán gói mới<select class="timeline-input" name="paymentStatus">

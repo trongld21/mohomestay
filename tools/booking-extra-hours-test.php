@@ -50,13 +50,13 @@ $pdo->exec("CREATE TABLE bookings (id TEXT,room_id TEXT,check_in TEXT,check_out 
 CREATE TABLE booking_checkout_charges (booking_id TEXT,actual_checkout_at TEXT);
 CREATE TABLE room_emergency_locks (id TEXT,room_id TEXT,starts_at TEXT,ended_at TEXT);
 CREATE TABLE room_quote_holds (id TEXT,room_id TEXT,starts_at TEXT,ends_at TEXT,released_at TEXT,expires_at TEXT);");
-$nextStart = $quote['end']->modify('+30 minutes');
+$nextStart = $quote['end']->modify('+29 minutes');
 $pdo->prepare("INSERT INTO bookings VALUES ('next','pink',?,?,'CONFIRMED',NULL)")
     ->execute([mysql_datetime($nextStart), mysql_datetime($nextStart->modify('+3 hours'))]);
 try {
     assert_room_inventory($pdo, 'pink', mysql_datetime($quote['start']), mysql_datetime($quote['end']));
     throw new RuntimeException('Extension without enough cleaning time accepted.');
 } catch (BookingException $error) {
-    extra_check($error->httpStatus === 409, 'Extended checkout must leave the entire cleaning hour.');
+    extra_check($error->httpStatus === 409, 'Extended checkout must leave the entire 30-minute cleaning period.');
 }
 echo "Booking extra hour pricing, validation, checkout and cleaning conflicts: OK\n";

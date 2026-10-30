@@ -74,7 +74,8 @@ continuation_reject(fn() => create_booking_continuation($pdo, $parentId, ['packa
 continuation_reject(fn() => assert_room_inventory($pdo, 'r', $boundary, $end));
 $inventory = availability_snapshot($pdo, [$room], $day->format('Y-m-d'), 2);
 $cleaning = array_values(array_filter($inventory['rooms'][0]['intervals'], static fn($interval) => $interval['status'] === 'CLEANING'));
-continuation_check(count($cleaning) === 1 && strtotime($cleaning[0]['start']) === strtotime($end . ' UTC'), 'Only final checkout has the cleaning hour.');
+continuation_check(count($cleaning) === 1 && strtotime($cleaning[0]['start']) === strtotime($end . ' UTC')
+    && strtotime($cleaning[0]['end']) - strtotime($cleaning[0]['start']) === 1800, 'Only final checkout has 30 minutes cleaning.');
 $parent = $pdo->query("SELECT * FROM bookings WHERE id='" . $parentId . "'")->fetch();
 $state = booking_lifecycle($parent, strtotime($boundary . ' UTC') + 60);
 continuation_check($state['status'] === 'CHECKED_OUT' && !$state['isOverdue'] && $state['continuingStay'], 'Finished first package must not become overdue while guest stays in the next package.');

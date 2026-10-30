@@ -74,7 +74,7 @@ $pdo->prepare("INSERT INTO room_quote_holds VALUES ('hold','black','2026-10-23 1
     ->execute([gmdate('Y-m-d H:i:s', time() + 3600)]);
 reject_stay(fn() => correct_booking_stay($pdo, $id, $input), 409);
 $pdo->exec('DELETE FROM room_quote_holds');
-$pdo->prepare("INSERT INTO bookings VALUES (?,'black','2026-10-24 03:30:00','2026-10-24 07:00:00','CONFIRMED',NULL,1,1,'PAID','MO-OTHER','2026-10-20 00:00:00')")->execute([str_repeat('b', 32)]);
+$pdo->prepare("INSERT INTO bookings VALUES (?,'black','2026-10-24 03:29:00','2026-10-24 07:00:00','CONFIRMED',NULL,1,1,'PAID','MO-OTHER','2026-10-20 00:00:00')")->execute([str_repeat('b', 32)]);
 reject_stay(fn() => correct_booking_stay($pdo, $id, $input), 409);
 expect_stay($pdo->query('SELECT COUNT(*) FROM booking_stay_changes')->fetchColumn() === 0, 'Rejected edit must not be audited as successful');
 $pdo->exec("DELETE FROM bookings WHERE booking_code='MO-OTHER'");
@@ -102,7 +102,7 @@ expect_stay(count($newRoom['intervals']) === 2, 'New room matrix must contain st
 expect_stay($newRoom['intervals'][0]['start'] === '2026-10-23T15:00:00+00:00', 'Matrix uses corrected Vietnam arrival in UTC');
 expect_stay($newRoom['intervals'][1]['status'] === 'CLEANING'
     && $newRoom['intervals'][1]['start'] === '2026-10-24T04:00:00+00:00'
-    && $newRoom['intervals'][1]['end'] === '2026-10-24T05:00:00+00:00', 'Matrix derives exactly one hour cleaning from corrected checkout');
+    && $newRoom['intervals'][1]['end'] === '2026-10-24T04:30:00+00:00', 'Matrix derives exactly 30 minutes cleaning from corrected checkout');
 // A room-only move must preserve seconds instead of silently shifting the booked interval.
 $seconds = [
     'roomId' => 'mo', 'checkIn' => '2026-10-23T22:00:25', 'checkOut' => '2026-10-24T11:00:25',

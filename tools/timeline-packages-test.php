@@ -62,6 +62,6 @@ $afterBooking = availability_snapshot($pdo, [$room], $day, 2);
 $cleaning = array_values(array_filter($afterBooking['rooms'][0]['intervals'], static fn($interval) => $interval['status'] === 'CLEANING'));
 operation_check(count($cleaning) === 1, 'Cleaning appears after a booking exists.');
 operation_check((new DateTimeImmutable($cleaning[0]['start']))->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'))->format('H:i') === '21:00', 'Cleaning starts at checkout.');
-operation_check(strtotime($cleaning[0]['end']) - strtotime($cleaning[0]['start']) === 3600, 'Cleaning occupies exactly one hour after checkout.');
+operation_check(strtotime($cleaning[0]['end']) - strtotime($cleaning[0]['start']) === 1800, 'Cleaning occupies exactly 30 minutes after checkout.');
 
 echo "Timeline server package availability: OK\n";

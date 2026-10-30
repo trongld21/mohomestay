@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/booking-continuation.php';
 
-const ROOM_CLEANING_SECONDS = 3600;
+const ROOM_CLEANING_SECONDS = 1800;
 
 function room_occupied_until(array $booking, ?string $actualCheckout = null): string
 {
@@ -56,7 +56,7 @@ function assert_room_inventory(PDO $pdo, string $roomId, string $start, string $
         throw new BookingException('Khung giờ này đang được nhân viên giữ chỗ. Vui lòng chọn giờ hoặc phòng khác.', 409);
     }
     if (room_booking_conflict($pdo, $roomId, $start, $end, $exceptId)) {
-        throw new BookingException('Khung giờ trùng lịch đặt hoặc 1 giờ dọn phòng. Vui lòng chọn giờ khác.', 409);
+        throw new BookingException('Khung giờ trùng lịch đặt hoặc 30 phút dọn phòng. Vui lòng chọn giờ khác.', 409);
     }
 }
 

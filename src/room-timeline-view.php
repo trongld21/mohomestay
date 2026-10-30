@@ -49,7 +49,7 @@ function render_room_timeline(?array $room = null): void
             <span class="flex items-center gap-2"><i class="size-3 rounded bg-sky-200" aria-hidden="true"></i>Đang giữ báo giá</span>
             <span class="flex items-center gap-2"><i class="size-3 rounded bg-stone-200" aria-hidden="true"></i>Đã qua / ngưng nhận</span>
         </div>
-        <p class="mb-3 text-sm text-[#736b61]">Mỗi cột là một khoảng giờ. Ví dụ: trả phòng lúc 10:00 → dọn 10:00–11:00 → nhận khách mới từ 11:00.</p>
+        <p class="mb-3 text-sm text-[#736b61]">Mỗi cột là một khoảng giờ. Ví dụ: trả phòng lúc 10:00 → dọn 10:00–10:30 → nhận khách mới từ 10:30.</p>
         <p class="mb-3 text-sm text-[#736b61]" data-timeline-status role="status">Đang kết nối lịch phòng…</p>
         <div class="<?= $staff ? 'overflow-x-auto rounded-none' : 'max-h-[30rem] overflow-auto rounded-xl' ?> border border-[#e5dacb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800"
             data-timeline-scroll tabindex="0" role="region" aria-label="Ma trận lịch phòng, cuộn ngang để xem các giờ">

@@ -13,12 +13,12 @@
     const cash = (value) => new Intl.NumberFormat("vi-VN").format(value) + "đ";
     const overlaps = (start, end, interval) => start < timestamp(interval.end) && end > timestamp(interval.start);
     const searchOverlaps = (start, end, interval) => overlaps(start, end +
-        (["CONFIRMED", "CHECKED_IN", "PENDING"].includes(interval.status) ? 3600000 : 0), interval);
+        (["CONFIRMED", "CHECKED_IN", "PENDING"].includes(interval.status) ? 1800000 : 0), interval);
 
     function freeWindows(room, start, end) {
         if (!room.active || end <= start) return [];
         const busy = room.intervals.filter((i) => searchOverlaps(start, end, i))
-            .map((i) => [Math.max(start, timestamp(i.start) - (["CONFIRMED", "CHECKED_IN", "PENDING"].includes(i.status) ? 3600000 : 0)), Math.min(end, timestamp(i.end))])
+            .map((i) => [Math.max(start, timestamp(i.start) - (["CONFIRMED", "CHECKED_IN", "PENDING"].includes(i.status) ? 1800000 : 0)), Math.min(end, timestamp(i.end))])
             .sort((a, b) => a[0] - b[0]);
         const result = [];
         let cursor = start;

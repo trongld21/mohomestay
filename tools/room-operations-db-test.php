@@ -94,8 +94,8 @@ operation_check((int)$charge['amount'] === 50000, '70 minutes late minus grace m
 operation_check($pdo->query('SELECT ended_at FROM room_emergency_locks')->fetchColumn() === gmdate('Y-m-d H:i:s', $now), 'Checkout must release emergency lock.');
 $repeat = confirm_room_checkout($pdo, $id, 'other', $now + 7200);
 operation_check($repeat['actual_checkout_at'] === $charge['actual_checkout_at'] && $repeat['amount'] === $charge['amount'], 'Retry must not change charge/time.');
-operation_conflict(fn() => assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $now + 3599), gmdate('Y-m-d H:i:s', $now + 7200)));
-assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $now + 3600), gmdate('Y-m-d H:i:s', $now + 7200));
+operation_conflict(fn() => assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $now + 1799), gmdate('Y-m-d H:i:s', $now + 7200)));
+assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $now + 1800), gmdate('Y-m-d H:i:s', $now + 7200));
 try {
     ensure_checkout_payment($pdo, $id, static function (): never { throw new RuntimeException('Provider offline'); });
 } catch (RuntimeException) {
@@ -134,8 +134,8 @@ assert_room_inventory($pdo, 'r', $a, $b);
 $nextId = str_repeat('c', 32);
 $pdo->prepare("INSERT INTO bookings (id,room_id,booking_code,status,check_in,check_out) VALUES (?,'r','MO-NEXT','CONFIRMED',?,?)")
     ->execute([$nextId, $a, $b]);
-operation_conflict(fn() => assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $now + 80000), gmdate('Y-m-d H:i:s', $now + 86400 - 3599)));
-assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $now + 78000), gmdate('Y-m-d H:i:s', $now + 86400 - 3600));
+operation_conflict(fn() => assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $now + 80000), gmdate('Y-m-d H:i:s', $now + 86400 - 1799)));
+assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $now + 78000), gmdate('Y-m-d H:i:s', $now + 86400 - 1800));
 $localDate = (new DateTimeImmutable('@' . $now))->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'))->format('Y-m-d');
 $public = availability_snapshot($pdo, [
     ['id' => 'r', 'status' => 'ACTIVE'],

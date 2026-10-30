@@ -42,8 +42,8 @@ foreach (['22:00', '10:00'] as $checkIn) {
             $insert->execute(['night', 'pink', $a, $b, $status, gmdate('Y-m-d H:i:s', time() + 900)]);
             conflict_expect(room_booking_conflict($pdo, 'pink', $otherStart, $otherEnd), 'Night must block overlapping hourly booking.');
             conflict_expect(!room_booking_conflict($pdo, 'black', $otherStart, $otherEnd), 'Other room must remain independent.');
-            conflict_expect(room_booking_conflict($pdo, 'pink', local_utc('2027-01-16 10:00'), local_utc('2027-01-16 13:00')), 'Checkout still needs one hour cleaning.');
-            conflict_expect(!room_booking_conflict($pdo, 'pink', local_utc('2027-01-16 11:00'), local_utc('2027-01-16 14:00')), 'Exactly one hour after checkout is available.');
+            conflict_expect(room_booking_conflict($pdo, 'pink', local_utc('2027-01-16 10:29'), local_utc('2027-01-16 13:29')), 'Cleaning still blocks arrival 29 minutes after checkout.');
+            conflict_expect(!room_booking_conflict($pdo, 'pink', local_utc('2027-01-16 10:30'), local_utc('2027-01-16 13:30')), 'Exactly 30 minutes after checkout is available.');
             $pdo->exec('DELETE FROM bookings');
             $insert->execute(['hourly', 'pink', $otherStart, $otherEnd, $status, gmdate('Y-m-d H:i:s', time() + 900)]);
             conflict_expect(room_booking_conflict($pdo, 'pink', $a, $b), 'Hourly booking must also block later night request.');

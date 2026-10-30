@@ -45,7 +45,8 @@ const remainingNight = slotWindow(nightPackage, '2026-10-23', '', earlyNow);
 assert.equal(remainingNight.start.toISOString(), '2026-10-23T14:00:00.000Z', 'Previous night retains scheduled evening');
 assert.equal(remainingNight.end.toISOString(), '2026-10-24T02:00:00.000Z', 'Today after midnight checks out this morning');
 assert.equal(slotState(remainingNight, [{ start: '2026-10-23T15:00:00Z', end: '2026-10-24T01:00:00Z' }], earlyNow), 'booked', 'An existing overnight stay blocks the remaining night');
-assert.equal(slotState(remainingNight, [{ start: '2026-10-24T02:30:00Z', end: '2026-10-24T05:00:00Z', status: 'CONFIRMED' }], earlyNow), 'booked', 'Remaining overnight stay preserves the one-hour cleaning gap before the next guest');
+assert.equal(slotState(remainingNight, [{ start: '2026-10-24T02:29:00Z', end: '2026-10-24T05:00:00Z', status: 'CONFIRMED' }], earlyNow), 'booked', 'Less than 30 minutes cleaning blocks the next guest');
+assert.equal(slotState(remainingNight, [{ start: '2026-10-24T02:30:00Z', end: '2026-10-24T05:00:00Z', status: 'CONFIRMED' }], earlyNow), 'available', 'Exactly 30 minutes cleaning allows the next guest');
 assert.equal(slotState(remainingNight, [{ start: '2026-10-24T03:00:00Z', end: '2026-10-24T05:00:00Z', status: 'CONFIRMED' }], earlyNow), 'available', 'A next guest exactly one hour after morning checkout keeps the full cleaning gap');
 const tomorrowNight = slotWindow(nightPackage, '2026-10-25', '', earlyNow);
 assert.equal(tomorrowNight.start.toISOString(), '2026-10-25T14:00:00.000Z', 'Future dates keep their scheduled evening');
@@ -72,15 +73,15 @@ for (const checkInTime of ['22:00', '10:00']) {
     assert.equal(night.end.toISOString(), '2027-01-16T03:00:00.000Z');
     const occupied = [
         { start: night.start.toISOString(), end: night.end.toISOString(), status: 'CONFIRMED' },
-        { start: night.end.toISOString(), end: new Date(night.end.getTime() + 3600000).toISOString(), status: 'CLEANING' },
+        { start: night.end.toISOString(), end: new Date(night.end.getTime() + 1800000).toISOString(), status: 'CLEANING' },
     ];
     for (const durationMinutes of [180, 360]) {
         const hourly = slotWindow({ mode: 'DURATION', durationMinutes }, '2027-01-16', '01:00', testNow);
         assert.equal(slotState(hourly, occupied, testNow), 'booked');
         assert.equal(slotState(night, [{ start: hourly.start.toISOString(), end: hourly.end.toISOString(), status: 'CONFIRMED' }], testNow), 'booked');
-        const cleaning = slotWindow({ mode: 'DURATION', durationMinutes }, '2027-01-16', '10:30', testNow);
+        const cleaning = slotWindow({ mode: 'DURATION', durationMinutes }, '2027-01-16', '10:29', testNow);
         assert.equal(slotState(cleaning, occupied, testNow), 'booked');
-        const afterCleaning = slotWindow({ mode: 'DURATION', durationMinutes }, '2027-01-16', '11:00', testNow);
+        const afterCleaning = slotWindow({ mode: 'DURATION', durationMinutes }, '2027-01-16', '10:30', testNow);
         assert.equal(slotState(afterCleaning, occupied, testNow), 'available');
     }
 }
@@ -125,5 +126,6 @@ const followingStay = [{ start: '2027-01-16T04:00:00+07:00', end: '2027-01-16T07
 assert.equal(slotState(globalThis.MoBookingSlots.extendedWindow(extensionBase, 1), followingStay, fullDayNow), 'available');
 assert.equal(slotState(globalThis.MoBookingSlots.extendedWindow(extensionBase, 2), followingStay, fullDayNow), 'available');
 const tighterStay = [{ ...followingStay[0], start: '2027-01-16T03:30:00+07:00' }];
-assert.equal(slotState(globalThis.MoBookingSlots.extendedWindow(extensionBase, 2), tighterStay, fullDayNow), 'booked', 'Extra hours must leave the full cleaning hour');
+assert.equal(slotState(globalThis.MoBookingSlots.extendedWindow(extensionBase, 2), tighterStay, fullDayNow), 'available', 'Extra hours leave exactly 30 minutes for cleaning');
+assert.equal(slotState(extension, [{ ...tighterStay[0], start: '2027-01-16T03:29:00+07:00' }], fullDayNow), 'booked', 'Extra hours still require all 30 minutes for cleaning');
 console.log('Extra hours extend the stay and preserve cleaning conflict checks: OK');
