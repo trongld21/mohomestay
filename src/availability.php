@@ -46,8 +46,7 @@ function availability_snapshot(PDO $pdo, array $rooms, string $date, int $days =
             $booking['continuation_active'] = booking_has_live_continuation($booking, $bookings);
             $occupiedEnd = room_occupied_until($booking);
             if ($occupiedEnd <= mysql_datetime($start)) continue;
-            $stayEnd = $booking['status'] === 'CHECKED_OUT'
-                ? ($booking['actual_checkout_at'] ?: $booking['check_out']) : $booking['check_out'];
+            $stayEnd = $booking['check_out'];
             if ($stayEnd > mysql_datetime($start)) {
                 $intervals[] = [
                     'start' => gmdate('c', strtotime($booking['check_in'] . ' UTC')),

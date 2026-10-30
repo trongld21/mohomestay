@@ -94,8 +94,11 @@ operation_check((int)$charge['amount'] === 50000, '70 minutes late minus grace m
 operation_check($pdo->query('SELECT ended_at FROM room_emergency_locks')->fetchColumn() === gmdate('Y-m-d H:i:s', $now), 'Checkout must release emergency lock.');
 $repeat = confirm_room_checkout($pdo, $id, 'other', $now + 7200);
 operation_check($repeat['actual_checkout_at'] === $charge['actual_checkout_at'] && $repeat['amount'] === $charge['amount'], 'Retry must not change charge/time.');
-operation_conflict(fn() => assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $now + 1799), gmdate('Y-m-d H:i:s', $now + 7200)));
-assert_room_inventory($pdo, 'r', gmdate('Y-m-d H:i:s', $now + 1800), gmdate('Y-m-d H:i:s', $now + 7200));
+$cleaningEnd = strtotime($scheduled . ' UTC') + ROOM_CLEANING_SECONDS;
+operation_check(room_booking_conflict($pdo, 'r', gmdate('Y-m-d H:i:s', $cleaningEnd - 1), gmdate('Y-m-d H:i:s', $now + 7200)), 'Scheduled cleaning remains blocked before its boundary.');
+operation_check(!room_booking_conflict($pdo, 'r', gmdate('Y-m-d H:i:s', $cleaningEnd), gmdate('Y-m-d H:i:s', $now + 7200)), 'Scheduled cleaning ends exactly 30 minutes after checkout.');
+operation_check(room_occupied_until(['check_out' => $scheduled, 'status' => 'CHECKED_OUT'], $charge['actual_checkout_at']) === gmdate('Y-m-d H:i:s', $cleaningEnd), 'Late checkout confirmation must not extend scheduled cleaning.');
+operation_check(room_occupied_until(['check_out' => $scheduled, 'status' => 'CHECKED_OUT'], gmdate('Y-m-d H:i:s', $now - 86400)) === gmdate('Y-m-d H:i:s', $cleaningEnd), 'Early checkout confirmation must not shorten scheduled cleaning.');
 try {
     ensure_checkout_payment($pdo, $id, static function (): never { throw new RuntimeException('Provider offline'); });
 } catch (RuntimeException) {
@@ -145,6 +148,12 @@ operation_check(array_column($public['rooms'], 'id') === ['r'], 'Hidden rooms mu
 $json = json_encode($public);
 operation_check(!str_contains($json, 'MO-TEST') && !str_contains($json, 'staff') && !str_contains($json, 'bookingId'), 'Public intervals must not disclose booking identities or staff.');
 operation_check(str_contains($json, 'CLEANING'), 'Public calendar must show cleaning time.');
+$scheduledCleaning = array_filter($public['rooms'][0]['intervals'], static fn(array $interval): bool =>
+    $interval['status'] === 'CLEANING'
+    && $interval['start'] === gmdate('c', strtotime($scheduled . ' UTC'))
+    && $interval['end'] === gmdate('c', $cleaningEnd)
+);
+operation_check(count($scheduledCleaning) === 1, 'Public calendar cleaning must use scheduled checkout, matching server inventory.');
 $_SESSION = ['admin_until' => time() + 3600];
 $pdo->prepare("UPDATE bookings SET status='CHECKED_IN' WHERE id=?")->execute([$nextId]);
 $pdo->prepare("INSERT INTO room_emergency_locks (id,booking_id,room_id,starts_at,locked_by) VALUES (?,?,'r',?,'staff')")

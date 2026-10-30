@@ -17,12 +17,12 @@ confirm_booking_receipt($pdo, 'receipt', 'bank_transfer', 'admin');
 recovery_expect((int)$pdo->query("SELECT COUNT(*) FROM booking_payment_receipts WHERE booking_id='receipt'")->fetchColumn() === 1, 'Receipt retries must keep one audit entry.');
 
 $pdo->exec("UPDATE bookings SET payment_status='UNPAID',status='PENDING' WHERE id='receipt'");
-$pdo->prepare("UPDATE booking_checkout_charges SET actual_checkout_at=? WHERE booking_id='previous'")->execute([$stamp(-2400)]);
+$pdo->prepare("UPDATE bookings SET check_out=? WHERE id='previous'")->execute([$stamp(-2400)]);
 try {
     confirm_booking_receipt($pdo, 'receipt', 'bank_transfer', 'admin');
     throw new RuntimeException('A real historical stay overlap was accepted.');
 } catch (BookingException $error) {
-    recovery_expect($error->httpStatus === 409, 'Actual occupancy overlap remains blocked.');
+    recovery_expect($error->httpStatus === 409, 'Scheduled occupancy overlap remains blocked.');
 }
 $pdo->exec("DELETE FROM bookings WHERE id='previous'; DELETE FROM booking_checkout_charges;");
 $pdo->prepare("UPDATE bookings SET check_in=?,check_out=? WHERE id='receipt'")->execute([$stamp(-14400), $stamp(-7200)]);

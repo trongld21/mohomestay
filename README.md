@@ -6,7 +6,7 @@ Quản trị có thể xác nhận đã nhận tiền cho đơn đã kết thúc
 đè lên lịch lưu trú khác. Khi xác nhận hồi tố, phần dọn của đơn đã trả và đã kết thúc
 được bỏ qua; lịch tương lai, khóa phòng và giữ chỗ đang hiệu lực vẫn được kiểm tra.
 Đơn quá khứ được ghi nhận đã kết thúc, không cấp mã cửa mới. Giữ nguyên giờ và giá đã đặt.
-Thẻ quản trị hiển thị giờ trả thực tế và thời điểm dọn xong để đối chiếu.
+Thẻ quản trị hiển thị giờ trả thực tế để đối chiếu; thời điểm dọn xong luôn bằng giờ checkout trên đơn cộng 30 phút, không phụ thuộc lúc bấm trả phòng.
 Đặt gói mới trên web chỉ nhận giờ có phút `00` hoặc `30`; máy chủ kiểm tra lại quy tắc này.
 
 ## Khôi phục mã TTLock bị trùng PIN
@@ -457,7 +457,7 @@ yêu cầu xử lý mã cửa trước; không tự sửa thời hạn mã đã 
 - Màn nhân viên: `/admin/availability`. Cấp quyền **Tìm phòng trống** và từng quyền khóa khách quá giờ, giữ khung giờ báo giá, xác nhận trả phòng/QR trong trang phân quyền.
 - Chi tiết phòng có ma trận 1 giờ; bấm ô xem khoảng bận chính xác. Dữ liệu công khai không chứa mã đơn, tên khách hay ghi chú nhân viên.
 - Giữ báo giá khóa đúng khung giờ được chọn trong 1 giờ kể từ lúc thao tác, tự hết hạn mà không cần cron; nhân viên có quyền được mở sớm.
-- Dọn phòng: chặn 1 giờ sau giờ checkout dự kiến; khi nhân viên xác nhận trả phòng, dùng giờ trả thực tế. Đặt mới, tạo đơn thủ công, nhận sớm và callback thanh toán đều kiểm tra lại trên server.
+- Dọn phòng: chặn 30 phút sau giờ checkout trên đơn, kể cả khi xác nhận trả phòng sớm hoặc muộn. Giờ trả thực tế chỉ dùng đối chiếu/phụ thu, không tự kéo dài lịch dọn. Khóa khẩn cấp vẫn chặn cho tới khi được giải phóng. Đặt mới, tạo đơn thủ công, nhận sớm và callback thanh toán đều kiểm tra lại trên server.
 - Đến giờ checkout chỉ đánh dấu quá giờ, không coi khách đã rời phòng. Nhân viên kiểm tra, khóa khẩn cấp nếu khách còn ở, và xác nhận trả khi khách rời.
 - Phụ thu: miễn 15 phút, phần còn lại làm tròn giờ lên × 50.000đ. Chốt giờ và số tiền một lần, tạo link QR payOS riêng và nhận webhook để đánh dấu đã thu. Lỗi payOS vẫn giữ khoản phải thu để thử lại.
 - Chạy migration `011_room_operations` và `012_room_quote_holds` trước khi dùng. Không reset dữ liệu. Kiểm tra mới: `php tools/room-operations-test.php`, `php tools/room-operations-db-test.php`, `node tools/room-timeline-test.cjs`.

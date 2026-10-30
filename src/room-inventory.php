@@ -9,17 +9,13 @@ const ROOM_CLEANING_SECONDS = 1800;
 function room_occupied_until(array $booking, ?string $actualCheckout = null): string
 {
     $scheduled = strtotime($booking['check_out'] . ' UTC');
-    if ($booking['status'] === 'CHECKED_OUT') {
-        $actual = $actualCheckout ?? ($booking['actual_checkout_at'] ?? null);
-        $scheduled = $actual ? strtotime($actual . ' UTC') : $scheduled;
-    }
     $cleaning = !empty($booking['continuation_active']) && $booking['status'] !== 'CHECKED_OUT' ? 0 : ROOM_CLEANING_SECONDS;
     return gmdate('Y-m-d H:i:s', $scheduled + $cleaning);
 }
 
 /**
  * Exact half-open interval check shared by all booking writers under the room row lock.
- * Both stays need their cleaning window; completed stays retain their actual cleaning time.
+ * Both stays reserve cleaning after scheduled checkout, regardless of confirmation time.
  */
 function room_booking_conflict(PDO $pdo, string $roomId, string $start, string $end, ?string $exceptId = null, ?int $receiptAt = null): bool
 {
@@ -41,7 +37,7 @@ function room_booking_conflict(PDO $pdo, string $roomId, string $start, string $
         $otherEnd = room_occupied_until($booking);
         if ($receiptAt !== null && $booking['status'] === 'CHECKED_OUT'
             && strtotime($otherEnd . ' UTC') <= $receiptAt) {
-            $otherEnd = $booking['actual_checkout_at'] ?: $booking['check_out'];
+            $otherEnd = $booking['check_out'];
         }
         if ($start < $otherEnd) return true;
     }
