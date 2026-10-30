@@ -68,7 +68,8 @@
                 <label class="text-sm font-medium">Phòng mới
                     <select name="roomId" class="${fieldClass}" required>${rooms.map((room) => `<option value="${escape(room.id)}"${room.id === booking.room_id ? " selected" : ""}>${escape(room.name)} · tối đa ${Number(room.maxGuests)} khách</option>`).join("")}</select>
                 </label>
-                <div class="grid gap-4 sm:grid-cols-2">
+                <label class="flex items-center gap-2 text-sm font-medium"><input type="checkbox" name="preserveTimes" checked class="h-4 w-4 accent-[#79543e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e]">Chỉ đổi phòng, giữ nguyên giờ nhận/trả và mã cổng đã cấp</label>
+                <div data-stay-schedule class="hidden gap-4 sm:grid-cols-2">
                     ${dateTimeField("checkIn", "Ngày giờ nhận phòng", booking.check_in)}
                     ${dateTimeField("checkOut", "Ngày giờ trả phòng", booking.check_out)}
                 </div>
@@ -85,6 +86,11 @@
             </form>`;
         document.body.append(dialog);
         const form = dialog.querySelector("form");
+        form.elements.preserveTimes.addEventListener("change", () => {
+            const schedule = dialog.querySelector("[data-stay-schedule]");
+            schedule.classList.toggle("hidden", form.elements.preserveTimes.checked);
+            schedule.classList.toggle("grid", !form.elements.preserveTimes.checked);
+        });
         const error = dialog.querySelector("[data-stay-error]");
         const events = new AbortController();
         const datePickers = [];
@@ -131,6 +137,7 @@
             if (saving || !form.reportValidity()) return;
             const payload = Object.fromEntries(["roomId", "checkIn", "checkOut", "reason"].map((name) => [name, form.elements[name].value]));
             Object.assign(payload, {
+                preserveTimes: form.elements.preserveTimes.checked,
                 expectedRoomId: booking.room_id,
                 expectedCheckIn: booking.check_in,
                 expectedCheckOut: booking.check_out,

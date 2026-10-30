@@ -117,3 +117,17 @@ $halfHour = array_replace($seconds, ['checkIn' => '2026-10-23T22:30:00', 'checkO
 correct_booking_stay($pdo, $id, $halfHour);
 expect_stay($pdo->query('SELECT check_out FROM bookings')->fetchColumn() === '2026-10-24 04:30:00', 'Half-hour corrections must be accepted exactly.');
 echo "Superadmin stay correction permissions, past dates, price preservation, conflicts, audit and stale edits: OK\n";
+$pdo->exec("UPDATE booking_access_codes SET sync_status='READY',remote_id=123,attempts=1");
+$accessBeforeMove = $pdo->query('SELECT * FROM booking_access_codes')->fetch();
+$move = [
+    'roomId' => 'black', 'preserveTimes' => true,
+    'checkIn' => '2026-10-01T00:00', 'checkOut' => '2026-10-01T01:00',
+    'expectedRoomId' => 'mo', 'expectedCheckIn' => '2026-10-23 15:30:00', 'expectedCheckOut' => '2026-10-24 04:30:00',
+    'reason' => 'Chuyển phòng giữ nguyên mã cổng',
+];
+correct_booking_stay($pdo, $id, $move);
+$moved = $pdo->query('SELECT * FROM bookings')->fetch();
+expect_stay($moved['room_id'] === 'black' && $moved['check_in'] === $move['expectedCheckIn'] && $moved['check_out'] === $move['expectedCheckOut'], 'Room-only transfer must use persisted times, ignoring submitted dates.');
+expect_stay($pdo->query('SELECT * FROM booking_access_codes')->fetch() === $accessBeforeMove, 'Issued gate credential must remain unchanged when moving rooms.');
+reject_stay(fn() => correct_booking_stay($pdo, $id, $move), 409);
+echo "Issued-code room-only transfer, preserved dates and stale edits: OK\n";

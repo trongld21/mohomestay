@@ -16,8 +16,18 @@ function correct_booking_stay(PDO $pdo, string $id, array $input): void
     if (mb_strlen($reason) < 5 || mb_strlen($reason) > 500) {
         throw new BookingException('Nhập lý do điều chỉnh từ 5 đến 500 ký tự.', 422);
     }
+    $query = $pdo->prepare('SELECT room_id,check_in,check_out FROM bookings WHERE id=?');
+    $query->execute([$id]);
+    $original = $query->fetch();
+    if (!$original) throw new BookingException('Không tìm thấy đơn.', 404);
+    $preserveTimes = ($input['preserveTimes'] ?? false) === true;
     $dates = [];
     foreach (['checkIn', 'checkOut'] as $key) {
+        if ($preserveTimes) {
+            $dates[] = (new DateTimeImmutable($original[$key === 'checkIn' ? 'check_in' : 'check_out'], new DateTimeZone('UTC')))
+                ->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'));
+            continue;
+        }
         $value = (string)($input[$key] ?? '');
         $format = strlen($value) === 19 ? 'Y-m-d\TH:i:s' : 'Y-m-d\TH:i';
         $date = DateTimeImmutable::createFromFormat('!' . $format, $value, new DateTimeZone('Asia/Ho_Chi_Minh'));
@@ -36,10 +46,7 @@ function correct_booking_stay(PDO $pdo, string $id, array $input): void
 
     // Read the old room before beginning the transaction so inventory reads do not
     // reuse a MySQL snapshot created before waiting for the room locks.
-    $query = $pdo->prepare('SELECT room_id FROM bookings WHERE id=?');
-    $query->execute([$id]);
-    $oldRoomId = $query->fetchColumn();
-    if (!$oldRoomId) throw new BookingException('Không tìm thấy đơn.', 404);
+    $oldRoomId = $original['room_id'];
     $pdo->beginTransaction();
     try {
         $suffix = room_operation_lock_suffix($pdo);
