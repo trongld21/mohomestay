@@ -309,6 +309,15 @@ function payment_webhook_api(): never
 function admin_bookings_api(): never
 {
     require_admin();
+    // Recover missed provider notifications even if the guest never returns.
+    // Persistent per-booking claims are shared with the scheduled worker.
+    reconcile_pending_payments(db(), null, static function (PDO $pdo, array $data): void {
+        $booking = apply_payment_callback($pdo, $data);
+        if ($booking && $booking['status'] === 'CONFIRMED') {
+            try_dispatch_staff_notifications($pdo, (string)$booking['id']);
+            provision_paid_booking((string)$booking['id']);
+        }
+    }, 2);
     $rows = db()->query(
         'SELECT b.*,r.name room_name,p.failure_reason,c.actual_checkout_at,(SELECT COUNT(*) FROM booking_identity_images i WHERE i.booking_id=b.id) identity_image_count FROM bookings b '
         . 'JOIN rooms r ON r.id=b.room_id LEFT JOIN payments p ON p.booking_id=b.id LEFT JOIN booking_checkout_charges c ON c.booking_id=b.id '

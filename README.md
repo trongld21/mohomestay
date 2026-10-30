@@ -43,6 +43,10 @@ php "$HOME/domains/mohomestay.vn/src/payment-reconciliation-worker.php" >> "$HOM
 Đây là tác vụ độc lập với trình duyệt và cấu hình TTLock. Mỗi lượt đối soát tối đa 10 đơn,
 ưu tiên đơn chưa kiểm tra, lưu thời gian kiểm tra và thử lại sau ít nhất một phút.
 Giữ cron `booking-access-worker.php` hiện có; cả hai dùng cơ chế khóa chống cấp mã trùng.
+Khi quản trị tải/làm mới danh sách đơn, máy chủ cũng đối soát tối đa 2 đơn mỗi lượt,
+ưu tiên đơn chưa kiểm tra mới nhất và dùng chung thời gian chờ với cron. Không cần khách quay lại trang.
+Đối soát tiếp tục với các đơn đã checkout trong 7 ngày gần nhất để không bỏ sót tiền về muộn;
+đơn quá giờ vẫn ghi nhận tiền để xử lý thủ công, không tự cấp mã hoặc mở lại lịch.
 Chỉ trạng thái/số tiền/mã giao dịch được API payOS xác nhận mới được tự ghi nhận.
 Nếu hết hạn giữ chỗ nhưng phòng còn trống, đơn chờ được khôi phục. Nếu xung đột hoặc đơn đã hủy,
 vẫn ghi nhận tiền và yêu cầu đối soát thủ công; không đè lịch hay tự khôi phục đơn đã hủy.

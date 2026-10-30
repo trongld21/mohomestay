@@ -115,16 +115,19 @@ function refresh_payment_cancellation(PDO $pdo, array $booking, ?callable $fetch
     $stmt->execute([$key]);
 }
 
-function reconcile_pending_payments(PDO $pdo, ?callable $fetch = null, ?callable $apply = null): void
+function reconcile_pending_payments(PDO $pdo, ?callable $fetch = null, ?callable $apply = null, int $limit = 10): void
 {
     // Recover missed webhooks even when the guest closes the payment page.
     // Bound provider traffic; leave expired/conflicting payment decisions to the callback.
+    $limit = max(1, min(10, $limit));
     $query = $pdo->prepare("SELECT * FROM bookings WHERE status IN ('PENDING','CANCELLED')
         AND payment_status IN ('UNPAID','PENDING','FAILED') AND payment_method='payos' AND is_test=0
         AND check_out>? AND (payment_next_check_at IS NULL OR payment_next_check_at<=?)
-        ORDER BY COALESCE(payment_checked_at, '1970-01-01'),created_at LIMIT 10");
+        ORDER BY COALESCE(payment_checked_at, '1970-01-01'),created_at DESC LIMIT " . $limit);
     $now = gmdate('Y-m-d H:i:s');
-    $query->execute([$now, $now]);
+    // Keep discovering received money after checkout; callback records conflicts
+    // for manual reconciliation without reopening an expired stay or issuing codes.
+    $query->execute([gmdate('Y-m-d H:i:s', time() - 7 * 86400), $now]);
     foreach ($query->fetchAll(PDO::FETCH_ASSOC) as $booking) {
         // Persistent claim prevents concurrent cron workers checking the same booking.
         $claim = $pdo->prepare('UPDATE bookings SET payment_checked_at=?,payment_next_check_at=? WHERE id=? AND (payment_next_check_at IS NULL OR payment_next_check_at<=?)');

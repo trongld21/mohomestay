@@ -19,9 +19,11 @@ foreach ([
     ['manual', 'PENDING', 'UNPAID', 'transfer', 0],
     ['cancelled', 'CANCELLED', 'UNPAID', 'payos', 0],
     ['paid', 'CONFIRMED', 'PAID', 'payos', 0],
+    ['past', 'PENDING', 'UNPAID', 'payos', 0],
 ] as $row) {
     $insert->execute([...$row, '1793190000000', 223000, gmdate('Y-m-d H:i:s'), gmdate('Y-m-d H:i:s', time() + 43200)]);
 }
+$pdo->prepare("UPDATE bookings SET check_out=? WHERE id='past'")->execute([gmdate('Y-m-d H:i:s', time() - 3600)]);
 $calls = [];
 $applied = [];
 $fetch = function (string $orderCode) use (&$calls): array {
@@ -37,12 +39,17 @@ if (!function_exists('reconcile_pending_payments')) {
     throw new RuntimeException('Background worker cannot reconcile pending payOS bookings.');
 }
 reconcile_pending_payments($pdo, $fetch, $apply);
-if (count($calls) !== 3 || count($applied) !== 2 || $applied[0]['amount'] !== 223000) {
+if (count($calls) !== 4 || count($applied) !== 3 || $applied[0]['amount'] !== 223000) {
     throw new RuntimeException('Reconcile real pending payments and continue after a provider failure.');
 }
 $_SESSION['payment_status_checked'] = [];
 reconcile_pending_payments($pdo, $fetch, $apply);
-if (count($calls) !== 3) throw new RuntimeException('Persistent backoff must survive a new guest/cron session.');
+if (count($calls) !== 4) throw new RuntimeException('Persistent backoff must survive a new guest/cron session.');
+$pdo->exec('UPDATE bookings SET payment_next_check_at=NULL');
+$_SESSION['payment_status_checked'] = [];
+$before = count($calls);
+reconcile_pending_payments($pdo, $fetch, $apply, 2);
+if (count($calls) !== $before + 2) throw new RuntimeException('Admin refresh must bound provider checks to its requested batch size.');
 [$start, $end] = package_window(['mode' => 'FIXED_TIME', 'checkInTime' => '21:00', 'checkOutTime' => '09:00'], '2026-10-28', '');
 if ($start->format('Y-m-d H:i') !== '2026-10-28 21:00' || $end->format('Y-m-d H:i') !== '2026-10-29 09:00'
     || mysql_datetime($start) !== '2026-10-28 14:00:00' || mysql_datetime($end) !== '2026-10-29 02:00:00') {

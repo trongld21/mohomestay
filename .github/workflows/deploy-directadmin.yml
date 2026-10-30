@@ -61,6 +61,8 @@ jobs:
           php tools/room-test.php
           php tools/room-operations-test.php
           php tools/receipt-history-test.php
+          php tools/payment-worker-test.php
+          php tools/payment-cancellation-test.php
           php tools/half-hour-booking-test.php
           php tools/overnight-conflict-test.php
           php tools/room-discount-test.php
