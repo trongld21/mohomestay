@@ -21,3 +21,5 @@ for (const isSuperAdmin of [false, true]) {
     assert.ok(html.includes('Hết hạn giữ chỗ'));
 }
 console.log('Expired booking rows preserve cancellation and payment recovery: OK');
+const completed = context.renderBookingRow({ ...booking, status: 'CHECKED_OUT', actual_checkout_at: '2026-10-30 10:09:52', cleaning_until: '2026-10-30 10:39:52' });
+assert.ok(completed.includes('Trả thực tế') && completed.includes('Dọn đến'), 'Completed cards must expose the times used to block receipt');

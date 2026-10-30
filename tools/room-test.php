@@ -27,8 +27,8 @@ room_throws(fn() => bookable_package_window(['mode' => 'DURATION', 'durationMinu
 room_check($tomorrowStart->format('Y-m-d H:i') === '2027-01-16 14:00', 'Current time must not lock tomorrow.');
 foreach ([180, 360, 1440] as $duration) {
     $durationPackage = ['mode' => 'DURATION', 'durationMinutes' => $duration];
-    [$beforeCutoff] = bookable_package_window($durationPackage, '2027-01-15', '20:59', $cutoffNow);
-    room_check($beforeCutoff->format('H:i') === '20:59', 'Arrival before 21:00 may check out after 21:00.');
+    [$beforeCutoff] = bookable_package_window($durationPackage, '2027-01-15', '20:30', $cutoffNow);
+    room_check($beforeCutoff->format('H:i') === '20:30', 'Arrival before 21:00 may check out after 21:00.');
     [$atNineStart] = bookable_package_window($durationPackage, '2027-01-15', '21:00', $cutoffNow);
     room_check($atNineStart->format('H:i') === '21:00', 'Regular packages must allow arrival at 21:00.');
     [$lateArrival] = bookable_package_window($durationPackage, '2027-01-15', '23:00', $atNine);

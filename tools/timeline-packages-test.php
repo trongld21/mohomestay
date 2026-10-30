@@ -45,7 +45,7 @@ $discounted = timeline_available_packages($pdo, array_replace($room, ['discountP
 operation_check($discounted[0]['price'] === 90000, 'Offer the payable discounted price.');
 $clock = new DateTimeImmutable($day . ' 13:22:30', new DateTimeZone('Asia/Ho_Chi_Minh'));
 $currentHour = timeline_available_packages($pdo, $room, $day, '13:00', $clock);
-operation_check($currentHour[0]['time'] === '13:23', 'Current hour must offer a future minute instead of a past arrival.');
+operation_check($currentHour[0]['time'] === '13:30', 'Current hour must offer the next valid half-hour arrival.');
 operation_check(timeline_available_packages($pdo, $room, $day, '12:00', $clock) === [], 'Past hours must have no packages.');
 try {
     timeline_available_packages($pdo, $room, $day, '25:00');

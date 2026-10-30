@@ -95,7 +95,7 @@
         CANCELLED: "Đã hủy",
         EXPIRED: "Hết hạn giữ chỗ",
     };
-    function bookingDate(value) {
+    function bookingDate(value, withSeconds = false) {
         if (!value) return "—";
         const date = new Date(value.includes("T") ? value : value.replace(" ", "T") + "Z");
         return Number.isNaN(date.getTime())
@@ -107,6 +107,7 @@
                   year: "numeric",
                   hour: "2-digit",
                   minute: "2-digit",
+                  second: withSeconds ? "2-digit" : undefined,
               }).format(date);
     }
     async function loadBookings() {
@@ -357,6 +358,8 @@
                 </div>
                 <div class="booking-stay"><span class="booking-stay-label">Nhận</span><time>${bookingDate(booking.check_in)}</time></div>
                 <div class="booking-stay"><span class="booking-stay-label">Trả</span><time>${bookingDate(booking.check_out)}</time></div>
+                ${booking.actual_checkout_at ? `<div class="mt-1 flex flex-wrap gap-2 text-xs text-stone-600"><span>Trả thực tế</span><time>${bookingDate(booking.actual_checkout_at, true)}</time></div>` : ''}
+                ${booking.cleaning_until ? `<div class="mt-1 flex flex-wrap gap-2 text-xs text-stone-600"><span>Dọn đến</span><time>${bookingDate(booking.cleaning_until, true)}</time></div>` : ''}
             </div></td>
             <td class="booking-payment-cell"><div class="booking-cell">
                 <strong class="booking-amount">${cash(booking.total_price)}</strong>
@@ -447,7 +450,9 @@
                     paymentMethod: booking.payment_method || "bank_transfer",
                     received: true,
                 }));
-                LangUI.toast({ type: "success", title: "Đã ghi nhận thanh toán", message: result.accessReady
+                LangUI.toast({ type: "success", title: "Đã ghi nhận thanh toán", message: result.status === "CHECKED_OUT"
+                    ? `${booking.booking_code} · Đã lưu thanh toán cho đơn đã kết thúc.`
+                    : result.accessReady
                     ? `${booking.booking_code} · Đã giữ lịch và có mã cổng.`
                     : `${booking.booking_code} · Đã lưu thanh toán; mã cổng/email đang chờ xử lý. Có thể thử lại ở Mã mở cửa.` });
                 await loadBookings();

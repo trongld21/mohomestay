@@ -1,5 +1,14 @@
 # Mơ Home — PHP cho DirectAdmin
 
+## Nhận tiền hồi tố và giờ nhận phòng
+
+Quản trị có thể xác nhận đã nhận tiền cho đơn đã kết thúc hoặc còn hiệu lực nếu không
+đè lên lịch lưu trú khác. Khi xác nhận hồi tố, phần dọn của đơn đã trả và đã kết thúc
+được bỏ qua; lịch tương lai, khóa phòng và giữ chỗ đang hiệu lực vẫn được kiểm tra.
+Đơn quá khứ được ghi nhận đã kết thúc, không cấp mã cửa mới. Giữ nguyên giờ và giá đã đặt.
+Thẻ quản trị hiển thị giờ trả thực tế và thời điểm dọn xong để đối chiếu.
+Đặt gói mới trên web chỉ nhận giờ có phút `00` hoặc `30`; máy chủ kiểm tra lại quy tắc này.
+
 ## Khôi phục mã TTLock bị trùng PIN
 
 Migration `029_booking_access_reused_pins.sql` bỏ ràng buộc duy nhất theo khóa/PIN,

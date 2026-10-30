@@ -8,7 +8,8 @@
         }
         return value.split(":").map(Number);
     }
-    function minuteOptions(current) {
+    function minuteOptions(current, step = 5) {
+        if (step === 30) return [0, 30];
         return [...new Set([...Array.from({ length: 12 }, (_, index) => index * 5), current])]
             .sort((a, b) => a - b);
     }
@@ -20,11 +21,16 @@
     }
 
     function create(dialog, options = {}) {
+        const minuteStep = () => {
+            const value = typeof options.minuteStep === 'function' ? options.minuteStep() : options.minuteStep;
+            return value === 30 ? 30 : 1;
+        };
         const root = options.root || dialog.querySelector(".manual-time-picker");
         const panel = options.panel || dialog.querySelector("#manual-time-popover");
         const hourList = panel.querySelector("[data-time-hours]");
         const minuteList = panel.querySelector("[data-time-minutes]");
         const exact = panel.querySelector("[data-time-exact]");
+        const exactLabel = exact.closest?.('.manual-exact-minute');
         const fields = options.fields || dialog.querySelector("form").elements;
         const triggers = [...root.querySelectorAll("[data-time-trigger]")];
         let hour = 0;
@@ -35,13 +41,16 @@
         const minimum = () => options.getDate ? minimumMinute(options.getDate(), options.now?.() || new Date()) : 0;
 
         function render() {
+            const step = minuteStep();
+            if (exactLabel) exactLabel.hidden = step === 30;
+            exact.step = step;
             const cutoff = minimum();
             const option = (value, unit, selected) => {
-                const past = (unit === "hour" ? value * 60 + 59 : hour * 60 + value) < cutoff;
+                const past = (unit === "hour" ? value * 60 + (step === 30 ? 30 : 59) : hour * 60 + value) < cutoff;
                 return `<button type="button" role="option" aria-selected="${selected && !past}" tabindex="${selected && !past ? 0 : -1}" data-time-${unit}="${value}"${past ? ' disabled aria-disabled="true" title="Đã qua giờ"' : ""}><span>${pad(value)} ${unit === "hour" ? "giờ" : "phút"}</span><span class="manual-time-check" aria-hidden="true"></span></button>`;
             };
             hourList.innerHTML = Array.from({ length: 24 }, (_, index) => option(index, "hour", index === hour)).join("");
-            minuteList.innerHTML = minuteOptions(minute).map((value) => option(value, "minute", value === minute)).join("");
+            minuteList.innerHTML = minuteOptions(minute, step === 30 ? 30 : 5).map((value) => option(value, "minute", value === minute)).join("");
             root.querySelector("[data-time-hour-label]").textContent = pad(hour) + " giờ";
             root.querySelector("[data-time-minute-label]").textContent = pad(minute) + " phút";
             exact.value = minute;
@@ -50,7 +59,9 @@
         }
 
         function set(value) {
-            [hour, minute] = parse(value);
+            const parsed = parse(value);
+            if (parsed[1] % minuteStep() !== 0) throw new RangeError('Chỉ chọn 00 hoặc 30 phút.');
+            [hour, minute] = parsed;
             fields.arrivalHour.value = pad(hour);
             fields.arrivalMinute.value = pad(minute);
             fields.time.value = `${pad(hour)}:${pad(minute)}`;
@@ -97,7 +108,7 @@
 
         function commit(value) {
             const [nextHour, nextMinute] = parse(value);
-            if (nextHour * 60 + nextMinute < minimum()) {
+            if (nextMinute % minuteStep() !== 0 || nextHour * 60 + nextMinute < minimum()) {
                 render();
                 return;
             }
@@ -125,7 +136,8 @@
             if (!option || option.disabled || disabled) return;
             if (option.hasAttribute("data-time-hour")) {
                 const nextHour = Number(option.dataset.timeHour);
-                const nextMinute = Math.max(minute, minimum() - nextHour * 60);
+                const step = minuteStep();
+                const nextMinute = Math.ceil(Math.max(minute, minimum() - nextHour * 60) / step) * step;
                 if (nextMinute > 59) return render();
                 commit(`${pad(nextHour)}:${pad(nextMinute)}`);
                 focusSelected(minuteList);

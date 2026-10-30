@@ -11,6 +11,7 @@
     const time = one("[data-cal-time]");
     const timeField = one("[data-cal-time-field]");
     const timePicker = window.MoTimePicker.create(root, {
+        minuteStep: 30,
         root: timeField.querySelector(".manual-time-picker"),
         panel: one("#calendar-time-popover"),
         fields: {
@@ -178,7 +179,7 @@
     });
     window.addEventListener("focus", () => load(true));
     if (rooms.some((room) => room.id === query.get("room"))) roomSelect.value = query.get("room");
-    if (/^\d{2}:\d{2}$/.test(query.get("time") || "")) time.value = query.get("time");
+    if (/^(?:[01]\d|2[0-3]):(?:00|30)$/.test(query.get("time") || "")) time.value = query.get("time");
     updatePackages(true);
     load();
 })();

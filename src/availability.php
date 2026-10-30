@@ -112,7 +112,7 @@ function timeline_available_packages(PDO $pdo, array $room, string $date, string
     if (!$inventory || !$inventory['is_active'] || $inventory['status'] !== 'ACTIVE') {
         return [];
     }
-    $arrival = $clicked > $now ? $clicked : $now->setTimestamp((int)(floor($now->getTimestamp() / 60) * 60 + 60));
+    $arrival = $clicked > $now ? $clicked : $now->setTimestamp((int)((floor($now->getTimestamp() / 1800) + 1) * 1800));
     $options = [];
     foreach ($room['packages'] ?? [] as $configured) {
         if (empty($configured['enabled'])) {

@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 require('../public/assets/booking-slots.js');
 
 const { configuredSlots, slotWindow, slotState } = globalThis.MoBookingSlots;
+assert.equal(slotWindow({ mode: 'DURATION', durationMinutes: 180 }, '2027-01-15', '17:15'), null, 'Odd-minute arrivals are not selectable');
 
 const room = {
     packages: [
@@ -79,7 +80,7 @@ for (const checkInTime of ['22:00', '10:00']) {
         const hourly = slotWindow({ mode: 'DURATION', durationMinutes }, '2027-01-16', '01:00', testNow);
         assert.equal(slotState(hourly, occupied, testNow), 'booked');
         assert.equal(slotState(night, [{ start: hourly.start.toISOString(), end: hourly.end.toISOString(), status: 'CONFIRMED' }], testNow), 'booked');
-        const cleaning = slotWindow({ mode: 'DURATION', durationMinutes }, '2027-01-16', '10:29', testNow);
+        const cleaning = slotWindow({ mode: 'DURATION', durationMinutes }, '2027-01-16', '10:00', testNow);
         assert.equal(slotState(cleaning, occupied, testNow), 'booked');
         const afterCleaning = slotWindow({ mode: 'DURATION', durationMinutes }, '2027-01-16', '10:30', testNow);
         assert.equal(slotState(afterCleaning, occupied, testNow), 'available');
@@ -102,7 +103,7 @@ console.log('Full-day occupancy disables duration packages before a time is sele
 
 for (const durationMinutes of [180, 360, 1440]) {
     const slot = { mode: 'DURATION', durationMinutes };
-    assert.equal(slotState(slotWindow(slot, '2027-01-15', '20:59', fullDayNow), [], fullDayNow), 'available');
+    assert.equal(slotState(slotWindow(slot, '2027-01-15', '20:30', fullDayNow), [], fullDayNow), 'available');
     assert.equal(slotState(slotWindow(slot, '2027-01-15', '21:00', fullDayNow), [], fullDayNow), 'available');
     assert.equal(slotState(slotWindow(slot, '2027-01-15', '23:00', fullDayNow), [], fullDayNow), 'available');
     assert.equal(globalThis.MoBookingSlots.durationDayState(slot, '2027-01-15', [], new Date('2027-01-15T21:00:00+07:00')), 'available');

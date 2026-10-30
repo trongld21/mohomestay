@@ -33,7 +33,7 @@
     function slotWindow(slot, date, time = '', now = new Date()) {
         if (!slot || !date) return null;
         const startTime = slot.mode === 'FIXED_TIME' ? slot.checkInTime : time;
-        if (!startTime) return null;
+        if (!/^(?:[01]\d|2[0-3]):(?:00|30)$/.test(startTime || '')) return null;
         const start = new Date(`${date}T${startTime}:00+07:00`);
         let end;
         if (slot.mode === 'FIXED_TIME' && slot.checkOutTime) {
@@ -48,7 +48,7 @@
         const fixed = slot.mode === 'FIXED_TIME';
         const overnight = fixed && slot.checkOutTime < slot.checkInTime;
         if (fixed && !overnight && start <= now && end > now) {
-            start.setTime(Math.ceil(now.getTime() / 60000) * 60000);
+            start.setTime(Math.ceil(now.getTime() / 1800000) * 1800000);
         }
         return { start, end, fixed };
     }
@@ -74,9 +74,9 @@
     function durationDayState(slot, date, intervals = [], now = new Date()) {
         const dayStart = new Date(`${date}T00:00:00+07:00`).getTime();
         const dayEnd = dayStart + 86400000;
-        const first = Math.max(dayStart, Math.floor(now.getTime() / 60000) * 60000 + 60000);
+        const first = Math.max(dayStart, (Math.floor(now.getTime() / 1800000) + 1) * 1800000);
         if (first >= dayEnd) return 'past';
-        for (let start = first; start < dayEnd; start += 60000) {
+        for (let start = first; start < dayEnd; start += 1800000) {
             const window = { start: new Date(start), end: new Date(start + Number(slot.durationMinutes) * 60000), fixed: false };
             if (slotState(window, intervals, now) === 'available') return 'available';
         }

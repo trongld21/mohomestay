@@ -98,7 +98,7 @@
         let availability = null,
             submitting = false,
             selectedId = "",
-            durationTime = query.time || "";
+            durationTime = /^(?:[01]\d|2[0-3]):(?:00|30)$/.test(query.time || "") ? query.time : "";
         const extraSection = one("[data-extra-hours-section]", form);
         const extraOptions = one("[data-extra-hours-options]", form);
         const extraField = form.elements.extraHours;

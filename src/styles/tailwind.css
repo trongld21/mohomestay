@@ -425,6 +425,9 @@
     appearance: textfield;
     -moz-appearance: textfield;
 }
+.manual-exact-minute[hidden] {
+    @apply hidden;
+}
 .admin-page input[type=number]::-webkit-inner-spin-button,
 .admin-page input[type=number]::-webkit-outer-spin-button,
 .manual-exact-minute input[type=number]::-webkit-inner-spin-button,

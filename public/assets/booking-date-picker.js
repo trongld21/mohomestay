@@ -55,7 +55,7 @@
     timeInput.type = "hidden";
     originalTimeField.prepend(timeInput);
     root.querySelector(".booking-primary-fields").append(originalTimeField);
-    const timePicker = MoTimePicker.create(root, { getDate: () => input.value });
+    const timePicker = MoTimePicker.create(root, { getDate: () => input.value, minuteStep: 30 });
     input.addEventListener("change", () => timePicker.refresh());
     function refreshTime() {
         if (timeInput.value) timePicker.set(timeInput.value);

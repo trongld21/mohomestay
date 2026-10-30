@@ -21,7 +21,7 @@ function room_occupied_until(array $booking, ?string $actualCheckout = null): st
  * Exact half-open interval check shared by all booking writers under the room row lock.
  * Both stays need their cleaning window; completed stays retain their actual cleaning time.
  */
-function room_booking_conflict(PDO $pdo, string $roomId, string $start, string $end, ?string $exceptId = null): bool
+function room_booking_conflict(PDO $pdo, string $roomId, string $start, string $end, ?string $exceptId = null, ?int $receiptAt = null): bool
 {
     $query = $pdo->prepare(
         'SELECT b.*,c.actual_checkout_at FROM bookings b '
@@ -29,12 +29,21 @@ function room_booking_conflict(PDO $pdo, string $roomId, string $start, string $
         . "WHERE b.room_id=? AND b.check_in<? AND (b.status IN ('CONFIRMED','CHECKED_IN','CHECKED_OUT') "
         . "OR (b.status='PENDING' AND b.hold_expires_at>?))"
     );
-    $query->execute([$roomId, gmdate('Y-m-d H:i:s', strtotime($end . ' UTC') + ROOM_CLEANING_SECONDS), gmdate('Y-m-d H:i:s')]);
+    $occupiedEnd = strtotime($end . ' UTC') + ROOM_CLEANING_SECONDS;
+    // Audited receipts can account for an existing stay after its cleaning has ended.
+    // New bookings never pass receiptAt and continue to reserve the full buffer.
+    if ($receiptAt !== null && $occupiedEnd <= $receiptAt) $occupiedEnd = strtotime($end . ' UTC');
+    $query->execute([$roomId, gmdate('Y-m-d H:i:s', $occupiedEnd), gmdate('Y-m-d H:i:s')]);
     $bookings = $query->fetchAll();
     foreach ($bookings as $booking) {
         $booking['continuation_active'] = booking_has_live_continuation($booking, $bookings);
         if ($exceptId !== null && $booking['id'] === $exceptId) continue;
-        if ($start < room_occupied_until($booking)) return true;
+        $otherEnd = room_occupied_until($booking);
+        if ($receiptAt !== null && $booking['status'] === 'CHECKED_OUT'
+            && strtotime($otherEnd . ' UTC') <= $receiptAt) {
+            $otherEnd = $booking['actual_checkout_at'] ?: $booking['check_out'];
+        }
+        if ($start < $otherEnd) return true;
     }
     return false;
 }
@@ -49,13 +58,13 @@ function room_quote_hold_conflict(PDO $pdo, string $roomId, string $start, strin
     return (bool)$query->fetchColumn();
 }
 
-function assert_room_inventory(PDO $pdo, string $roomId, string $start, string $end, ?string $exceptId = null): void
+function assert_room_inventory(PDO $pdo, string $roomId, string $start, string $end, ?string $exceptId = null, ?int $receiptAt = null): void
 {
     assert_no_emergency_lock($pdo, $roomId, $start, $end);
     if (room_quote_hold_conflict($pdo, $roomId, $start, $end)) {
         throw new BookingException('Khung giờ này đang được nhân viên giữ chỗ. Vui lòng chọn giờ hoặc phòng khác.', 409);
     }
-    if (room_booking_conflict($pdo, $roomId, $start, $end, $exceptId)) {
+    if (room_booking_conflict($pdo, $roomId, $start, $end, $exceptId, $receiptAt)) {
         throw new BookingException('Khung giờ trùng lịch đặt hoặc 30 phút dọn phòng. Vui lòng chọn giờ khác.', 409);
     }
 }

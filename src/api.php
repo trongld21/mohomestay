@@ -310,14 +310,16 @@ function admin_bookings_api(): never
 {
     require_admin();
     $rows = db()->query(
-        'SELECT b.*,r.name room_name,p.failure_reason,(SELECT COUNT(*) FROM booking_identity_images i WHERE i.booking_id=b.id) identity_image_count FROM bookings b '
-        . 'JOIN rooms r ON r.id=b.room_id LEFT JOIN payments p ON p.booking_id=b.id '
+        'SELECT b.*,r.name room_name,p.failure_reason,c.actual_checkout_at,(SELECT COUNT(*) FROM booking_identity_images i WHERE i.booking_id=b.id) identity_image_count FROM bookings b '
+        . 'JOIN rooms r ON r.id=b.room_id LEFT JOIN payments p ON p.booking_id=b.id LEFT JOIN booking_checkout_charges c ON c.booking_id=b.id '
         . 'ORDER BY b.created_at DESC,b.id'
     )->fetchAll();
     $now = time();
     $rooms = room_repository()->allRooms();
     $rows = array_map(function ($booking) use ($now, $rooms) {
         $booking['room_image'] = $rooms[$booking['room_id']]['image'] ?? '/images/white-illustration.jpg';
+        $booking['cleaning_until'] = $booking['status'] === 'CHECKED_OUT' && !empty($booking['actual_checkout_at'])
+            ? room_occupied_until($booking) : null;
         return booking_lifecycle($booking, $now);
     }, $rows);
     json_response(['bookings'=>$rows,'csrf'=>csrf_token()]);

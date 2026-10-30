@@ -24,7 +24,7 @@
     let available = false;
     let revision = 0;
     let requestId = "";
-    const timePicker = MoTimePicker.create(dialog);
+    const timePicker = MoTimePicker.create(dialog, { minuteStep: () => fields.timingMode.value === 'CUSTOM' ? 1 : 30 });
     const datePicker = MoAdminDatePicker.create(dialog);
 
     async function request(url, body) {

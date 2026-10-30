@@ -81,12 +81,15 @@ function stay_window(string $date, string $time, string $package): array
 function bookable_package_window(array $package, string $date, string $time, ?DateTimeImmutable $now = null): array
 {
     [$start, $end] = package_window($package, $date, $time);
+    if ((int)$start->format('i') % 30 !== 0) {
+        throw new BookingException('Chỉ chọn giờ nhận phòng theo mốc 30 phút: 00 hoặc 30 phút.', 422);
+    }
     $now ??= new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
     $overnight = ($package['mode'] ?? '') === 'FIXED_TIME'
         && $package['checkOutTime'] < $package['checkInTime'];
     if (($package['mode'] ?? '') === 'FIXED_TIME' && !$overnight && $start <= $now && $end > $now) {
         // Late arrivals keep the original checkout and full package price.
-        $start = $now->setTimestamp((int)(ceil($now->getTimestamp() / 60) * 60));
+        $start = $now->setTimestamp((int)(ceil($now->getTimestamp() / 1800) * 1800));
     }
     if ($end <= $now || $end <= $start) throw new BookingException('Gói lưu trú này đã hết giờ. Vui lòng chọn gói khác.');
     if ($start <= $now && ($package['mode'] ?? '') !== 'FIXED_TIME') {
@@ -113,6 +116,9 @@ function quote_booking_for_room(array $room, array $input, bool $manual = false,
     [$start, $end] = $unrestricted
         ? package_window($package, (string)($input['date'] ?? ''), (string)($input['time'] ?? ''))
         : bookable_package_window($package, (string)($input['date'] ?? ''), (string)($input['time'] ?? ''));
+    if ((int)$start->format('i') % 30 !== 0) {
+        throw new BookingException('Chỉ chọn giờ nhận phòng theo mốc 30 phút: 00 hoặc 30 phút.', 422);
+    }
     $now = new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
     $package = package_with_discount($package, (int)($room['discountPercent'] ?? 0), $start->format('Y-m-d'), $room);
     if (!$unrestricted && $start > $now->modify('+366 days')) throw new BookingException('Chỉ nhận đặt phòng trong vòng 12 tháng.');
