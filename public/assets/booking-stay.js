@@ -101,11 +101,18 @@
                 panel: section.querySelector(".manual-time-popover"),
                 fields: { time, arrivalHour: section.querySelector("[data-stay-hour]"), arrivalMinute: section.querySelector("[data-stay-minute]") },
                 signal: events.signal,
+                minuteStep: 30,
             });
-            timePicker.set(original.slice(11, 16));
+            const aligned = /T\d{2}:(00|30):00$/.test(original);
+            if (aligned) {
+                timePicker.set(original.slice(11, 16));
+            } else {
+                form.elements[name].value = "";
+                section.querySelector("[data-time-hour-label]").textContent = "Chọn giờ";
+                section.querySelector("[data-time-minute-label]").textContent = "Chọn phút";
+            }
             const sync = () => {
-                const seconds = time.value === original.slice(11, 16) ? original.slice(17, 19) : "00";
-                form.elements[name].value = `${date.value}T${time.value}:${seconds}`;
+                form.elements[name].value = time.value ? `${date.value}T${time.value}:00` : "";
             };
             date.addEventListener("change", sync);
             time.addEventListener("change", sync);

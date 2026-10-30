@@ -24,6 +24,9 @@ function correct_booking_stay(PDO $pdo, string $id, array $input): void
         if (!$date || $date->format($format) !== $value) {
             throw new BookingException('Nhập đầy đủ ngày và giờ nhận/trả phòng hợp lệ.', 422);
         }
+        if ((int)$date->format('i') % 30 !== 0 || $date->format('s') !== '00') {
+            throw new BookingException('Giờ nhận và trả phòng chỉ được chọn phút 00 hoặc 30, không có giây lẻ.', 422);
+        }
         $dates[] = $date;
     }
     [$start, $end] = $dates;

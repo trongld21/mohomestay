@@ -56,6 +56,9 @@ $actor = ['id' => 'staff', 'root' => false];
 reject_stay(fn() => correct_booking_stay($pdo, $id, $input + ['root' => true]), 403);
 $actor = ['id' => 'admin', 'root' => true];
 reject_stay(fn() => correct_booking_stay($pdo, $id, array_replace($input, ['checkIn' => '2026-02-30T22:00'])), 422);
+foreach (['checkIn' => '2026-10-23T22:15', 'checkOut' => '2026-10-24T10:45'] as $key => $value) {
+    reject_stay(fn() => correct_booking_stay($pdo, $id, array_replace($input, [$key => $value])), 422);
+}
 reject_stay(fn() => correct_booking_stay($pdo, $id, array_replace($input, ['checkOut' => '2026-10-23T21:00'])), 422);
 reject_stay(fn() => correct_booking_stay($pdo, $id, array_replace($input, ['roomId' => 'hidden'])), 409);
 $pdo->exec("UPDATE rooms SET max_guests=1 WHERE id='black'");
@@ -103,12 +106,14 @@ expect_stay($newRoom['intervals'][0]['start'] === '2026-10-23T15:00:00+00:00', '
 expect_stay($newRoom['intervals'][1]['status'] === 'CLEANING'
     && $newRoom['intervals'][1]['start'] === '2026-10-24T04:00:00+00:00'
     && $newRoom['intervals'][1]['end'] === '2026-10-24T04:30:00+00:00', 'Matrix derives exactly 30 minutes cleaning from corrected checkout');
-// A room-only move must preserve seconds instead of silently shifting the booked interval.
+// Stay corrections require half-hour boundaries, including zero seconds.
 $seconds = [
     'roomId' => 'mo', 'checkIn' => '2026-10-23T22:00:25', 'checkOut' => '2026-10-24T11:00:25',
     'expectedRoomId' => 'black', 'expectedCheckIn' => '2026-10-23 15:00:00', 'expectedCheckOut' => '2026-10-24 04:00:00',
     'reason' => 'Kiểm tra độ chính xác thời gian',
 ];
-correct_booking_stay($pdo, $id, $seconds);
-expect_stay($pdo->query('SELECT check_out FROM bookings')->fetchColumn() === '2026-10-24 04:00:25', 'Exact seconds must survive date editing');
+reject_stay(fn() => correct_booking_stay($pdo, $id, $seconds), 422);
+$halfHour = array_replace($seconds, ['checkIn' => '2026-10-23T22:30:00', 'checkOut' => '2026-10-24T11:30:00']);
+correct_booking_stay($pdo, $id, $halfHour);
+expect_stay($pdo->query('SELECT check_out FROM bookings')->fetchColumn() === '2026-10-24 04:30:00', 'Half-hour corrections must be accepted exactly.');
 echo "Superadmin stay correction permissions, past dates, price preservation, conflicts, audit and stale edits: OK\n";
