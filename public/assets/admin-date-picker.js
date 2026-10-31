@@ -20,8 +20,10 @@
     }
 
     function create(dialog, options = {}) {
-        const field = dialog.querySelector(".manual-date-field");
-        const input = dialog.querySelector('[name="date"]');
+        const field = options.field || dialog.querySelector(".manual-date-field");
+        const input = options.input || dialog.querySelector('[name="date"]');
+        const endInput = options.endInput;
+        let rangeStart = null;
         const trigger = field.querySelector(".manual-date-trigger");
         const panel = field.querySelector(".manual-date-popover");
         const days = panel.querySelector("[data-calendar-days]");
@@ -34,7 +36,16 @@
         const today = () => new Intl.DateTimeFormat("en-CA", {
             timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit",
         }).format(new Date());
-        const allowed = (value) => (!input.min || value >= input.min) && (!input.max || value <= input.max);
+        function allowed(value) {
+            if ((input.min && value < input.min) || (input.max && value > input.max)) {
+                return false;
+            }
+            if (endInput && rangeStart) {
+                const daysApart = Math.abs(parse(value) - parse(rangeStart)) / 86400000;
+                return daysApart < options.maxRangeDays;
+            }
+            return true;
+        }
 
         function render() {
             const currentDay = today();
@@ -56,7 +67,9 @@
                 button.disabled = !allowed(day.value);
                 button.tabIndex = day.value === focused ? 0 : -1;
                 button.setAttribute("aria-label", new Intl.DateTimeFormat("vi-VN", { dateStyle: "full", timeZone: "UTC" }).format(parse(day.value)));
-                button.setAttribute("aria-pressed", String(day.value === input.value));
+                const start = rangeStart || input.value;
+                button.setAttribute("aria-pressed", String(day.value === start || Boolean(endInput && !rangeStart && day.value === endInput.value)));
+                if (endInput) button.dataset.inRange = String(!rangeStart && day.value > input.value && day.value < endInput.value);
                 if (day.value === currentDay) button.setAttribute("aria-current", "date");
                 days.append(button);
             }
@@ -67,7 +80,8 @@
             const rect = trigger.getBoundingClientRect();
             const height = window.visualViewport?.height || window.innerHeight;
             const width = window.visualViewport?.width || window.innerWidth;
-            const panelWidth = Math.min(352, width - 24);
+            const compact = options.compactLaptop && width >= 640 && height <= 850;
+            const panelWidth = Math.min(compact ? 304 : 352, width - 24);
             const below = height - rect.bottom - 16;
             const above = rect.top - 16;
             const flip = dialog.id !== "booking-app" && below < 390 && above > below;
@@ -76,7 +90,9 @@
                 ? "none"
                 : Math.max(120, flip ? above : below) + "px";
             panel.style.left = Math.max(12, Math.min(rect.left, width - panelWidth - 12)) + "px";
-            panel.style.top = (flip ? Math.max(12, rect.top - panel.offsetHeight - 8) : rect.bottom + 8) + "px";
+            if (compact) panel.style.maxHeight = Math.max(120, height - 24) + "px";
+            const top = flip ? rect.top - panel.offsetHeight - 8 : rect.bottom + 8;
+            panel.style.top = (compact ? Math.max(12, Math.min(top, height - panel.offsetHeight - 12)) : Math.max(12, top)) + "px";
         }
 
         function reflectOpen(value) {
@@ -85,6 +101,7 @@
         }
 
         function close(focus = false) {
+            rangeStart = null;
             if (opened && typeof panel.hidePopover === "function") panel.hidePopover();
             panel.classList.remove("is-open");
             reflectOpen(false);
@@ -92,22 +109,55 @@
         }
 
         function refresh() {
-            field.querySelector("[data-manual-date-label]").textContent = input.value
-                ? new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(parse(input.value))
-                : "Chọn ngày";
+            const label = field.querySelector("[data-manual-date-label]");
+            if (!input.value) {
+                label.textContent = endInput ? "Chọn khoảng ngày" : "Chọn ngày";
+                return;
+            }
+            const formatter = new Intl.DateTimeFormat("vi-VN", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                timeZone: "UTC",
+            });
+            let text = formatter.format(parse(input.value));
+            if (endInput?.value) {
+                text += " – " + formatter.format(parse(endInput.value));
+            }
+            label.textContent = text;
         }
 
         function select(value) {
             if (!allowed(value)) return;
+            if (endInput && !rangeStart) {
+                rangeStart = value;
+                focused = value;
+                panel.querySelector("[data-calendar-range-hint]").textContent = "Đã chọn ngày bắt đầu. Chọn ngày kết thúc (tối đa 93 ngày).";
+                render();
+                days.querySelector('[tabindex="0"]')?.focus({ preventScroll: true });
+                return;
+            }
+            if (endInput) {
+                endInput.value = value > rangeStart ? value : rangeStart;
+                value = value < rangeStart ? value : rangeStart;
+                rangeStart = null;
+            }
             input.value = value;
             refresh();
             input.dispatchEvent(new Event("input", { bubbles: true }));
             input.dispatchEvent(new Event("change", { bubbles: true }));
+            if (endInput) {
+                endInput.dispatchEvent(new Event("input", { bubbles: true }));
+                endInput.dispatchEvent(new Event("change", { bubbles: true }));
+            }
             close(true);
         }
 
         trigger.addEventListener("click", () => {
             if (opened) return close(true);
+            rangeStart = null;
+            const hint = panel.querySelector("[data-calendar-range-hint]");
+            if (hint) hint.textContent = "";
             refresh();
             focused = input.value || input.min || today();
             month = parse(focused);

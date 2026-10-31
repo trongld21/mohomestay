@@ -73,18 +73,22 @@ function render_google_analytics(string $path, string $host): void
     <?php
 }
 
-            function render_page(string $title, callable $content, array $options = []): never
-            {
-                $fullTitle = e($title) . ' | Mơ Home';
-                $adminPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-                $adminLayout = in_array($adminPath, [
-                    '/admin', '/admin/overview', '/admin/availability', '/admin/door-codes', '/admin/accounts',
-                    '/admin/permissions', '/admin/no-access', '/admin/sales', '/admin/sales/history',
-                    '/admin/products', '/admin/inventory', '/admin/people-counter',
-                ], true);
-                if ($adminLayout) require_once APP_ROOT . '/src/admin-layout.php';
-                $robots = ($options['robots'] ?? true) ? 'index,follow' : 'noindex,nofollow';
-                ?>
+function render_page(string $title, callable $content, array $options = []): never
+{
+    $fullTitle = e($title) . ' | Mơ Home';
+    $adminPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+    $loginLayout = $adminPath === '/auth/login';
+    $adminLayout = in_array($adminPath, [
+        '/admin', '/admin/overview', '/admin/availability', '/admin/door-codes', '/admin/accounts',
+        '/admin/permissions', '/admin/no-access', '/admin/sales', '/admin/sales/history',
+        '/admin/products', '/admin/inventory', '/admin/people-counter',
+        '/admin/personnel', '/admin/payroll', '/admin/timesheet',
+    ], true);
+    if ($adminLayout) {
+        require_once APP_ROOT . '/src/admin-layout.php';
+    }
+    $robots = ($options['robots'] ?? true) ? 'index,follow' : 'noindex,nofollow';
+    ?>
     <!doctype html>
     <html lang="vi">
 
@@ -113,11 +117,13 @@ function render_google_analytics(string $path, string $host): void
         <?php if (dev_reload_enabled()): ?><script src="<?= e(asset_url('/assets/dev-reload.js')) ?>" defer></script><?php endif ?>
     </head>
 
-    <body<?= $adminLayout ? ' class="admin-page"' : '' ?>>
+    <body<?= $adminLayout ? ' class="admin-page"' : ($loginLayout ? ' class="login-page"' : '') ?>>
         <a class="skip-link" href="#main">Đi đến nội dung</a>
         <?php if ($adminLayout): ?>
             <?php render_admin_icons(); render_admin_navigation($adminPath); ?>
             <div class="admin-workspace"><?php render_admin_topbar(); ?><main id="main"><?php $content(); ?></main></div>
+        <?php elseif ($loginLayout): ?>
+            <main id="main"><?php $content(); ?></main>
         <?php else: ?>
             <?php render_header(); ?><main id="main"><?php $content(); ?></main><?php render_footer(); ?>
         <?php endif ?>
@@ -825,14 +831,11 @@ function render_room(array $r): void
             </div>
         </div>
     </div><?php }
-                                                                                                                                                                                        function render_login(string $error): void
-                                                                                                                                                                                        { ?><div class="container section">
-        <div class="panel payment-container"><span class="eyebrow">DÀNH CHO CHỦ HOME</span>
-            <h1>Đăng nhập quản lý</h1>
-            <p class="muted">Khách đặt phòng không cần tạo tài khoản.</p>
-            <form method="post" class="stack"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><label class="field">Email<input name="email" type="email" required></label><label class="field">Mật khẩu<input name="password" type="password" required></label><?php if ($error): ?><p class="notice error"><?= e($error) ?></p><?php endif ?><button class="button">Đăng nhập</button></form>
-        </div>
-    </div><?php }
+function render_login(string $error): void
+{
+    require_once APP_ROOT . '/src/login-view.php';
+    render_login_form($error);
+}
 
 function render_admin(): void
 {

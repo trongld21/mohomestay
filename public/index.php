@@ -133,6 +133,21 @@ elseif ($path === '/admin/people-counter') {
     require_once APP_ROOT . '/src/people-counter-view.php';
     render_page('Lượt vào / ra', fn() => render_people_counter_page(), ['robots' => false]);
 }
+elseif ($path === '/admin/timesheet') {
+    if (!is_admin()) redirect('/auth/login');
+    require_permission('payroll');
+    header('Cache-Control: no-store');
+    require_once APP_ROOT . '/src/timesheet-view.php';
+    render_page('Chấm công', fn() => render_timesheet_page(), ['robots' => false]);
+}
+elseif (in_array($path, ['/admin/personnel', '/admin/payroll'], true)) {
+    if (!is_admin()) redirect('/auth/login');
+    require_permission('payroll');
+    header('Cache-Control: no-store');
+    require_once APP_ROOT . '/src/payroll-view.php';
+    $personnel = $path === '/admin/personnel';
+    render_page($personnel ? 'Quản lý nhân sự' : 'Tính lương', fn() => render_payroll_page($personnel), ['robots' => false]);
+}
 elseif ($path === '/admin/expenses') {
     if (!is_admin()) redirect('/auth/login');
     require_permission('expenses.view');

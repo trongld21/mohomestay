@@ -9,6 +9,17 @@ Quản trị có thể xác nhận đã nhận tiền cho đơn đã kết thúc
 Thẻ quản trị hiển thị giờ trả thực tế để đối chiếu; thời điểm dọn xong luôn bằng giờ checkout trên đơn cộng 30 phút, không phụ thuộc lúc bấm trả phòng.
 Đặt gói mới trên web chỉ nhận giờ có phút `00` hoặc `30`; máy chủ kiểm tra lại quy tắc này.
 
+## Nhân sự và tính lương
+
+Super Admin mở **Nhân sự & tính lương** trong menu quản trị để quản lý hồ sơ,
+ngày vào/nghỉ, mức lương giờ/tháng và lập kỳ lương. Nhập ca làm, phút nghỉ,
+phụ cấp và khấu trừ trên từng nhân viên; mọi kỳ đều cho phép chỉnh sửa.
+Hồ sơ nhân sự độc lập với tài khoản đăng nhập. Tính lương không tự ghi nhận chi tiền.
+Trong chi tiết lương nhân viên có thể nhập ca từ Excel `.xlsx`, xem trước và xác nhận
+thay ca. Chỉ lấy ngày/giờ, không lấy tiền lương hay thưởng cuối tuần từ file.
+Chạy migration `030_personnel_payroll.sql` bằng `php tools/migrate.php` trước khi dùng.
+Chi tiết công thức và kiểm thử: [docs/PAYROLL.md](docs/PAYROLL.md).
+
 ## Khôi phục mã TTLock bị trùng PIN
 
 Migration `029_booking_access_reused_pins.sql` bỏ ràng buộc duy nhất theo khóa/PIN,

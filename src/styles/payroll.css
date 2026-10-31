@@ -1,0 +1,601 @@
+/* Hallmark · shape: app screen · theme: Mơ Home (project) · genre: modern-minimal · signature: payroll ledger · v2.0.0 */
+/* Critique: keep the ledger dominant; forms use one flat surface and explicit labels. */
+/* Waiver: preserve the existing admin shell and Be Vietnam Pro to match the project. */
+:root {
+    --hr-paper: #faf8f4;
+    --hr-surface: #fffdf9;
+    --hr-ink: #3e322b;
+    --hr-muted: #70645b;
+    --hr-line: #dfd3c4;
+    --hr-accent: #70432c;
+    --hr-hover: #eee4d7;
+    --hr-inverse: #fffdf9;
+    --hr-error: #a52d2d;
+    --hr-error-paper: #fff1ef;
+    --hr-success: #346044;
+    --hr-success-paper: #edf4ea;
+    --hr-success-hover: #284d36;
+    --hr-warning: #865212;
+    --hr-warning-paper: #fff0cf;
+    --hr-info: #355f79;
+    --hr-info-paper: #eaf1f6;
+    --hr-neutral: #5c6269;
+    --hr-neutral-paper: #edf0f2;
+    --hr-font: 'Be Vietnam Pro', Arial, sans-serif;
+}
+
+html:has(.hr-module),
+body:has(.hr-module) {
+    overflow-x: clip;
+}
+
+.hr-module {
+    @apply mx-auto grid w-full max-w-7xl gap-5;
+    color: var(--hr-ink);
+    font-family: var(--hr-font);
+}
+
+.hr-module [hidden] {
+    display: none !important;
+}
+
+.hr-module h1,
+.hr-module h2,
+.hr-module h3 {
+    font-family: var(--hr-font);
+    text-wrap: balance;
+    @apply min-w-0 break-words font-semibold;
+}
+
+.hr-module h1 { @apply text-3xl leading-tight; }
+.hr-module h2 { @apply text-xl leading-snug; }
+.hr-module h3 { @apply text-base leading-snug; }
+.hr-module p { @apply leading-relaxed; }
+.hr-muted { color: var(--hr-muted); }
+.hr-money { @apply text-right tabular-nums whitespace-nowrap; }
+.hr-toolbar { @apply flex flex-wrap items-end justify-between gap-3; }
+.hr-actions { @apply flex flex-wrap items-center gap-2; }
+.hr-surface {
+    @apply min-w-0 rounded-xl border p-4 sm:p-5;
+    border-color: var(--hr-line);
+    background: var(--hr-surface);
+}
+.hr-surface.hr-timesheet-surface { @apply p-0; }
+.hr-button.hr-timesheet-mode[aria-pressed="true"] {
+    background: var(--hr-success);
+    border-color: var(--hr-success);
+    color: var(--hr-inverse);
+}
+.hr-button.hr-timesheet-mode[aria-pressed="true"]:hover {
+    background: var(--hr-success-hover);
+    color: var(--hr-inverse);
+}
+.hr-form-grid { @apply grid gap-4 sm:grid-cols-2 lg:grid-cols-3; }
+.hr-module[data-screen="payroll"] [data-create-actions] {
+    @apply flex-nowrap gap-1.5 sm:gap-2;
+}
+.hr-module[data-screen="payroll"] [data-create-actions] .hr-button {
+    @apply gap-1 whitespace-nowrap px-2 text-xs sm:gap-2 sm:px-4 sm:text-sm;
+}
+.hr-module[data-screen="payroll"] [data-create] {
+    container-type: inline-size;
+}
+@container (min-width: 960px) {
+    .hr-period-create-form {
+        @apply grid grid-cols-[minmax(160px,1fr)_minmax(260px,1.2fr)_auto] items-end gap-x-4;
+    }
+    .hr-period-create-form > .hr-form-grid {
+        display: contents;
+    }
+    .hr-period-create-form [data-date-range] {
+        grid-column: auto;
+    }
+    .hr-period-create-form [data-create-actions] {
+        @apply mt-0;
+    }
+    .hr-period-create-form .hr-field,
+    .hr-period-create-form [data-create-actions] .hr-button {
+        @apply h-12;
+    }
+    .hr-period-create-form > label {
+        grid-column: 1 / -1;
+    }
+}
+.hr-label { @apply grid min-w-0 gap-2 text-sm; }
+.hr-field {
+    @apply box-border min-h-11 w-full min-w-0 rounded-lg border px-3 py-2 text-base sm:text-sm;
+    border-color: var(--hr-line);
+    background: var(--hr-surface);
+    color: var(--hr-ink);
+}
+.hr-button {
+    @apply inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium no-underline;
+    border-color: var(--hr-line);
+    background: var(--hr-surface);
+    color: var(--hr-accent);
+}
+.hr-primary,
+.hr-button[aria-current="page"] {
+    background: var(--hr-accent);
+    border-color: var(--hr-accent);
+    color: var(--hr-inverse);
+}
+.hr-button:not(:disabled):hover {
+    background: var(--hr-hover);
+    color: var(--hr-ink);
+}
+.hr-button:not(:disabled):active { transform: translateY(1px); }
+.hr-button:disabled { @apply cursor-not-allowed opacity-50; }
+.hr-danger { color: var(--hr-error); }
+.hr-button.hr-danger:not(:disabled):hover {
+    background: var(--hr-error-paper);
+    color: var(--hr-error);
+}
+.hr-button.hr-positive {
+    background: var(--hr-success);
+    border-color: var(--hr-success);
+    color: var(--hr-inverse);
+}
+.hr-button.hr-positive:not(:disabled):hover {
+    background: var(--hr-success-hover);
+    border-color: var(--hr-success-hover);
+    color: var(--hr-inverse);
+}
+.hr-button.hr-info {
+    color: var(--hr-info);
+}
+.hr-button.hr-info:not(:disabled):hover {
+    background: var(--hr-info-paper);
+    color: var(--hr-info);
+}
+.hr-income { color: var(--hr-success); }
+.hr-deduction { color: var(--hr-error); }
+.hr-module :is(a, button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid var(--hr-accent);
+    outline-offset: 3px;
+}
+.hr-table-wrap { @apply max-w-full overflow-x-auto; }
+.hr-table { @apply w-full border-collapse text-left text-sm; }
+.hr-table th {
+    @apply whitespace-nowrap border-b px-3 py-3 text-sm font-medium;
+    border-color: var(--hr-line);
+    color: var(--hr-muted);
+}
+.hr-table td {
+    @apply border-b px-3 py-4 align-middle;
+    border-color: var(--hr-line);
+}
+.hr-table tbody tr:last-child td { border-bottom: 0; }
+.hr-state { @apply py-10 text-center text-sm; color: var(--hr-muted); }
+.hr-status { @apply rounded-lg p-3 text-sm; background: var(--hr-success-paper); color: var(--hr-success); }
+.hr-status[data-error="true"] { background: var(--hr-error-paper); color: var(--hr-error); }
+.hr-tag { @apply inline-flex rounded-md px-2 py-1 text-xs font-medium; background: var(--hr-hover); color: var(--hr-accent); }
+.hr-tag[data-state="active"],
+.hr-tag[data-state="locked"] {
+    background: var(--hr-success-paper);
+    color: var(--hr-success);
+}
+.hr-tag[data-state="draft"] {
+    background: var(--hr-warning-paper);
+    color: var(--hr-warning);
+}
+.hr-tag[data-state="inactive"] {
+    background: var(--hr-neutral-paper);
+    color: var(--hr-neutral);
+}
+.hr-summary { @apply flex flex-wrap gap-x-8 gap-y-3 border-y py-4; border-color: var(--hr-line); }
+.hr-summary strong { @apply mt-1 block text-xl tabular-nums; }
+.hr-repeat { @apply grid gap-3; }
+.hr-shift-row { @apply grid items-end gap-2 sm:grid-cols-4; }
+.hr-adjustment-row { @apply grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]; }
+.hr-confirm { @apply fixed inset-0 z-[100] grid place-items-center p-4; background: rgb(0 0 0 / 50%); }
+.hr-confirm > div { @apply w-full max-w-md; }
+html:has(.hr-confirm:not([hidden])) { overflow: hidden; }
+
+.hr-icon-button { @apply w-11 px-0; }
+.hr-icon-button svg,
+.hr-date-field svg { @apply h-5 w-5 shrink-0; }
+.hr-module select.hr-field {
+    @apply appearance-none pr-10;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2370432c' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 14px center;
+    background-repeat: no-repeat;
+}
+.hr-date-field { @apply relative block min-w-0; }
+.hr-date-field .manual-date-trigger {
+    @apply flex items-center justify-between gap-3 text-left;
+}
+.hr-date-field input.sr-only { @apply absolute; }
+.hr-date-field .manual-date-trigger:disabled { @apply cursor-not-allowed opacity-50; }
+.hr-calendar.manual-date-popover {
+    @apply fixed m-0 box-border rounded-xl border p-4;
+    inset: auto;
+    background: var(--hr-surface);
+    color: var(--hr-ink);
+    border-color: var(--hr-line);
+    box-shadow: 0 12px 32px rgb(62 50 43 / 14%);
+    font-family: var(--hr-font);
+}
+.hr-calendar:not(:popover-open):not(.is-open) { display: none; }
+.hr-calendar-heading { @apply mb-4 flex items-center justify-between gap-2 text-sm; }
+.hr-calendar-heading strong { @apply text-sm font-semibold capitalize; }
+.hr-calendar-weekdays,
+.hr-calendar-days { @apply grid grid-cols-7 gap-1; }
+.hr-calendar-weekdays { @apply mb-2 text-center text-xs; color: var(--hr-muted); }
+.hr-calendar-weekdays span { @apply py-2; }
+.hr-calendar-days button {
+    @apply flex min-h-10 items-center justify-center rounded-lg border-0 p-0 text-sm tabular-nums;
+    background: transparent;
+    color: var(--hr-ink);
+}
+.hr-calendar-days button[data-other-month="true"] { color: var(--hr-muted); }
+.hr-calendar-days button[data-today="true"] { @apply underline underline-offset-4; }
+.hr-calendar-days button[data-in-range="true"] { background: var(--hr-info-paper); color: var(--hr-info); }
+.hr-calendar-days button:not(:disabled):hover { background: var(--hr-hover); }
+.hr-calendar-days button[aria-pressed="true"] {
+    background: var(--hr-accent);
+    color: var(--hr-inverse);
+}
+.hr-calendar-days button:disabled { @apply cursor-not-allowed opacity-40; }
+.hr-calendar-footer { @apply mt-4 flex items-center justify-between gap-3 border-t pt-3; border-color: var(--hr-line); }
+@media (min-width: 640px) and (max-height: 850px) {
+    .hr-calendar.manual-date-popover { @apply p-3; }
+    .hr-calendar .hr-calendar-heading { @apply mb-2; }
+    .hr-calendar .hr-calendar-heading .hr-button { @apply h-8 min-h-8 w-8; }
+    .hr-calendar .hr-calendar-weekdays { @apply mb-1; }
+    .hr-calendar .hr-calendar-weekdays span { @apply py-1; }
+    .hr-calendar .hr-calendar-days button { @apply h-8 min-h-8 rounded-md text-xs; }
+    .hr-calendar .hr-calendar-footer { @apply mt-2 pt-2; }
+    .hr-calendar .hr-calendar-footer .hr-button { @apply min-h-9 px-3 py-1 text-xs; }
+}
+.hr-calendar :is(button):focus-visible {
+    outline: 2px solid var(--hr-accent);
+    outline-offset: 2px;
+}
+
+.hr-module[data-screen] {
+    @apply gap-6;
+}
+
+.hr-module[data-screen] > .hr-toolbar {
+    @apply items-center gap-5 border-b pb-5;
+    border-color: var(--hr-line);
+}
+
+.hr-module[data-screen="payroll"] > .hr-toolbar h1 {
+    color: var(--hr-success);
+}
+
+.hr-header-actions {
+    @apply flex w-full flex-wrap items-center gap-3 lg:w-auto;
+}
+
+.hr-module-tabs {
+    @apply inline-flex gap-1 rounded-md p-1;
+    background: var(--hr-info-paper);
+}
+
+.hr-module-tabs .hr-button {
+    @apply rounded border-0 px-4 py-2;
+    background: transparent;
+    color: var(--hr-info);
+}
+
+.hr-module-tabs .hr-button:hover {
+    background: #dce7ee;
+    color: var(--hr-info);
+}
+
+.hr-module-tabs .hr-button[aria-current="page"] {
+    background: var(--hr-success);
+    color: var(--hr-inverse);
+}
+
+.hr-module-tabs .hr-button[aria-current="page"]:hover {
+    background: var(--hr-success-hover);
+    color: var(--hr-inverse);
+}
+
+.hr-module[data-screen] [data-filter] {
+    @apply grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_auto_auto];
+}
+.hr-module[data-screen="payroll"] [data-filter] {
+    @apply grid-cols-[minmax(0,1fr)_auto_auto];
+}
+
+.hr-module[data-screen] .hr-field::placeholder {
+    color: var(--hr-muted);
+    opacity: 1;
+}
+
+.hr-empty {
+    @apply mx-auto flex max-w-lg flex-col items-center gap-3 px-2 py-10 text-center sm:py-12;
+}
+
+.hr-empty p {
+    @apply max-w-sm text-sm;
+}
+
+.hr-empty .hr-button {
+    @apply mt-2;
+}
+
+.hr-module[data-screen] ::selection {
+    background: var(--hr-hover);
+    color: var(--hr-ink);
+}
+
+.hr-module[data-screen] input {
+    caret-color: var(--hr-accent);
+}
+
+.hr-module[data-screen="payroll"] [data-detail] > .hr-toolbar {
+    @apply items-end border-b pb-5;
+    border-color: var(--hr-line);
+}
+
+.hr-module[data-screen="payroll"] [data-period-meta] {
+    @apply max-w-2xl leading-relaxed;
+    overflow-wrap: anywhere;
+}
+
+.hr-module[data-screen="payroll"] .hr-summary {
+    @apply justify-between gap-x-6 gap-y-5 border-t-0 pt-0;
+}
+
+.hr-module[data-screen="payroll"] .hr-summary > div:last-child strong {
+    color: var(--hr-success);
+}
+
+.hr-module [data-timesheet-upload] > .hr-label {
+    color: var(--hr-info);
+}
+
+.hr-module[data-screen="payroll"] [data-add-employee] {
+    @apply grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_auto];
+}
+
+.hr-module[data-screen="payroll"] [data-entry-editor] {
+    scroll-margin-top: 6rem;
+}
+
+.hr-module[data-screen="payroll"] [data-list] { @apply overflow-visible p-0; }
+.hr-period-list-heading { @apply grid gap-1 border-b px-5 py-4; border-color: var(--hr-line); }
+.hr-period-list-heading h2 { @apply text-base; }
+.hr-period-row {
+    @apply grid min-w-0 items-center gap-4 border-b px-5 py-5 lg:grid-cols-[2.5rem_minmax(0,1fr)_auto_auto];
+    border-color: var(--hr-line);
+}
+.hr-period-icon {
+    @apply hidden h-10 w-10 items-center justify-center rounded-xl lg:flex;
+    background: var(--hr-success-paper);
+    color: var(--hr-success);
+}
+.hr-period-info { @apply grid min-w-0 gap-1; }
+.hr-period-info h3 { @apply text-base; }
+.hr-period-info p { @apply leading-relaxed; }
+.hr-period-totals { @apply flex flex-wrap items-center gap-3 lg:grid lg:justify-items-end lg:gap-2; }
+.hr-period-actions { @apply flex-wrap; }
+.hr-open-period {
+    background: var(--hr-warning-paper);
+    border-color: var(--hr-warning-paper);
+    color: var(--hr-warning);
+}
+.hr-period-pagination { @apply flex flex-wrap items-center justify-between gap-3 p-5; }
+.hr-period-rename { @apply mt-3 flex flex-wrap items-end gap-2; }
+.hr-period-rename label { @apply min-w-0 flex-1; }
+.hr-surface.hr-ledger-overview,
+.hr-surface.hr-ledger-review { @apply min-w-0 p-0; }
+.hr-ledger-heading { @apply flex flex-wrap items-center justify-between gap-4 p-5; }
+.hr-ledger-heading h2 { @apply flex flex-wrap items-center gap-2 text-lg; }
+.hr-ledger-heading [data-period-count] { color: var(--hr-info); background: var(--hr-info-paper); }
+.hr-ledger-actions-trigger { @apply min-w-44 justify-between; }
+.hr-ledger-actions-trigger svg { @apply transition-transform; }
+.hr-ledger-actions-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+.hr-ledger-actions-menu {
+    @apply fixed m-0 box-border max-w-none overflow-auto rounded-xl border p-1.5;
+    inset: auto;
+    width: min(288px, calc(100vw - 24px));
+    background: var(--hr-surface);
+    border-color: var(--hr-line);
+    box-shadow: 0 12px 32px rgb(62 50 43 / 16%);
+    color: var(--hr-ink);
+}
+.hr-ledger-action-item {
+    @apply flex min-h-12 w-full items-center gap-3 rounded-lg border-0 px-3 py-2 text-left text-sm no-underline;
+    background: transparent;
+    color: var(--hr-ink);
+}
+.hr-ledger-action-item:not(:disabled):hover,
+.hr-ledger-action-item:focus-visible { background: var(--hr-info-paper); color: var(--hr-info); }
+.hr-ledger-action-item:disabled { @apply cursor-not-allowed opacity-50; }
+.hr-module[data-screen="payroll"] .hr-ledger-summary {
+    @apply grid grid-cols-2 gap-0 border-y p-0 lg:grid-cols-5;
+}
+.hr-ledger-summary > div { @apply min-w-0 border-b p-4 sm:p-5 lg:border-b-0 lg:border-r; border-color: var(--hr-line); }
+.hr-ledger-summary > div:first-child { @apply col-span-2 lg:col-span-1; background: var(--hr-warning-paper); }
+.hr-ledger-summary > div:last-child { @apply border-r-0; }
+.hr-module[data-screen="payroll"] .hr-ledger-summary > div strong { color: var(--hr-ink); }
+.hr-module[data-screen="payroll"] .hr-ledger-summary > div:first-child strong { color: var(--hr-success); }
+.hr-ledger-period { @apply flex flex-wrap items-center gap-3 px-5 py-4; }
+.hr-ledger-filters { @apply grid gap-4 p-5; }
+.hr-ledger-filters h2 { @apply text-lg; }
+.hr-ledger-search { @apply grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]; }
+.hr-button.hr-review-chip { @apply min-h-9 px-3 py-1.5 text-xs; }
+.hr-button.hr-review-chip[aria-pressed="true"] { background: var(--hr-info-paper); color: var(--hr-info); border-color: var(--hr-info); }
+.hr-ledger-columns { @apply relative; }
+.hr-ledger-columns summary { @apply cursor-pointer list-none; }
+.hr-ledger-column-options { @apply absolute right-0 z-20 mt-2 grid w-56 gap-3 rounded-xl border p-4; background: var(--hr-surface); border-color: var(--hr-line); box-shadow: 0 8px 24px rgb(62 50 43 / 12%); }
+.hr-ledger-column-options label { @apply flex min-h-9 items-center gap-2 text-sm; }
+.hr-ledger-scroll { @apply min-w-0 border-y px-4 sm:px-0; border-color: var(--hr-line); }
+.hr-ledger-table th { @apply text-xs; background: var(--hr-paper); }
+.hr-ledger-table th,
+.hr-ledger-table td { @apply px-4; }
+@media (min-width: 640px) {
+    .hr-ledger-table td { @apply align-top py-5; }
+    .hr-ledger-table td[data-label="Nhân viên"] > div { @apply pt-1; }
+    .hr-ledger-table td[data-label="Thực nhận"] > div > strong {
+        @apply flex min-h-11 items-center justify-end;
+    }
+}
+.hr-ledger-value,
+.hr-ledger-rate { @apply inline-flex min-h-11 items-center justify-center rounded-lg border px-3 text-sm tabular-nums; border-color: var(--hr-line); background: var(--hr-paper); }
+.hr-ledger-value { @apply min-w-16; }
+.hr-field.hr-bonus-hours { @apply w-28 text-center tabular-nums; }
+.hr-ledger-footer { @apply flex flex-wrap items-center justify-between gap-3 rounded-b-xl px-5 py-4 text-sm; background: var(--hr-paper); }
+.hr-ledger-footer .hr-actions { @apply gap-x-5 gap-y-2; }
+.hr-attendance-dialog {
+    @apply m-auto max-w-none overflow-hidden rounded-2xl border-0 p-0;
+    width: min(1440px, calc(100vw - 24px));
+    height: min(760px, calc(100dvh - 24px));
+    max-height: calc(100dvh - 24px);
+    background: var(--hr-surface);
+    color: var(--hr-ink);
+    box-shadow: 0 24px 64px rgb(38 42 34 / 24%);
+    font-family: var(--hr-font);
+}
+.hr-attendance-dialog::backdrop { background: rgb(24 35 28 / 48%); }
+html:has(.hr-attendance-dialog[open]) { overflow: hidden; }
+.hr-attendance-form { @apply grid h-full min-h-0; grid-template-rows: auto auto auto minmax(0,1fr) auto auto; }
+.hr-attendance-header { @apply flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4; border-color: var(--hr-line); }
+.hr-attendance-header h2 { @apply text-xl; }
+.hr-attendance-person { @apply max-w-full break-words rounded-md px-3 py-2 text-sm; background: var(--hr-warning-paper); color: var(--hr-warning); }
+.hr-attendance-stats { @apply grid grid-cols-3 border-b; background: var(--hr-paper); border-color: var(--hr-line); }
+.hr-attendance-stats > div { @apply grid min-w-0 gap-1 border-r px-5 py-3 last:border-r-0; border-color: var(--hr-line); }
+.hr-attendance-stats span { @apply text-xs; color: var(--hr-muted); }
+.hr-attendance-stats strong { @apply text-lg tabular-nums; }
+.hr-attendance-scroll { @apply min-h-0 overflow-auto px-4 sm:px-0; }
+.hr-attendance-table th { @apply sticky top-0 z-10; background: var(--hr-paper); }
+.hr-attendance-table td { @apply py-5; }
+@media (min-width: 640px) {
+    .hr-attendance-table td { @apply align-top; }
+    .hr-attendance-table td[data-label="TT"] .hr-shift-order { @apply min-h-12; }
+    .hr-attendance-table td[data-label="Ngày"] .manual-date-trigger,
+    .hr-attendance-table td[data-label="Giờ vào"] input,
+    .hr-attendance-table td[data-label="Giờ ra"] input,
+    .hr-attendance-table td[data-label="Đổi giờ"] button,
+    .hr-attendance-table td[data-label="Thao tác"] > button:first-child { @apply h-12; }
+    .hr-attendance-table td[data-label="Số giờ"] > div { @apply relative gap-0 pt-0; }
+    .hr-attendance-table [data-row-hours] { @apply absolute -top-4 text-xs leading-4; }
+    .hr-attendance-table .hr-shift-rate .hr-field { @apply h-12; }
+}
+.hr-shift-order { @apply inline-flex items-center gap-2; }
+.hr-button.hr-drag-shift {
+    @apply min-h-9 w-7 shrink-0 cursor-grab rounded-md border-0 p-0;
+    touch-action: none;
+    background: transparent;
+    color: var(--hr-muted);
+}
+.hr-button.hr-drag-shift:not(:disabled):hover { background: var(--hr-info-paper); color: var(--hr-info); }
+.hr-button.hr-drag-shift:not(:disabled):active { @apply cursor-grabbing; }
+.hr-button.hr-drag-shift:disabled { @apply cursor-default opacity-30; }
+.hr-attendance-table tr.is-dragging { background: var(--hr-info-paper); outline: 2px solid var(--hr-info); outline-offset: -2px; }
+.hr-attendance-dialog.is-reordering { @apply cursor-grabbing select-none; }
+.hr-attendance-table tr { position: relative; transition: background-color 150ms ease-out; }
+.hr-button.hr-insert-shift {
+    @apply absolute bottom-[-18px] left-1/2 z-10 flex h-9 min-h-9 w-9 -translate-x-1/2 items-center justify-center rounded-full p-0 opacity-0;
+    background: var(--hr-success);
+    color: var(--hr-inverse);
+    border-color: var(--hr-success);
+    pointer-events: none;
+    transition: opacity 150ms ease-out, background-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+.hr-attendance-table tr:hover .hr-insert-shift,
+.hr-attendance-table tr:focus-within .hr-insert-shift,
+.hr-button.hr-insert-shift:focus-visible { opacity: 1; pointer-events: auto; }
+.hr-button.hr-insert-shift:not(:disabled):hover { background: var(--hr-success-hover); color: var(--hr-inverse); box-shadow: 0 4px 10px rgb(40 77 54 / 20%); }
+.hr-attendance-dialog.is-reordering .hr-insert-shift { opacity: 0; pointer-events: none; }
+@media (hover: none) {
+    .hr-button.hr-insert-shift { opacity: 1; pointer-events: auto; }
+}
+.hr-attendance-table input[data-shift-key="in"],
+.hr-attendance-table input[data-shift-key="out"] { @apply w-24 tabular-nums; }
+.hr-shift-rate { @apply inline-flex w-fit max-w-full flex-nowrap items-center gap-2; }
+.hr-shift-rate .hr-field { @apply h-10 min-h-10 w-24 shrink-0 rounded-xl text-center text-sm tabular-nums; }
+.hr-shift-rate > span:last-child { @apply shrink-0 whitespace-nowrap; }
+.hr-button.hr-swap-time {
+    @apply rounded-full;
+    background: var(--hr-info-paper);
+    border-color: var(--hr-info-paper);
+    transition: transform 160ms ease-out, background-color 160ms ease-out, box-shadow 160ms ease-out;
+}
+.hr-button.hr-swap-time:not(:disabled):hover {
+    background: #dce7ee;
+    border-color: var(--hr-info);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgb(53 95 121 / 12%);
+}
+.hr-button.hr-swap-time:not(:disabled):active { transform: scale(.94); }
+.hr-swap-time.is-swapping svg { animation: hr-swap-time-turn 220ms ease-out; }
+@keyframes hr-swap-time-turn {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(180deg); }
+}
+.hr-attendance-table .hr-date-field { min-width: 168px; }
+.hr-attendance-table tr[data-invalid="true"] { background: var(--hr-error-paper); }
+.hr-attendance-footer { @apply flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4; background: var(--hr-paper); border-color: var(--hr-line); }
+.hr-attendance-footer [data-total] { @apply ml-2 text-lg tabular-nums; }
+@media (min-width: 640px) {
+    .hr-attendance-footer > .hr-actions { @apply gap-5; }
+}
+.hr-attendance-confirm { @apply absolute inset-0 z-50 flex items-center justify-center bg-black/35 p-4; }
+.hr-attendance-confirm > div { @apply w-full max-w-md; }
+@media (min-width: 640px) {
+    .hr-attendance-table { min-width: 1000px; }
+}
+@media (max-width: 639px) {
+    .hr-attendance-header { @apply grid grid-cols-[minmax(0,1fr)_auto] px-4 py-3; }
+    .hr-attendance-header > .hr-actions { display: contents; }
+    .hr-attendance-header h2 { grid-column: 1; }
+    .hr-attendance-header [data-person] { grid-column: 1; grid-row: 2; }
+    .hr-attendance-header [data-close-attendance] { grid-column: 2; grid-row: 1 / span 2; align-self: start; }
+    .hr-attendance-header h2 { @apply text-lg; }
+    .hr-attendance-stats > div { @apply px-3; }
+    .hr-attendance-person { @apply text-xs; }
+    .hr-attendance-table .hr-date-field { min-width: 0; }
+    .hr-attendance-footer { @apply grid grid-cols-2 px-4 py-3; }
+    .hr-attendance-footer > .hr-actions { display: contents; }
+    .hr-attendance-footer > .hr-actions > span { @apply justify-self-end; grid-column: 2; grid-row: 1; }
+    .hr-attendance-footer [data-save-attendance] { @apply whitespace-nowrap px-2 text-xs; grid-column: 1 / -1; grid-row: 2; }
+}
+@media (min-width: 640px) {
+    .hr-ledger-scroll { max-height: min(58vh, 600px); @apply overflow-auto; }
+    .hr-ledger-table { min-width: 1000px; }
+    .hr-ledger-table thead th { @apply sticky top-0 z-10; }
+    .hr-ledger-table th:first-child { @apply w-56; }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+    .hr-period-row { @apply grid-cols-[minmax(0,1fr)_auto]; }
+    .hr-period-actions { @apply col-span-2; }
+}
+
+@media (max-width: 639px) {
+    .hr-module [data-filter] { @apply grid grid-cols-[minmax(0,1fr)_2.75rem_2.75rem]; }
+    .hr-module [data-filter] label:first-child { @apply col-span-3; }
+    .hr-module [data-filter] label:nth-child(2) { @apply col-span-1; }
+    .hr-module[data-screen="payroll"] [data-filter] label:first-child { grid-column: auto; }
+    .hr-table,
+    .hr-table tbody,
+    .hr-table tr { display: block; }
+    .hr-table thead { @apply sr-only; }
+    .hr-table tr { @apply border-b py-3; border-color: var(--hr-line); }
+    .hr-table tr:last-child { border-bottom: 0; }
+    .hr-table td {
+        @apply grid grid-cols-[7rem_minmax(0,1fr)] items-center gap-3 border-0 px-0 py-2 text-left whitespace-normal;
+        overflow-wrap: anywhere;
+    }
+    .hr-table td::before {
+        content: attr(data-label);
+        @apply text-xs font-normal;
+        color: var(--hr-muted);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hr-module *, .hr-module *::before, .hr-module *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}

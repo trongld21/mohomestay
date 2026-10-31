@@ -240,4 +240,39 @@ try {
 unset($_SESSION['account_id'], $_SESSION['account_version']);
 account_check(can_use('people-counter.view'), 'Super Admin must remain allowed after staff denial');
 
+account_check(can_use('payroll'), 'Super Admin must access payroll.');
+account_check(!array_key_exists('payroll', account_permissions()) && !array_key_exists('payroll.view', account_permission_labels()), 'Payroll must not be assignable to staff.');
+foreach (['payroll', 'payroll.view'] as $permission) {
+    try {
+        save_account(['id' => $id, 'permissions' => [$permission]], true);
+        throw new LogicException('Payroll access was granted to staff.');
+    } catch (BookingException $error) {
+        account_check($error->httpStatus === 422, 'Granting payroll permission must be rejected.');
+    }
+}
+$legacy->execute([json_encode(['payroll', 'payroll.view', 'payroll.create', 'bookings.view']), $id]);
+$_SESSION['account_id'] = $id;
+$_SESSION['account_version'] = 2;
+foreach (['payroll', 'payroll.view', 'payroll.create'] as $permission) {
+    account_check(!can_use($permission), 'Staff must be denied payroll even with stored permissions.');
+}
+foreach (['GET', 'POST', 'PATCH', 'DELETE'] as $method) {
+    try {
+        require_permission(admin_api_permission('/api/admin/payroll', $method));
+        throw new LogicException('Staff accessed payroll API.');
+    } catch (RuntimeException $error) {
+        account_check($error->getMessage() === '403', 'All payroll API methods must reject staff.');
+    }
+}
+ob_start();
+render_admin_navigation('/admin/overview');
+$staffNavigation = ob_get_clean();
+account_check(!str_contains($staffNavigation, 'href="/admin/personnel"') && !str_contains($staffNavigation, 'href="/admin/payroll"'), 'Staff navigation must hide the module.');
+account_check(can_use('bookings.view'), 'Staff booking permissions must remain unchanged.');
+unset($_SESSION['account_id'], $_SESSION['account_version']);
+ob_start();
+render_admin_navigation('/admin/payroll');
+$rootNavigation = ob_get_clean();
+account_check(str_contains($rootNavigation, 'href="/admin/personnel"') && str_contains($rootNavigation, 'href="/admin/payroll"'), 'Super Admin navigation must show the module.');
+
 echo "Account authorization tests: OK\n";

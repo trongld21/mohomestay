@@ -42,6 +42,9 @@ function render_admin_icons(): void
             <path d="M12 3a12 12 0 0 0 8.5 3c.5 6 -2.5 10 -8.5 14c-6 -4 -9 -8 -8.5 -14a12 12 0 0 0 8.5 -3" />
             <path d="m9 12 2 2 4 -4" />
         </symbol>
+        <symbol id="admin-icon-filter" viewBox="0 0 24 24">
+            <path d="M5.5 5h13a1 1 0 0 1 .5 1.5l-5 5.5v7l-4 -3v-4l-5 -5.5a1 1 0 0 1 .5 -1.5" />
+        </symbol>
         <symbol id="admin-icon-refresh" viewBox="0 0 24 24">
             <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
             <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
@@ -179,6 +182,9 @@ function render_admin_icons(): void
         <symbol id="admin-icon-clock" viewBox="0 0 24 24">
             <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" />
             <path d="M12 7v5l3 3" />
+        </symbol>
+        <symbol id="admin-icon-arrows-exchange" viewBox="0 0 24 24">
+            <path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4" />
         </symbol>
     </defs></svg>
     <?php

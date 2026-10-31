@@ -46,6 +46,10 @@ function handle_api(string $path, string $method): never
             require_once APP_ROOT . '/src/people-counter.php';
             people_counter_api($method, false);
         }
+        if ($path === '/api/admin/payroll') {
+            require_once APP_ROOT . '/src/payroll.php';
+            payroll_api($method);
+        }
         if ($path === '/api/admin/expenses') {
             require_once APP_ROOT . '/src/expenses.php';
             expenses_api($method);

@@ -86,6 +86,20 @@ function render_admin_navigation(string $path): void
                     </div>
                 </details>
             <?php endif ?>
+            <?php if (can_use('payroll')): ?>
+                <details class="admin-nav-group" <?= in_array($path, ['/admin/personnel', '/admin/payroll', '/admin/timesheet'], true) ? 'open' : '' ?>>
+                    <summary class="<?= $link ?> cursor-pointer">
+                        <?= admin_icon('user') ?>
+                        <span class="min-w-0 flex-1">Nhân sự & tính lương</span>
+                        <svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                    </summary>
+                    <div class="grid gap-1 pb-1 pl-8">
+                        <a class="<?= $link ?>" href="/admin/personnel" <?= $path === '/admin/personnel' ? 'aria-current="page"' : '' ?>>Quản lý nhân sự</a>
+                        <a class="<?= $link ?>" href="/admin/payroll" <?= $path === '/admin/payroll' ? 'aria-current="page"' : '' ?>>Tính lương</a>
+                        <a class="<?= $link ?>" href="/admin/timesheet" <?= $path === '/admin/timesheet' ? 'aria-current="page"' : '' ?>>Chấm công</a>
+                    </div>
+                </details>
+            <?php endif ?>
             <?php if (can_use('accounts')): ?>
                 <details class="admin-nav-group" <?= in_array($path, ['/admin/accounts', '/admin/permissions'], true) ? 'open' : '' ?>>
                     <summary class="<?= $link ?> cursor-pointer">
@@ -136,6 +150,9 @@ function render_admin_topbar(): void
         '/admin/sales/history' => 'Lịch sử bán hàng',
         '/admin/products' => 'Quản lý sản phẩm',
         '/admin/expenses' => 'Phiếu chi',
+        '/admin/personnel' => 'Quản lý nhân sự',
+        '/admin/payroll' => 'Tính lương',
+        '/admin/timesheet' => 'Chấm công',
         '/admin/people-counter' => 'Lượt vào / ra',
         '/admin/inventory' => 'Nhập kho & tồn kho',
         '/admin/accounts' => 'Quản lý tài khoản',
