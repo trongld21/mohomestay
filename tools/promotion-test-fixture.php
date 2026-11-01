@@ -37,6 +37,7 @@ function promotion_test_database(): PDO
         id TEXT PRIMARY KEY,
         guest_phone TEXT,
         guest_email TEXT,
+        guest_name TEXT,
         status TEXT,
         is_test INTEGER,
         check_out TEXT

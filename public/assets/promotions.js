@@ -48,7 +48,7 @@
             const weekdays = (promotion.weekdays || []).map((day) => dayNames[day]).join(", ");
             const condition = promotion.type === "SCHEDULE"
                 ? `${weekdays} · ${promotion.startTime}–${promotion.endTime} (giờ nhận phòng)`
-                : `Từ ${promotion.minStays} lần lưu trú hoàn tất · trùng điện thoại hoặc email`;
+                : `Từ ${promotion.minStays} lần lưu trú hoàn tất · trùng ít nhất 2/3: họ tên, email, số điện thoại`;
             const roomIds = promotion.roomIds || [];
             const packageIds = promotion.packageIds || [];
             const scope = !roomIds.length && !packageIds.length ? "Tất cả phòng và gói" : [

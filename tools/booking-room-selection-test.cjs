@@ -20,7 +20,7 @@ for (const requested of ["lang", "mo", "missing"]) {
     const node = () => ({ value: "", innerHTML: "", setAttribute() {}, addEventListener() {} });
     const summary = node();
     const form = {
-        elements: { roomId: roomSelect, extraHours: { ...node(), value: "0" }, guestPhone: node(), guestEmail: node() },
+        elements: { roomId: roomSelect, extraHours: { ...node(), value: "0" }, guestName: node(), guestPhone: node(), guestEmail: node() },
         date: node(), time: node(), packageId: node(), numberOfGuests: node(),
         querySelector: (selector) => selector === ".booking-submit" || selector.startsWith("[data-extra-hours-") ? node() : null,
     };

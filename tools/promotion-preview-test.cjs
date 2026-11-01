@@ -19,7 +19,7 @@ async function checkAsyncPreviews() {
         room: () => ({ id: 'room' }),
         LANG_HOME: { csrf: 'token' },
         form: { date: { value: '2026-11-02' }, time: { value: '08:00' }, elements: {
-            guestPhone: { value: '0901234567' }, guestEmail: { value: 'guest@example.com' },
+            guestName: { value: 'Khách cũ' }, guestPhone: { value: '0901234567' }, guestEmail: { value: 'guest@example.com' },
         } },
         request: () => new Promise((resolve, reject) => pending.push({ resolve, reject })),
     });
@@ -41,7 +41,7 @@ async function checkAsyncPreviews() {
     const manual = fs.readFileSync('public/assets/manual-booking.js', 'utf8');
     const manualStart = manual.indexOf('    async function updateAvailability()');
     const manualEnd = manual.indexOf('    function closeDialog()', manualStart);
-    const fields = Object.fromEntries(['agreedPrice', 'date', 'time', 'guestPhone', 'guestEmail'].map((name) => [name, { value: '' }]));
+    const fields = Object.fromEntries(['agreedPrice', 'date', 'time', 'guestName', 'guestPhone', 'guestEmail'].map((name) => [name, { value: '' }]));
     fields.date.value = '2026-11-02';
     fields.time.value = '08:00';
     fields.agreedPrice.value = '100000';
@@ -61,6 +61,7 @@ async function checkAsyncPreviews() {
             : Promise.resolve({ connected: true, rooms: [{ id: 'room', active: true, intervals: [] }] }),
     };
     vm.createContext(state);
+    state.MoBookingSlots.manualSlotWindow = state.MoBookingSlots.slotWindow;
     vm.runInContext(manual.slice(manualStart, manualEnd), state);
     const quote = vm.runInContext('updateAvailability()', state);
     assert.equal(state.submit.disabled, true, 'manual form blocks while quote is pending');

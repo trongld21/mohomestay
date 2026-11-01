@@ -10,6 +10,7 @@ const vm = require("node:vm");
         const fields = {
             roomId: { ...node(), value: "pink" }, extraHours: { ...node(), value: "0" },
             guestPhone: { ...node(), value: "0900000000" },
+            guestName: { ...node(), value: "Khách thử" },
             guestEmail: { ...node(), value: "test@example.com" },
         };
         const form = {
@@ -66,6 +67,7 @@ const vm = require("node:vm");
                 if (url === "/api/booking-price") {
                     const payload = JSON.parse(options.body);
                     assert.equal(payload.guestPhone, fields.guestPhone.value);
+                    assert.equal(payload.guestName, fields.guestName.value);
                     assert.equal(payload.guestEmail, fields.guestEmail.value);
                     assert.equal(options.headers["X-CSRF-Token"], "csrf-test");
                     return { ok: true, json: async () => ({ basePrice: 200000, price: 180000, percent: 10, promotionName: "Ưu đãi" }) };

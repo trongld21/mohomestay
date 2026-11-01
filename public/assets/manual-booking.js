@@ -137,6 +137,7 @@
                     roomId: room.id, packageId: slot.id, date: fields.date.value,
                     time: fields.time.value, guestPhone: fields.guestPhone.value,
                     guestEmail: fields.guestEmail.value, manual: true,
+                    guestName: fields.guestName.value,
                 });
                 if (current !== revision || !dialog.open) return;
                 if (!Number.isFinite(quote.price) || !Number.isFinite(quote.basePrice)) throw new Error("Giá gói chưa hợp lệ.");
@@ -253,7 +254,7 @@
     dialog.querySelector("[data-manual-discard-confirm]").onclick = closeDialog;
     form.addEventListener("input", (event) => {
         if (event.target.name === "agreedPrice") priceEdited = true;
-        if (["guestPhone", "guestEmail"].includes(event.target.name) && !isCustom()) {
+        if (["guestName", "guestPhone", "guestEmail"].includes(event.target.name) && !isCustom()) {
             ++revision;
             available = false;
             submit.disabled = true;

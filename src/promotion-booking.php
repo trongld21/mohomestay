@@ -35,7 +35,7 @@ function promotion_apply_quote(PDO $pdo, array $quote, ?int $agreedPrice = null)
     );
     $package = promotion_price(
         $pdo, $quote['room'], $package, $quote['start'],
-        (string)($quote['phone'] ?? ''), (string)($quote['email'] ?? '')
+        (string)($quote['phone'] ?? ''), (string)($quote['email'] ?? ''), (string)($quote['name'] ?? '')
     );
     $quote = array_replace($quote, booking_package_snapshot($package));
     if (($quote['extraHours'] ?? 0) > 0) {
@@ -55,7 +55,7 @@ function promotion_apply_quote(PDO $pdo, array $quote, ?int $agreedPrice = null)
 
 function promotion_preview_for_room(PDO $pdo, array $room, array $input, bool $allowAnyDate = false): array
 {
-    foreach (['packageId', 'date', 'time', 'guestPhone', 'guestEmail'] as $key) {
+    foreach (['packageId', 'date', 'time', 'guestPhone', 'guestEmail', 'guestName'] as $key) {
         if (isset($input[$key]) && (!is_string($input[$key]) || strlen($input[$key]) > 254)) {
             throw new BookingException('Thông tin tính giá không hợp lệ.', 422);
         }
@@ -67,6 +67,7 @@ function promotion_preview_for_room(PDO $pdo, array $room, array $input, bool $a
     $quote = promotion_apply_quote($pdo, [
         'room' => $room, 'package' => $package, 'start' => $start,
         'phone' => $input['guestPhone'] ?? '', 'email' => $input['guestEmail'] ?? '',
+        'name' => $input['guestName'] ?? '',
     ]);
     $package = $quote['package'];
     return [

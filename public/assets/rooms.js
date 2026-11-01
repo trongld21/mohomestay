@@ -162,6 +162,7 @@
                         date: form.date.value, time: form.time.value,
                         guestPhone: form.elements.guestPhone.value,
                         guestEmail: form.elements.guestEmail.value,
+                        guestName: form.elements.guestName.value,
                     }),
                 });
                 if (current !== priceRevision) return;
@@ -450,7 +451,7 @@
             durationTime = form.time.value;
             invalidatePrice();
         };
-        for (const name of ["guestPhone", "guestEmail"]) {
+        for (const name of ["guestName", "guestPhone", "guestEmail"]) {
             form.elements[name].addEventListener("input", () => invalidatePrice(350));
         }
         form.onsubmit = async (event) => {

@@ -157,11 +157,17 @@ function promotion_phone(string $phone): string
     return $phone;
 }
 
-function promotion_completed_stays(PDO $pdo, string $phone, string $email): int
+function promotion_guest_name(string $name): string
+{
+    return mb_strtolower(preg_replace('/\s+/u', ' ', trim($name)) ?? '', 'UTF-8');
+}
+
+function promotion_completed_stays(PDO $pdo, string $phone, string $email, string $name = ''): int
 {
     $phone = promotion_phone($phone);
     $email = strtolower(trim($email));
-    if ($phone === '' && $email === '') {
+    $name = promotion_guest_name($name);
+    if (count(array_filter([$phone, $email, $name], static fn(string $value): bool => $value !== '')) < 2) {
         return 0;
     }
     // Normalize only in the targeted SQL predicate; never load guest histories into PHP.
@@ -179,15 +185,24 @@ function promotion_completed_stays(PDO $pdo, string $phone, string $email): int
         $params[] = $email;
     }
     // Checkout charges records the real completion time and supersedes scheduled departure.
-    $sql = "SELECT COUNT(*) FROM bookings b LEFT JOIN booking_checkout_charges c ON c.booking_id=b.id "
+    $sql = "SELECT b.guest_name,b.guest_phone,b.guest_email FROM bookings b LEFT JOIN booking_checkout_charges c ON c.booking_id=b.id "
         . "WHERE b.status='CHECKED_OUT' AND b.is_test=0 AND COALESCE(c.actual_checkout_at,b.check_out)<=? AND (" . implode(' OR ', $parts) . ')';
     array_unshift($params, gmdate('Y-m-d H:i:s'));
     $query = $pdo->prepare($sql);
     $query->execute($params);
-    return (int)$query->fetchColumn();
+    $count = 0;
+    while ($booking = $query->fetch(PDO::FETCH_ASSOC)) {
+        $matches = (int)($phone !== '' && promotion_phone((string)$booking['guest_phone']) === $phone)
+            + (int)($email !== '' && strtolower(trim((string)$booking['guest_email'])) === $email)
+            + (int)($name !== '' && promotion_guest_name((string)$booking['guest_name']) === $name);
+        if ($matches >= 2) {
+            $count++;
+        }
+    }
+    return $count;
 }
 
-function promotion_price(PDO $pdo, array $room, array $package, DateTimeImmutable $start, string $phone, string $email): array
+function promotion_price(PDO $pdo, array $room, array $package, DateTimeImmutable $start, string $phone, string $email, string $name = ''): array
 {
     $start = $start->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'));
     $base = (int)($package['basePrice'] ?? $package['price']);
@@ -212,7 +227,7 @@ function promotion_price(PDO $pdo, array $room, array $package, DateTimeImmutabl
                 continue;
             }
         } else {
-            $stays ??= promotion_completed_stays($pdo, $phone, $email);
+            $stays ??= promotion_completed_stays($pdo, $phone, $email, $name);
             if ($stays < $promotion['minStays']) {
                 continue;
             }

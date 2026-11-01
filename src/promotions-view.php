@@ -134,7 +134,7 @@ function render_promotions_page(): void
                                 required>
                         </label>
                         <p class="text-sm text-stone-600">
-                            Nhận diện bằng số điện thoại hoặc email trùng lịch sử. Chỉ đếm đơn đã trả phòng
+                            Cần trùng ít nhất 2/3 thông tin: họ tên, email, số điện thoại trên cùng một đơn cũ. Chỉ đếm đơn đã trả phòng
                             hợp lệ, không tính đơn test, hủy hoặc chưa hoàn tất.
                         </p>
                     </fieldset>

@@ -26,13 +26,13 @@ function continuation_check(bool $condition, string $message): void
 {
     if (!$condition) throw new RuntimeException($message);
 }
-function continuation_reject(callable $operation): void
+function continuation_reject(callable $operation, int $expectedStatus = 409): void
 {
     try {
         $operation();
         throw new RuntimeException('Invalid continuation accepted.');
     } catch (BookingException $error) {
-        continuation_check($error->httpStatus === 409, 'Conflict must return 409.');
+        continuation_check($error->httpStatus === $expectedStatus, 'Rejection must use the expected status.');
     }
 }
 $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
@@ -64,7 +64,7 @@ $pdo->prepare("INSERT INTO bookings (id,booking_code,room_id,check_in,check_out,
 continuation_reject(fn() => assert_room_inventory($pdo, 'r', $boundary, $end));
 $context = booking_continuation_context($pdo, $parentId);
 continuation_check(array_column($context['packages'], 'id') === ['night', 'three'], 'Only packages beginning exactly at previous checkout are options.');
-continuation_reject(fn() => create_booking_continuation($pdo, $parentId, ['packageId' => 'wrong', 'requestId' => uuid()]));
+continuation_reject(fn() => create_booking_continuation($pdo, $parentId, ['packageId' => 'wrong', 'requestId' => uuid()]), 422);
 $input = ['packageId' => 'night', 'requestId' => uuid(), 'guestPhone' => '0999999999'];
 $child = create_booking_continuation($pdo, $parentId, $input);
 continuation_check($child['check_in'] === $boundary && $child['check_out'] === $end, 'Night must begin at 21:00 and end at 09:00.');

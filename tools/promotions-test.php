@@ -25,7 +25,9 @@ $rule = ['name' => 'Weekday', 'type' => 'SCHEDULE', 'percent' => 20, 'enabled' =
 $saved = promotion_save($pdo, $rule);
 $room = ['id' => 'room'];
 $package = ['id' => 'package', 'price' => 90000, 'basePrice' => 100000, 'effectiveDiscountPercent' => 10];
-$quote = fn(string $date, string $phone = '', string $email = '') => promotion_price($pdo, $room, $package, new DateTimeImmutable($date, new DateTimeZone('Asia/Ho_Chi_Minh')), $phone, $email);
+$quote = fn(string $date, string $phone = '', string $email = '', string $name = '') => promotion_price(
+    $pdo, $room, $package, new DateTimeImmutable($date, new DateTimeZone('Asia/Ho_Chi_Minh')), $phone, $email, $name
+);
 foreach (['2026-11-02 06:00', '2026-11-02 14:59:59'] as $date) {
     promotion_check($quote($date)['price'] === 80000, 'Inclusive start and exclusive end schedule');
 }
@@ -36,17 +38,18 @@ promotion_check($quote('2026-11-01T23:00:00Z')['price'] === 80000, 'Arrival conv
 $tie = promotion_save($pdo, array_merge($rule, ['name' => 'Tie']));
 promotion_check($quote('2026-11-02 08:00')['promotionId'] === min($saved['id'], $tie['id']), 'Stable ID tie');
 $returning = promotion_save($pdo, ['name' => 'Returning', 'type' => 'RETURNING', 'percent' => 30, 'enabled' => true, 'minStays' => 2]);
-$insert = $pdo->prepare('INSERT INTO bookings VALUES (?,?,?,?,?,?)');
+$insert = $pdo->prepare('INSERT INTO bookings (id,guest_phone,guest_email,status,is_test,check_out) VALUES (?,?,?,?,?,?)');
 $insert->execute(['a', '+84 912-345-678', ' OLD@EXAMPLE.COM ', 'CHECKED_OUT', 0, '2020-01-01 10:00:00']);
 $insert->execute(['b', '0912345678', 'different@example.com', 'CHECKED_OUT', 0, '2020-01-01 10:00:00']);
-promotion_check($quote('2026-11-02 08:00', '0912345678', 'old@example.com')['price'] === 70000, 'Phone variants OR email count once and highest discount does not stack');
+$pdo->exec("UPDATE bookings SET guest_name='Nguyễn Văn An'");
+promotion_check($quote('2026-11-02 08:00', '0912345678', 'old@example.com', 'Nguyễn Văn An')['price'] === 70000, 'Two matching identity fields per stay qualify and discounts do not stack');
 promotion_check($quote('2026-11-02 08:00', '0999999999', 'old@example.com')['price'] === 80000, 'Changed phone email matches only direct booking, not transitive identities');
 foreach ([['future', 'CHECKED_OUT', 0, '2099-01-01'], ['test', 'CHECKED_OUT', 1, '2020-01-01'], ['cancel', 'CANCELLED', 0, '2020-01-01']] as [$id, $status, $test, $end]) {
     $insert->execute([$id, '0999999999', 'old@example.com', $status, $test, $end]);
 }
 promotion_check($quote('2026-11-02 08:00', '0999999999', 'old@example.com')['price'] === 80000, 'Future test cancelled stays excluded');
 $pdo->exec("INSERT INTO booking_checkout_charges VALUES ('b','2099-01-01 00:00:00')");
-promotion_check($quote('2026-11-02 08:00', '0912345678')['price'] === 80000, 'Actual checkout overrides scheduled checkout');
+promotion_check($quote('2026-11-02 08:00', '0912345678', '', 'Nguyễn Văn An')['price'] === 80000, 'Actual checkout overrides scheduled checkout');
 $insert->execute(['near-future', '0888888888', '', 'CHECKED_OUT', 0, gmdate('Y-m-d H:i:s', time() + 3600)]);
 promotion_check(promotion_completed_stays($pdo, '0888888888', '') === 0, 'Future UTC departures excluded within next seven hours');
 $insert->execute(['blank', '', '', 'CHECKED_OUT', 0, '2020-01-01']);

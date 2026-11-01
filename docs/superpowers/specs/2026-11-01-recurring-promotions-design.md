@@ -43,4 +43,6 @@ Kiểm tra lịch theo thứ, ngày và ranh giới giờ; khách đổi số gi
 
 ## Trạng thái
 
+Điều chỉnh theo yêu cầu mới ngày 2026-11-01: nhận diện khách quay lại cần trùng ít nhất 2/3 trường họ tên, email, SĐT trên cùng một đơn đã hoàn tất, thay thế quy tắc SĐT hoặc email ở bản thiết kế ban đầu. Không ghép thông tin từ nhiều đơn; thông tin trống không tính trùng. Tên so sánh không phân biệt hoa thường và bỏ khoảng trắng thừa; không bỏ dấu tiếng Việt. Báo giá web/admin gửi và cập nhật lại khi sửa cả họ tên.
+
 Người dùng đã duyệt thiết kế và yêu cầu triển khai ngày 2026-11-01. Các chi tiết ở phần thiết kế đề xuất được áp dụng theo bản duyệt này.

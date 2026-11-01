@@ -10,8 +10,10 @@ không giới hạn theo bộ lọc đó.
 
 Giờ tính theo Việt Nam và thời điểm nhận phòng thực tế. Khung 06:00–15:00 gồm
 06:00, không gồm 15:00; mốc kết thúc 24:00 được hỗ trợ. Ngày bắt đầu/kết thúc tính
-cả hai ngày. Khách quay lại được nhận diện bằng SĐT hoặc email trực tiếp trùng đơn
+cả hai ngày. Khách quay lại phải trùng ít nhất 2/3 thông tin họ tên, email, SĐT trên cùng một đơn
 đã hoàn tất trước thời điểm tính giá; không tính đơn test, hủy hoặc chưa hoàn tất.
+Tên được so sánh không phân biệt hoa thường và bỏ khoảng trắng thừa; email không
+phân biệt hoa thường, SĐT chuẩn hóa đầu 0/+84. Thông tin bỏ trống không được tính là trùng.
 
 Chỉ lấy mức giảm cao nhất giữa các chương trình đủ điều kiện và mức giảm phòng/gói
 hiện có, áp dụng một lần lên giá gốc. Khách cũ giảm 10% đúng lịch giảm 20% chỉ được

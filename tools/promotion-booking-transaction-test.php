@@ -12,7 +12,7 @@ promotion_save($pdo, [
     'name' => 'Ban ngày', 'type' => 'SCHEDULE', 'percent' => 20,
     'weekdays' => [1, 2, 3, 4, 5, 6, 7], 'startTime' => '06:00', 'endTime' => '15:00',
 ]);
-$pdo->prepare("INSERT INTO bookings (id,room_id,check_in,check_out,status,is_test,guest_phone,guest_email) VALUES (?,'r','2020-01-01 01:00:00','2020-01-01 04:00:00','CHECKED_OUT',0,'0901234567','returning@example.test')")
+$pdo->prepare("INSERT INTO bookings (id,room_id,check_in,check_out,status,is_test,guest_phone,guest_email,guest_name) VALUES (?,'r','2020-01-01 01:00:00','2020-01-01 04:00:00','CHECKED_OUT',0,'0901234567','returning@example.test','Khách quay lại')")
     ->execute([uuid()]);
 $date = $day->modify('+10 days')->format('Y-m-d');
 $input = [
@@ -30,7 +30,12 @@ continuation_check((int)$saved['discount_percent'] === 20 && $saved['promotion_n
 $again = create_manual_booking($pdo, $input);
 continuation_check($again['id'] === $booking['id'] && (int)$again['total_price'] === 127000, 'Retry preserves original discount and booking.');
 $outside = create_manual_booking($pdo, array_replace($input, ['date' => $day->modify('+11 days')->format('Y-m-d'), 'time' => '16:00', 'requestId' => uuid()]));
-continuation_check((int)$outside['total_price'] === 143000, 'Changed phone and same case-insensitive email still receives returning discount outside schedule.');
+continuation_check((int)$outside['total_price'] === 143000, 'Changed phone with matching name and email still receives returning discount outside schedule.');
+$singleMatch = create_manual_booking($pdo, array_replace($input, [
+    'date' => $day->modify('+13 days')->format('Y-m-d'), 'time' => '16:00',
+    'guestName' => 'Khách khác', 'requestId' => uuid(),
+]));
+continuation_check((int)$singleMatch['total_price'] === 159000, 'Matching email alone does not qualify for a returning discount.');
 $manual = create_manual_booking($pdo, array_replace($input, [
     'date' => $day->modify('+12 days')->format('Y-m-d'), 'requestId' => uuid(), 'agreedPrice' => 99000,
 ]));
