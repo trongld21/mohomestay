@@ -44,9 +44,10 @@ function can_use(string $permission): bool
     if ($account['root']) {
         return true;
     }
-    // Camera imagery and occupancy reports are reserved for the root account,
+    // Camera imagery, occupancy reports and payroll are reserved for the root account,
     // including accounts that still carry a permission from an older release.
-    if ($permission === 'people-counter' || str_starts_with($permission, 'people-counter.')) {
+    if ($permission === 'people-counter' || str_starts_with($permission, 'people-counter.')
+        || $permission === 'payroll' || str_starts_with($permission, 'payroll.')) {
         return false;
     }
     if ($permission === 'bookings' && in_array('bookings.overview', expanded_account_permissions(json_decode($account['permissions'], true) ?: []), true)) {
@@ -251,6 +252,7 @@ function admin_api_permission(string $path, string $method, array $body = []): s
 {
     $feature = explode('/', substr($path, strlen('/api/admin/')))[0];
     return match ($feature) {
+        'payroll' => 'payroll',
         'people-counter' => $method === 'GET' ? 'people-counter.view' : 'accounts',
         'expenses' => $method === 'GET' ? 'expenses.view' : 'expenses.create',
         'inventory' => $method === 'GET' ? 'inventory.view' : 'inventory.receive',

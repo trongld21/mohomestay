@@ -1,0 +1,26 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+const scope = { window: {} };
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../public/assets/payroll-attendance.js"), "utf8"), scope);
+const validate = scope.window.MoPayrollAttendance.validate;
+const period = { start_date: "2026-10-01", end_date: "2026-10-31" };
+const shift = { date: "2026-10-01", in: "22:00", out: "06:00", break_minutes: 30 };
+assert.equal(validate([shift], period)[0].minutes, 450);
+assert.equal(validate([shift], period)[0].message, "");
+assert.ok(validate([{ ...shift, out: "22:00" }], period)[0].message);
+assert.ok(validate([{ ...shift, break_minutes: 480 }], period)[0].message);
+assert.ok(validate([{ ...shift, date: "2026-11-01" }], period)[0].message);
+assert.ok(validate([{ ...shift, date: "2026-02-31" }], period)[0].message);
+assert.ok(validate([{ ...shift, in: "" }], period)[0].message);
+assert.ok(validate([{ ...shift, hourly_rate: -1 }], period)[0].message);
+assert.ok(validate([{ ...shift, hourly_rate: 1.5 }], period)[0].message);
+assert.ok(validate([{ ...shift, hourly_rate: NaN }], period)[0].message);
+assert.equal(validate([{ ...shift, hourly_rate: 0 }], period)[0].message, "");
+const overlap = validate([shift, { date: "2026-10-02", in: "05:00", out: "07:00", break_minutes: 0 }], period);
+assert.ok(overlap.every((row) => row.message.includes("trùng")));
+assert.equal(validate([], period).length, 0);
+console.log("Attendance popup validation: overnight, breaks, invalid dates, overlap and empty shifts OK");

@@ -2,8 +2,45 @@
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
+@import "./payroll.css";
+@import "./login.css";
 @source "../*.php";
 @source "../../public/assets/*.js";
+
+.admin-sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: #b7a18d transparent;
+}
+
+@supports selector(::-webkit-scrollbar) {
+    .admin-sidebar {
+        scrollbar-width: auto;
+        scrollbar-color: auto;
+    }
+
+    .admin-sidebar::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .admin-sidebar::-webkit-scrollbar-track {
+        @apply bg-transparent;
+    }
+
+    .admin-sidebar::-webkit-scrollbar-thumb {
+        @apply rounded-full;
+        background-color: #b7a18d;
+    }
+
+    .admin-sidebar::-webkit-scrollbar-thumb:hover {
+        background-color: #8c725c;
+    }
+
+    .admin-sidebar::-webkit-scrollbar-button {
+        @apply hidden;
+        width: 0;
+        height: 0;
+    }
+}
 
 .admin-page [data-counter-tabs] a[aria-current="page"] {
     @apply text-white;

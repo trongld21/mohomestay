@@ -1,0 +1,284 @@
+:root {
+    --login-ink: #3e2519;
+    --login-muted: #71675e;
+    --login-paper: #fffdf9;
+    --login-card: #fffdf9f5;
+    --login-line: #dfd0c1;
+    --login-accent: #7c482b;
+    --login-hover: #60351f;
+    --login-field: #fffcf8;
+    --login-error: #a1322c;
+    --login-error-paper: #fff0eb;
+    --login-shadow: #6e42251c;
+    --login-body-font: 'Be Vietnam Pro', Arial, sans-serif;
+    --login-heading-font: 'Noto Serif', Georgia, serif;
+}
+
+body.login-page {
+    @apply m-0;
+    color: var(--login-ink);
+    background: var(--login-paper);
+    font-family: var(--login-body-font);
+    overflow-x: clip;
+}
+
+.mo-login {
+    @apply relative isolate box-border flex min-h-svh w-full items-center justify-center px-5 py-8 sm:px-8 sm:py-12;
+}
+
+.mo-login-background {
+    @apply absolute inset-0 -z-10 h-full w-full max-w-none object-cover;
+    object-position: center;
+}
+
+.mo-login-card {
+    @apply box-border w-full max-w-[640px] rounded-3xl border px-6 py-8 sm:px-12 sm:py-10;
+    background: var(--login-card);
+    border-color: var(--login-line);
+    box-shadow: 0 24px 72px var(--login-shadow);
+}
+
+.mo-login [hidden] {
+    display: none !important;
+}
+
+.mo-login-heading {
+    @apply text-center;
+}
+
+.mo-login-mark {
+    @apply mx-auto mb-5 flex w-fit items-center justify-center gap-5;
+    color: var(--login-accent);
+}
+.mo-login-mark > svg {
+    @apply h-12 w-12;
+}
+
+.mo-login-mark > span {
+    @apply h-px w-14;
+    background: var(--login-line);
+}
+
+.mo-login-heading h1 {
+    @apply m-0 break-words text-[29px] font-semibold leading-tight sm:text-[40px];
+    font-family: var(--login-heading-font);
+    color: var(--login-ink);
+    text-wrap: balance;
+}
+.mo-login-heading p {
+    @apply mt-4 text-sm leading-relaxed;
+    color: var(--login-muted);
+}
+
+.mo-login-form {
+    @apply mt-8 grid gap-3;
+}
+
+.mo-login-label {
+    @apply text-sm font-semibold;
+}
+
+.mo-login-input-wrap {
+    @apply relative mb-3 flex min-w-0 items-center rounded-xl border;
+    background: var(--login-field);
+    border-color: var(--login-line);
+}
+.mo-login-input-wrap > svg {
+    @apply pointer-events-none absolute left-4 h-5 w-5;
+    color: var(--login-muted);
+}
+
+.mo-login-input-wrap > input {
+    @apply box-border h-14 w-full min-w-0 rounded-xl border-0 bg-transparent py-3 pl-12 pr-4 text-base;
+    color: var(--login-ink);
+    caret-color: var(--login-accent);
+}
+.mo-login-input-wrap > input[type="password"],
+.mo-login-input-wrap:has([data-login-password-toggle]) > input {
+    @apply pr-16;
+}
+
+.mo-login-input-wrap > input::placeholder {
+    color: var(--login-muted);
+    opacity: 1;
+}
+
+.mo-login-password-toggle {
+    @apply absolute right-1 flex h-11 w-12 items-center justify-center rounded-lg border-0 bg-transparent;
+    color: var(--login-accent);
+}
+.mo-login-password-toggle svg {
+    @apply h-6 w-6;
+}
+
+.mo-login-password-toggle::before {
+    @apply absolute left-0 h-6 w-px;
+    content: '';
+    background: var(--login-line);
+}
+.mo-login-password-toggle:hover {
+    background: var(--login-line);
+}
+
+.mo-login-options {
+    @apply mb-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-2 text-xs sm:text-sm;
+    color: var(--login-muted);
+}
+
+.mo-login-remember {
+    @apply flex min-h-11 cursor-pointer items-center gap-3;
+}
+
+.mo-login-remember input {
+    @apply m-0 h-5 w-5 shrink-0 cursor-pointer;
+    accent-color: var(--login-accent);
+}
+
+.mo-login-submit {
+    @apply flex min-h-14 w-full items-center justify-center gap-4 rounded-xl border px-5 py-4 text-base font-semibold;
+    background: var(--login-accent);
+    border-color: var(--login-accent);
+    color: var(--login-paper);
+    box-shadow: 0 6px 18px var(--login-shadow);
+}
+.mo-login-submit svg {
+    @apply h-5 w-5;
+}
+
+.mo-login-submit:not(:disabled):hover {
+    background: var(--login-hover);
+}
+
+.mo-login-submit:not(:disabled):active {
+    transform: translateY(1px);
+}
+
+.mo-login-submit:disabled {
+    @apply cursor-not-allowed opacity-50;
+}
+
+.mo-login-back {
+    @apply mx-auto mt-5 flex min-h-11 w-fit items-center text-xs underline underline-offset-4;
+    color: var(--login-muted);
+}
+
+.mo-login-back:hover {
+    color: var(--login-hover);
+}
+
+.mo-login-error {
+    @apply mb-2 rounded-lg px-4 py-3 text-sm leading-relaxed;
+    background: var(--login-error-paper);
+    color: var(--login-error);
+}
+
+.mo-login :is(a, input, button, summary):focus-visible {
+    outline: 2px solid var(--login-accent);
+    outline-offset: 3px;
+}
+.mo-login ::selection {
+    background: var(--login-line);
+    color: var(--login-ink);
+}
+
+@media (min-width: 640px) and (max-height: 800px) {
+    .mo-login {
+        @apply py-4;
+    }
+
+    .mo-login-card {
+        @apply max-w-[520px] px-8 py-5;
+    }
+
+    .mo-login-mark {
+        @apply mb-3;
+    }
+
+    .mo-login-mark > svg {
+        @apply h-10 w-10;
+    }
+
+    .mo-login-heading h1 {
+        @apply text-[32px];
+    }
+
+    .mo-login-heading p {
+        @apply mt-2;
+    }
+
+    .mo-login-form {
+        @apply mt-5 gap-2;
+    }
+
+    .mo-login-input-wrap {
+        @apply mb-2;
+    }
+
+    .mo-login-input-wrap > input {
+        @apply h-12;
+    }
+
+    .mo-login-options {
+        @apply mb-1;
+    }
+
+    .mo-login-submit {
+        @apply min-h-12 py-3;
+    }
+
+    .mo-login-back {
+        @apply mt-3 min-h-9;
+    }
+}
+
+@media (min-width: 640px) and (max-height: 640px) {
+    .mo-login {
+        @apply py-3;
+    }
+
+    .mo-login-card {
+        @apply py-5;
+    }
+
+    .mo-login-mark {
+        @apply mb-2;
+    }
+
+    .mo-login-mark > svg {
+        @apply h-8 w-8;
+    }
+
+    .mo-login-heading h1 {
+        @apply text-[28px];
+    }
+
+    .mo-login-form {
+        @apply mt-4;
+    }
+
+    .mo-login-input-wrap {
+        @apply mb-1;
+    }
+
+    .mo-login-submit {
+        @apply min-h-11 py-2;
+    }
+
+    .mo-login-back {
+        @apply mt-2 min-h-8;
+    }
+
+    .mo-login-card:has(.mo-login-error) .mo-login-mark {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mo-login *,
+    .mo-login *::before,
+    .mo-login *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}
