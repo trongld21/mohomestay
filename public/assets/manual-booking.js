@@ -176,7 +176,9 @@
         discard.hidden = true;
         requestId = [...crypto.getRandomValues(new Uint8Array(16))]
             .map((value) => value.toString(16).padStart(2, "0")).join("");
-        const now = new Date();
+        // Package arrivals require half-hour slots; round the date too at midnight.
+        const halfHour = 30 * 60 * 1000;
+        const now = new Date(Math.ceil(Date.now() / halfHour) * halfHour);
         fields.timingMode.value = "PACKAGE";
         fields.startNow.checked = false;
         fields.endDate.value = "";
