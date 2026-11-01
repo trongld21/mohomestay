@@ -116,6 +116,21 @@ function quote_booking_for_room(array $room, array $input, bool $manual = false,
     [$start, $end] = $unrestricted
         ? package_window($package, (string)($input['date'] ?? ''), (string)($input['time'] ?? ''))
         : bookable_package_window($package, (string)($input['date'] ?? ''), (string)($input['time'] ?? ''));
+    if ($manual && ($package['mode'] ?? '') === 'FIXED_TIME'
+        && $package['checkOutTime'] < $package['checkInTime'] && !empty($input['time'])) {
+        $time = (string)$input['time'];
+        if (!preg_match('/^(?:[01]\d|2[0-3]):(?:00|30)$/D', $time)) {
+            throw new BookingException('Chọn giờ nhận phòng theo mốc 30 phút: 00 hoặc 30 phút.', 422);
+        }
+        $arrival = new DateTimeImmutable($start->format('Y-m-d') . ' ' . $time, $start->getTimezone());
+        if ($time < $package['checkInTime']) {
+            $arrival = $arrival->modify('+1 day');
+        }
+        if ($arrival < $start || $arrival >= $end) {
+            throw new BookingException('Giờ nhận muộn phải nằm trong khung gói qua đêm, trước giờ trả phòng.', 422);
+        }
+        $start = $arrival;
+    }
     if ((int)$start->format('i') % 30 !== 0) {
         throw new BookingException('Chỉ chọn giờ nhận phòng theo mốc 30 phút: 00 hoặc 30 phút.', 422);
     }

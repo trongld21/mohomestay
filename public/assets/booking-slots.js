@@ -53,6 +53,16 @@
         return { start, end, fixed };
     }
 
+    function manualSlotWindow(slot, date, time = '', now = new Date()) {
+        const window = slotWindow(slot, date, time, now);
+        if (!window || slot.mode !== 'FIXED_TIME' || slot.checkOutTime >= slot.checkInTime || !time) return window;
+        if (!/^(?:[01]\d|2[0-3]):(?:00|30)$/.test(time)) return null;
+        const arrival = new Date(`${date}T${time}:00+07:00`);
+        if (time < slot.checkInTime) arrival.setTime(arrival.getTime() + 86400000);
+        if (arrival < window.start || arrival >= window.end) return null;
+        return { ...window, start: arrival };
+    }
+
     function extendedWindow(window, hours = 0) {
         const count = Number(hours);
         if (!window || !Number.isInteger(count) || count < 0 || count > 2) return null;
@@ -83,5 +93,5 @@
         return 'booked';
     }
 
-    scope.MoBookingSlots = { configuredSlots, priceForArrival, earliestBookingDate, slotWindow, extendedWindow, slotState, durationDayState };
+    scope.MoBookingSlots = { configuredSlots, priceForArrival, earliestBookingDate, slotWindow, manualSlotWindow, extendedWindow, slotState, durationDayState };
 })(typeof window === 'undefined' ? globalThis : window);

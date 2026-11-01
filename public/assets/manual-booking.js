@@ -96,6 +96,7 @@
             priceEdited = false;
             fields.agreedPrice.value = isCustom() ? "" : (selectedPackage()?.price ?? "");
         }
+        if (!isCustom() && selectedPackage()?.mode === "FIXED_TIME") setArrivalTime(selectedPackage().checkInTime);
     }
 
     async function updateAvailability() {
@@ -115,16 +116,19 @@
                 timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
             }).format(now));
         }
-        timePicker.setDisabled(custom ? fields.startNow.checked : slot?.mode === "FIXED_TIME");
-        if (!custom && slot?.mode === "FIXED_TIME") setArrivalTime(slot.checkInTime);
-        const window = custom ? customWindow() : MoBookingSlots.slotWindow(slot, fields.date.value, fields.time.value, allowAnyDate ? new Date(-8640000000000000) : new Date());
+        const overnight = slot?.mode === "FIXED_TIME" && slot.checkOutTime < slot.checkInTime;
+        timePicker.setDisabled(custom ? fields.startNow.checked : slot?.mode === "FIXED_TIME" && !overnight);
+        if (!custom && slot?.mode === "FIXED_TIME" && !overnight) setArrivalTime(slot.checkInTime);
+        const window = custom ? customWindow() : MoBookingSlots.manualSlotWindow(slot, fields.date.value, fields.time.value, allowAnyDate ? new Date(-8640000000000000) : new Date());
         summary.dataset.state = "loading";
         if (!room || !window) {
-            summary.textContent = custom ? "Chọn giờ nhận hợp lệ và giờ trả sau giờ nhận phòng." : "Chọn phòng, gói lưu trú và thời gian nhận phòng.";
+            summary.textContent = custom ? "Chọn giờ nhận hợp lệ và giờ trả sau giờ nhận phòng."
+                : overnight ? "Chọn giờ nhận từ " + slot.checkInTime + " đến trước " + slot.checkOutTime + " sáng hôm sau, theo mốc 30 phút."
+                    : "Chọn phòng, gói lưu trú và thời gian nhận phòng.";
             return;
         }
         let promotionDetails = "";
-        const details = () => `<strong>${escape(room.name)} · ${escape(custom ? "Thời gian tùy chọn" : slot.name)}</strong><br>Nhận: ${dateTime(window.start)} → Trả: ${dateTime(window.end)}<br>Tổng tiền: <strong data-manual-total>${(fields.agreedPrice.value === "" ? "Chưa nhập giá" : cash(fields.agreedPrice.value))}</strong>${promotionDetails}`;
+        const details = () => `<strong>${escape(room.name)} · ${escape(custom ? "Thời gian tùy chọn" : slot.name)}</strong><br>Nhận: ${dateTime(window.start)} → Trả: ${dateTime(window.end)}<br>Tổng tiền: <strong data-manual-total>${(fields.agreedPrice.value === "" ? "Chưa nhập giá" : cash(fields.agreedPrice.value))}</strong>${promotionDetails}${!custom && overnight ? "<br>Có thể chọn giờ nhận muộn sau khi dọn phòng; giá gói và giờ trả sáng hôm sau giữ nguyên." : ""}`;
         summary.innerHTML = details() + "<br>Đang kiểm tra lịch phòng…";
         try {
             if (!custom) {
@@ -282,6 +286,7 @@
         if (["packageId", "timingMode"].includes(event.target.name)) {
             priceEdited = false;
             fields.agreedPrice.value = isCustom() ? "" : (selectedPackage()?.price ?? "");
+            if (!isCustom() && selectedPackage()?.mode === "FIXED_TIME") setArrivalTime(selectedPackage().checkInTime);
         }
         if (["arrivalHour", "arrivalMinute"].includes(event.target.name)) {
             setArrivalTime(`${fields.arrivalHour.value}:${fields.arrivalMinute.value}`);
