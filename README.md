@@ -1,5 +1,24 @@
 # Mơ Home — PHP cho DirectAdmin
 
+## Ưu đãi lặp lại và khách quay lại
+
+Chạy migration `030_recurring_promotions.sql` trước khi sử dụng tính năng. Trang
+`/admin/promotions` cho tạo/sửa, bật/tắt ưu đãi theo thứ trong tuần, giờ nhận phòng,
+khoảng ngày hoặc số lần lưu trú hoàn tất. Quyền xem dùng `rooms.view`, quyền sửa
+dùng `rooms.edit`. Bộ lọc phòng và bộ lọc gói cùng áp dụng; bỏ trống bộ lọc nghĩa là
+không giới hạn theo bộ lọc đó.
+
+Giờ tính theo Việt Nam và thời điểm nhận phòng thực tế. Khung 06:00–15:00 gồm
+06:00, không gồm 15:00; mốc kết thúc 24:00 được hỗ trợ. Ngày bắt đầu/kết thúc tính
+cả hai ngày. Khách quay lại được nhận diện bằng SĐT hoặc email trực tiếp trùng đơn
+đã hoàn tất trước thời điểm tính giá; không tính đơn test, hủy hoặc chưa hoàn tất.
+
+Chỉ lấy mức giảm cao nhất giữa các chương trình đủ điều kiện và mức giảm phòng/gói
+hiện có, áp dụng một lần lên giá gốc. Khách cũ giảm 10% đúng lịch giảm 20% chỉ được
+giảm 20%. Phụ thu và hàng bán không được giảm. Giá admin tự chỉnh được giữ nguyên;
+giá gợi ý chưa chỉnh được máy chủ tính lại khi tạo đơn. Bảng
+`booking_promotion_snapshots` lưu giá và ưu đãi để sửa chương trình không đổi đơn cũ.
+
 ## Nhận tiền hồi tố và giờ nhận phòng
 
 Quản trị có thể xác nhận đã nhận tiền cho đơn đã kết thúc hoặc còn hiệu lực nếu không

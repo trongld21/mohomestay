@@ -112,6 +112,13 @@ elseif (preg_match('#^/booking-success/((?:MO|LANG)-[A-F0-9]{10})$#', $path, $ma
     render_page('Thông tin đặt phòng', fn() => render_booking_success($matches[1]), ['robots' => false]);
 }
 elseif ($path === '/auth/login') render_page('Đăng nhập quản lý', fn() => render_login($loginError ?? ''), ['robots' => false]);
+elseif ($path === '/admin/promotions') {
+    if (!is_admin()) redirect('/auth/login');
+    require_permission('rooms.view');
+    header('Cache-Control: no-store');
+    require_once APP_ROOT . '/src/promotions-view.php';
+    render_page('Ch??ng tr?nh ?u ??i', fn() => render_promotions_page(), ['robots' => false]);
+}
 elseif ($path === '/admin/availability') {
     if (!is_admin()) redirect('/auth/login');
     require_permission('availability.view');

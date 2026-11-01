@@ -36,6 +36,8 @@ function continuation_reject(callable $operation): void
     }
 }
 $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+require __DIR__ . '/promotion-test-fixture.php';
+promotion_test_schema($pdo);
 $pdo->exec("CREATE TABLE rooms (id TEXT PRIMARY KEY,name TEXT,is_active INTEGER,status TEXT);
 CREATE TABLE bookings (id TEXT PRIMARY KEY,booking_code TEXT,room_id TEXT,check_in TEXT,check_out TEXT,stay_package TEXT,package_id TEXT,
 package_name_snapshot TEXT,package_mode_snapshot TEXT,package_duration_snapshot INTEGER,package_check_in_snapshot TEXT,package_check_out_snapshot TEXT,

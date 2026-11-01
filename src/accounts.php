@@ -280,6 +280,7 @@ function admin_api_permission(string $path, string $method, array $body = []): s
         },
         'booking-overview' => 'bookings.overview',
         'booking-rooms' => 'bookings.create',
+        'promotions' => $method === 'GET' ? 'rooms.view' : 'rooms.edit',
         'bookings' => str_ends_with($path, '/continuation') ? 'bookings.create' : match ($method) {
             'GET' => str_contains($path, '/identity/') ? 'bookings.identity' : 'bookings.view',
             'POST' => str_ends_with($path, '/stay') ? 'accounts'

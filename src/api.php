@@ -17,6 +17,9 @@ function handle_api(string $path, string $method): never
             $permission = admin_api_permission($path, $method, $body);
             require_permission($permission);
         }
+        if ($path === '/api/booking-price' || preg_match('#^/api/admin/promotions(?:/|$)#', $path)) {
+            promotion_api($path, $method);
+        }
         if ($path === '/api/admin/staff-email/test' && $method === 'POST') {
             require_csrf();
             if (empty(current_account()['root'])) throw new BookingException('Chỉ Super Admin được gửi email thử.', 403);
@@ -208,13 +211,7 @@ function create_booking_api(): never
         $packageLock->execute([$q['packageId'], $q['room']['id']]);
         $freshPackage = $packageLock->fetch();
         if (!$freshPackage || !(bool)$freshPackage['is_enabled']) throw new BookingException('Gói giá vừa được thay đổi. Vui lòng chọn lại.', 409);
-        $freshPackageDto = locked_booking_package($room, $freshPackage, $q['start']->format('Y-m-d'));
-        [$freshStart,$freshEnd]=bookable_package_window($freshPackageDto,$q['requestedDate'],$freshPackageDto['mode']==='DURATION'?$q['start']->format('H:i'):'');
-        $q['package'] = $freshPackageDto;
-        $q['start'] = $freshStart;
-        $q['end'] = $freshEnd;
-        $q = array_replace($q, booking_package_snapshot($freshPackageDto),
-            booking_extra_hours_details($freshPackageDto, $freshEnd, $q['extraHours']));
+        $q = promotion_refresh_locked_quote($pdo, $q, $room, $freshPackage);
         if (!$room || !$room['is_active']) throw new BookingException('Phòng đang tạm ngưng nhận khách.', 409);
         assert_room_inventory($pdo, $q['room']['id'], mysql_datetime($q['start']), mysql_datetime($q['end']));
         $blocked = $pdo->prepare('SELECT id FROM room_availability WHERE room_id=? AND available=0 AND `date` BETWEEN ? AND ? LIMIT 1');
@@ -229,6 +226,7 @@ function create_booking_api(): never
             $pdo->prepare('UPDATE bookings SET extra_hours=?,extra_hours_amount=? WHERE id=?')
                 ->execute([$q['extraHours'], $q['extraHoursAmount'], $booking['id']]);
         }
+        promotion_snapshot($pdo, $booking['id'], $q['package']);
         save_booking_identity($pdo, $booking['id'], $identity);
         $pdo->commit();
     } catch (Throwable $e) { if($pdo->inTransaction())$pdo->rollBack(); throw $e; }

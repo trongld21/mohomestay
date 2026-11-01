@@ -54,6 +54,11 @@ function render_admin_navigation(string $path): void
                     </a>
                 <?php endif ?>
             <?php endforeach ?>
+            <?php if (can_use('rooms.view')): ?>
+                <a class="<?= $link ?>" href="/admin/promotions" <?= $path === '/admin/promotions' ? 'aria-current="page"' : '' ?>>
+                    <?= admin_icon('bed') ?><span>Ch??ng tr?nh ?u ??i</span>
+                </a>
+            <?php endif ?>
             <?php if (can_use('people-counter.view')): ?>
                 <a class="<?= $link ?>" href="/admin/people-counter" <?= $path === '/admin/people-counter' ? 'aria-current="page"' : '' ?>>
                     <?= admin_icon('user') ?>

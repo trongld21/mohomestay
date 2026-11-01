@@ -43,4 +43,4 @@ Kiểm tra lịch theo thứ, ngày và ranh giới giờ; khách đổi số gi
 
 ## Trạng thái
 
-Đề xuất chờ người dùng duyệt trước khi lập kế hoạch triển khai. Các chi tiết ở phần thiết kế đề xuất là lựa chọn của người triển khai, chưa phải yêu cầu đã được người dùng xác nhận.
+Người dùng đã duyệt thiết kế và yêu cầu triển khai ngày 2026-11-01. Các chi tiết ở phần thiết kế đề xuất được áp dụng theo bản duyệt này.

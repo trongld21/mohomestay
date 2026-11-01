@@ -80,7 +80,7 @@ function render_google_analytics(string $path, string $host): void
                 $adminLayout = in_array($adminPath, [
                     '/admin', '/admin/overview', '/admin/availability', '/admin/door-codes', '/admin/accounts',
                     '/admin/permissions', '/admin/no-access', '/admin/sales', '/admin/sales/history',
-                    '/admin/products', '/admin/inventory', '/admin/people-counter',
+                    '/admin/products', '/admin/inventory', '/admin/people-counter', '/admin/promotions',
                 ], true);
                 if ($adminLayout) require_once APP_ROOT . '/src/admin-layout.php';
                 $robots = ($options['robots'] ?? true) ? 'index,follow' : 'noindex,nofollow';

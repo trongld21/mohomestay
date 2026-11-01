@@ -17,12 +17,12 @@ for (const requested of ["lang", "mo", "missing"]) {
             }
         },
     };
-    const node = () => ({ value: "", innerHTML: "", setAttribute() {} });
+    const node = () => ({ value: "", innerHTML: "", setAttribute() {}, addEventListener() {} });
     const summary = node();
     const form = {
-        elements: { roomId: roomSelect },
+        elements: { roomId: roomSelect, extraHours: { ...node(), value: "0" }, guestPhone: node(), guestEmail: node() },
         date: node(), time: node(), packageId: node(), numberOfGuests: node(),
-        querySelector: (selector) => selector === ".booking-submit" ? node() : null,
+        querySelector: (selector) => selector === ".booking-submit" || selector.startsWith("[data-extra-hours-") ? node() : null,
     };
     const nodes = {
         "[data-booking-form]": form,
@@ -31,18 +31,21 @@ for (const requested of ["lang", "mo", "missing"]) {
         "[data-terms]": node(),
         "[data-slot-grid]": node(),
         "[data-duration-time]": node(),
+        "[data-extra-hours-section]": node(),
+        "[data-extra-hours-options]": node(),
     };
     const root = { querySelector: (selector) => nodes[selector] };
     const config = { rooms, today: "2026-10-23" };
     vm.runInNewContext(source, {
         window: {
             LANG_HOME: config,
-            MoBookingSlots: { configuredSlots: () => [], slotWindow: () => null },
+            MoBookingSlots: { configuredSlots: () => [], slotWindow: () => null, extendedWindow: () => null, earliestBookingDate: () => "2026-10-23" },
         },
         LANG_HOME: config,
-        document: { querySelector: (selector) => selector === "#booking-app" ? root : null },
+        document: { querySelector: (selector) => selector === "#booking-app" ? root : null, addEventListener() {} },
         location: { search: `?room=${requested}` },
         URLSearchParams, Event,
+        clearTimeout, setTimeout, setInterval() {},
         fetch: () => new Promise(() => {}),
     });
     const expected = requested === "lang" ? "Lặng" : "Mơ";

@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/promotions.php';
+require_once __DIR__ . '/promotion-booking.php';
+
 function quote_manual_booking(array $room, array $input, bool $allowAnyDate = false): array
 {
     $source = (string)($input['bookingSource'] ?? 'PHONE');
@@ -114,6 +117,7 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false, array
         // Trusted account state only; request fields must never grant the override.
         $allowAnyDate = !$test && (bool)(current_account()['root'] ?? false);
         $quote = quote_manual_booking($room, $input, $allowAnyDate || $continuation !== null);
+        $quote = promotion_apply_quote($pdo, $quote, array_key_exists('agreedPrice', $input) ? (int)$input['agreedPrice'] : null);
         if ($continuation !== null) validate_booking_continuation($continuation, $quote);
         $start = mysql_datetime($quote['start']);
         $end = mysql_datetime($quote['end']);
@@ -178,6 +182,9 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false, array
         $columns = implode(',', array_keys($values));
         $marks = implode(',', array_fill(0, count($values), '?'));
         $pdo->prepare('INSERT INTO bookings (' . $columns . ') VALUES (' . $marks . ')')->execute(array_values($values));
+        if (isset($quote['package'])) {
+            promotion_snapshot($pdo, $values['id'], $quote['package']);
+        }
         if ($continuation !== null) {
             $pdo->prepare('UPDATE bookings SET continued_to_booking_id=? WHERE id=?')->execute([$values['id'], $continuation['id']]);
         }

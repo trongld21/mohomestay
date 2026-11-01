@@ -7,7 +7,11 @@ const vm = require("node:vm");
         const node = () => ({ value: "", innerHTML: "", attributes: {}, setAttribute(name, value) { this.attributes[name] = value; }, dispatchEvent() {}, addEventListener() {}, querySelector: () => null });
         const checkbox = { checked: testing, addEventListener() {} };
         const submit = node();
-        const fields = { roomId: { ...node(), value: "pink" }, extraHours: { ...node(), value: "0" } };
+        const fields = {
+            roomId: { ...node(), value: "pink" }, extraHours: { ...node(), value: "0" },
+            guestPhone: { ...node(), value: "0900000000" },
+            guestEmail: { ...node(), value: "test@example.com" },
+        };
         const form = {
             reportValidity: () => true, elements: fields, date: node(), time: node(), packageId: node(), numberOfGuests: node(),
             querySelector: (selector) => selector === "[data-test-payment]" ? checkbox : submit,
@@ -33,6 +37,7 @@ const vm = require("node:vm");
                 LANG_HOME: config,
                 MoBookingSlots: {
                     configuredSlots: () => [slot],
+                    priceForArrival: (_room, item) => item,
                     earliestBookingDate: () => "2099-01-01",
                     durationDayState: () => "available",
                     extendedWindow: (window) => window,
@@ -42,7 +47,7 @@ const vm = require("node:vm");
             },
             LANG_HOME: config, location,
             document: { addEventListener() {}, querySelector: (selector) => selector === "#booking-app" ? root : null },
-            setInterval() {},
+            setInterval() {}, setTimeout, clearTimeout,
             URLSearchParams, Event, CSS: { escape: (value) => value },
             crypto: { randomUUID: () => "12345678-1234-1234-1234-123456789012" },
             sessionStorage: { setItem() {} }, LangUI: { toast() {} },
@@ -58,6 +63,13 @@ const vm = require("node:vm");
                 }
             },
             fetch: async (url, options) => {
+                if (url === "/api/booking-price") {
+                    const payload = JSON.parse(options.body);
+                    assert.equal(payload.guestPhone, fields.guestPhone.value);
+                    assert.equal(payload.guestEmail, fields.guestEmail.value);
+                    assert.equal(options.headers["X-CSRF-Token"], "csrf-test");
+                    return { ok: true, json: async () => ({ basePrice: 200000, price: 180000, percent: 10, promotionName: "Ưu đãi" }) };
+                }
                 if (url.startsWith("/api/availability")) {
                     return { ok: true, json: async () => ({ onlineBooking: true, rooms: [{ id: "pink", active: true, intervals: [] }] }) };
                 }
@@ -77,6 +89,8 @@ const vm = require("node:vm");
         vm.runInContext(fs.readFileSync("public/assets/rooms.js", "utf8"), context);
         await new Promise((resolve) => setImmediate(resolve));
         grid.onclick({ target: { closest: () => slotButton } });
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        assert.equal(submit.disabled, false, "Successful price preview unlocks the booking.");
         await form.onsubmit({ preventDefault() {} });
         const request = submissions[0];
         assert.equal(request.url, testing ? "/api/dev/payments/create" : "/api/bookings");

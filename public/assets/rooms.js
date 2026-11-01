@@ -95,6 +95,8 @@
         const roomSelect = form.elements.roomId,
             submit = one(".booking-submit", form),
             slotTools = window.MoBookingSlots;
+        let priceQuote = null, priceError = "", priceRevision = 0, priceTimer = null;
+        let priceArrival = null;
         let availability = null,
             submitting = false,
             selectedId = "",
@@ -137,6 +139,43 @@
                 year: "numeric",
             });
 
+        function invalidatePrice(delay = 0) {
+            const current = ++priceRevision;
+            clearTimeout(priceTimer);
+            priceQuote = null;
+            priceError = "";
+            renderSlots();
+            renderSummary();
+            if (!selectedSlot()) return;
+            priceTimer = setTimeout(() => refreshPrice(current), delay);
+        }
+        async function refreshPrice(current) {
+            const slot = selectedSlot();
+            const arrival = selectedWindow()?.start.getTime();
+            if (!slot || !arrival) return;
+            try {
+                const quote = await request("/api/booking-price", {
+                    method: "POST",
+                    headers: { "X-CSRF-Token": LANG_HOME.csrf },
+                    body: JSON.stringify({
+                        roomId: room().id, packageId: slot.id,
+                        date: form.date.value, time: form.time.value,
+                        guestPhone: form.elements.guestPhone.value,
+                        guestEmail: form.elements.guestEmail.value,
+                    }),
+                });
+                if (current !== priceRevision) return;
+                if (!Number.isFinite(quote.price) || !Number.isFinite(quote.basePrice)) throw new Error("Giá gói chưa hợp lệ.");
+                priceQuote = quote;
+                priceArrival = arrival;
+            } catch (error) {
+                if (current !== priceRevision) return;
+                priceQuote = null;
+                priceError = error.message;
+            }
+            renderSlots();
+            renderSummary();
+        }
         function syncGuests() {
             const current = room(),
                 previous = Number(form.numberOfGuests.value || 2);
@@ -147,6 +186,10 @@
             form.numberOfGuests.value = Math.min(previous, current?.maxGuests || 1);
         }
         function clearSelection() {
+            ++priceRevision;
+            clearTimeout(priceTimer);
+            priceQuote = null;
+            priceError = "";
             selectedId = "";
             extraField.value = "0";
             extraSection.hidden = true;
@@ -181,9 +224,11 @@
                 <div class="summary-row"><span>Ngày ghé</span><strong>${prettyDate(form.date.value)}</strong></div>
                 <div class="summary-row"><span>Khung giờ</span><strong>${timeLabel}</strong></div>
                 <div class="summary-row"><span>Gói lưu trú</span><strong>${esc(slot?.name || "—")}</strong></div>
-                ${slot ? `<div class="summary-row"><span>Giá gói</span><strong>${cash(slot.price)}</strong></div>` : ""}
+                ${slot ? `<div class="summary-row"><span>Giá gói</span><strong>${priceQuote ? cash(priceQuote.price) : "Đang kiểm tra…"}</strong></div>` : ""}
+                ${slot && priceQuote?.percent > 0 ? `<p class="text-sm text-stone-600"><del>${cash(priceQuote.basePrice)}</del> · Giảm ${esc(priceQuote.percent)}%${priceQuote.promotionName ? " · " + esc(priceQuote.promotionName) : ""}</p>` : ""}
+                ${slot && priceError ? `<p class="text-sm text-red-700" role="alert">${esc(priceError)} Vui lòng chọn lại gói để thử lại.</p>` : ""}
                 ${slot && extraHours > 0 ? `<div class="summary-row"><span>Phụ thu ${extraHours} giờ</span><strong>${cash(extraAmount)}</strong></div>` : ""}
-                <div class="summary-row total"><span>Tổng tiền</span><strong>${slot ? cash(slot.price + extraAmount) : "—"}</strong></div>
+                <div class="summary-row total"><span>Tổng tiền</span><strong>${slot && priceQuote ? cash(priceQuote.price + extraAmount) : "—"}</strong></div>
                 ${slot
                     ? '<p class="summary-assurance"><span aria-hidden="true">✓</span> Khung giờ được giữ 15 phút khi tạo đơn.</p>'
                     : '<p class="summary-prompt">Chọn một gói còn trống để xem đầy đủ chi tiết.</p>'}`;
@@ -199,8 +244,7 @@
             form.time.required = slot.mode === "DURATION";
             form.time.value = slot.mode === "FIXED_TIME" ? slot.checkInTime : durationTime;
             form.time.dispatchEvent(new Event("mo:time-sync"));
-            renderSlots();
-            renderSummary();
+            invalidatePrice();
         }
         function renderExtras() {
             const base = slotTools.slotWindow(selectedSlot(), form.date.value, form.time.value);
@@ -295,7 +339,7 @@
                 window = selectedWindow(),
                 state = window ? slotTools.slotState(window, info?.intervals || []) : "needs-time",
                 canSubmit = (availability.onlineBooking || testPayment?.checked) && info?.active && state === "available";
-            submit.disabled = !canSubmit;
+            submit.disabled = !canSubmit || !priceQuote;
             submit.textContent = !availability.onlineBooking && !testPayment?.checked
                 ? "Đặt online chưa mở"
                 : !slot
@@ -306,7 +350,8 @@
                       ? "Khung giờ đã được đặt"
                       : state === "past"
                         ? "Khung giờ đã qua"
-                        : "Tiếp tục thanh toán →";
+                        : priceError ? "Chưa kiểm tra được giá"
+                          : !priceQuote ? "Đang kiểm tra giá…" : "Tiếp tục thanh toán →";
         }
         async function loadAvailability() {
             availability = null;
@@ -377,12 +422,14 @@
         form.date.onchange = loadAvailability;
         form.time.onchange = () => {
             durationTime = form.time.value;
-            renderSlots();
-            renderSummary();
+            invalidatePrice();
         };
+        for (const name of ["guestPhone", "guestEmail"]) {
+            form.elements[name].addEventListener("input", () => invalidatePrice(350));
+        }
         form.onsubmit = async (event) => {
             event.preventDefault();
-            if (submitting) return;
+            if (submitting || !priceQuote || submit.disabled) return;
             message.innerHTML = "";
             if (!selectedSlot()) {
                 message.innerHTML = '<p class="notice error">Vui lòng chọn một gói còn trống.</p>';
@@ -455,11 +502,19 @@
         loadAvailability();
         setInterval(() => {
             if (!availability || document.hidden) return;
+            if (priceQuote && selectedWindow()?.start.getTime() !== priceArrival) {
+                invalidatePrice();
+                return;
+            }
             renderSlots();
             renderSummary();
         }, 15000);
         document.addEventListener("visibilitychange", () => {
             if (!document.hidden && availability) {
+                if (priceQuote && selectedWindow()?.start.getTime() !== priceArrival) {
+                    invalidatePrice();
+                    return;
+                }
                 renderSlots();
                 renderSummary();
             }
