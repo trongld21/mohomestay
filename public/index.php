@@ -117,7 +117,7 @@ elseif ($path === '/admin/promotions') {
     require_permission('rooms.view');
     header('Cache-Control: no-store');
     require_once APP_ROOT . '/src/promotions-view.php';
-    render_page('Ch??ng tr?nh ?u ??i', fn() => render_promotions_page(), ['robots' => false]);
+    render_page('Chương trình ưu đãi', fn() => render_promotions_page(), ['robots' => false]);
 }
 elseif ($path === '/admin/availability') {
     if (!is_admin()) redirect('/auth/login');
