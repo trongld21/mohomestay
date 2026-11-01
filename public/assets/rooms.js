@@ -271,6 +271,28 @@
                 : "Không thêm giờ: giữ nguyên giờ trả của gói.";
         }
 
+        function renderSlotPrice(slot, selected) {
+            if (selected && !priceQuote) {
+                return `<span class="mt-4 block text-right text-sm text-stone-600" aria-live="polite">${
+                    priceError ? "Chưa kiểm tra được giá" : "Đang kiểm tra giá…"
+                }</span>`;
+            }
+            const price = selected ? priceQuote.price : slot.price;
+            const base = selected ? priceQuote.basePrice : (slot.basePrice ?? slot.price);
+            const percent = selected ? priceQuote.percent : (slot.effectiveDiscountPercent ?? 0);
+            const discounted = percent > 0 && price < base;
+            return `<span class="mt-4 flex flex-wrap items-end justify-between gap-2 border-t border-dashed border-stone-300 pt-3">
+                <small class="text-xs text-stone-500">Trọn gói</small>
+                <span class="grid gap-1 text-right">
+                    ${discounted ? `<span class="flex flex-wrap items-center justify-end gap-2 text-xs">
+                        <del class="text-stone-500">${cash(base)}</del>
+                        <span class="rounded-full bg-amber-100 px-2 py-1 font-semibold text-amber-900">Giảm ${esc(percent)}%</span>
+                    </span>` : ""}
+                    <strong class="text-base font-bold text-amber-900">${cash(price)}</strong>
+                </span>
+            </span>`;
+        }
+
         function renderSlots() {
             if (submitting) return;
             form.date.min = slotTools.earliestBookingDate(room());
@@ -326,7 +348,11 @@
                         slot.mode === "FIXED_TIME"
                             ? `<b>${esc(window ? clockLabel(window.start) : slot.checkInTime)}</b><i aria-hidden="true"></i><b>${esc(window ? clockLabel(window.end) : slot.checkOutTime)}</b>`
                             : `<b>${esc(packageLabel(slot))}</b><i aria-hidden="true"></i><b>${selected && form.time.value ? "Từ " + esc(form.time.value) : "Tự chọn giờ"}</b>`;
-                    return `<button class="booking-slot-card is-${state}${selected ? " is-selected" : ""}" type="button" data-slot-id="${esc(slot.id)}" ${state !== "available" && (pastDuration || fullyBlocked || slot.mode !== "DURATION" || state === "closed") ? "disabled" : ""} aria-pressed="${selected}" style="--slot-index:${index}"><span class="slot-card-top"><strong>${esc(slot.name)}</strong><span class="slot-state">${label}</span></span><span class="slot-time">${timeLabel}</span><span class="slot-price"><small>Trọn gói</small><strong>${cash(slot.price)}</strong></span></button>`;
+                    return `<button class="booking-slot-card is-${state}${selected ? " is-selected" : ""}" type="button" data-slot-id="${esc(slot.id)}" ${state !== "available" && (pastDuration || fullyBlocked || slot.mode !== "DURATION" || state === "closed") ? "disabled" : ""} aria-pressed="${selected}" style="--slot-index:${index}">
+                        <span class="slot-card-top"><strong>${esc(slot.name)}</strong><span class="slot-state">${label}</span></span>
+                        <span class="slot-time">${timeLabel}</span>
+                        ${renderSlotPrice(slot, selected)}
+                    </button>`;
                 })
                 .join("");
             if (
