@@ -36,7 +36,7 @@ function payroll_salary_settings(array $input): array
     if (!in_array($type, ['hourly', 'monthly'], true)) {
         throw new BookingException('Chọn lương giờ hoặc lương tháng.', 422);
     }
-    $expected = payroll_integer($input, 'expected_days', 31, 26);
+    $expected = payroll_integer($input, 'expected_days', 31, 30);
     if ($expected < 1) {
         throw new BookingException('Ngày công chuẩn phải từ 1 đến 31.', 422);
     }
@@ -180,6 +180,16 @@ function payroll_find(PDO $pdo, string $table, string $id, bool $lock = false): 
 function payroll_save_employee(PDO $pdo, array $input): array
 {
     $id = payroll_text($input, 'id', 36);
+    $existing = $id !== '' ? payroll_find($pdo, 'payroll_employees', $id) : null;
+    if ($existing && $existing['status'] === 'deleted') {
+        throw new BookingException('Hồ sơ nhân viên đã được xóa.', 404);
+    }
+    // The compact personnel form omits contact email and employment dates.
+    $input += [
+        'email' => $existing['email'] ?? '',
+        'start_date' => $existing['start_date'] ?? (new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh')))->format('Y-m-d'),
+        'end_date' => ($input['status'] ?? '') === 'active' ? '' : ($existing['end_date'] ?? ''),
+    ];
     $values = payroll_salary_settings($input);
     foreach (['name' => 150, 'phone' => 30, 'email' => 190, 'role' => 100, 'note' => 2000] as $key => $limit) {
         $values[$key] = payroll_text($input, $key, $limit, $key === 'name');
@@ -198,10 +208,6 @@ function payroll_save_employee(PDO $pdo, array $input): array
     $values['updated_at'] = gmdate('Y-m-d H:i:s');
     try {
         if ($id !== '') {
-            $existing = payroll_find($pdo, 'payroll_employees', $id);
-            if ($existing['status'] === 'deleted') {
-                throw new BookingException('Hồ sơ nhân viên đã được xóa.', 404);
-            }
             $version = payroll_integer($input, 'version', PHP_INT_MAX);
             $sql = implode(',', array_map(static fn($key) => $key . '=?', array_keys($values)));
             $query = $pdo->prepare('UPDATE payroll_employees SET ' . $sql . ',version=version+1 WHERE id=? AND version=?');
@@ -361,7 +367,7 @@ function payroll_mutate_period(PDO $pdo, array $input, string $actor): array
         if ($action === 'period/rename') {
             $name = payroll_text($input, 'name', 150, true);
             $pdo->prepare('UPDATE payroll_periods SET name=? WHERE id=?')->execute([$name, $periodId]);
-        } elseif (in_array($action, ['entry/save', 'entry/remove'], true)) {
+        } elseif (in_array($action, ['entry/save', 'entry/remove', 'entry/rate'], true)) {
             $employeeId = payroll_text($input, 'employee_id', 36, true);
             $query = $pdo->prepare('SELECT * FROM payroll_entries WHERE period_id=? AND employee_id=?');
             $query->execute([$periodId, $employeeId]);
@@ -384,6 +390,32 @@ function payroll_mutate_period(PDO $pdo, array $input, string $actor): array
                 $data = $input['details'] ?? ($existing ? json_decode($existing['details'], true, 512, JSON_THROW_ON_ERROR) : $employee);
                 if (!is_array($data)) {
                     throw new BookingException('Chi tiết lương không hợp lệ.', 422);
+                }
+                if ($action === 'entry/rate') {
+                    if (!$existing || $employee['status'] === 'deleted') {
+                        throw new BookingException('Không tìm thấy dòng lương hoặc hồ sơ nhân viên.', 404);
+                    }
+                    $data = json_decode($existing['details'], true, 512, JSON_THROW_ON_ERROR);
+                    if (($data['salary_type'] ?? '') !== 'hourly' || $employee['salary_type'] !== 'hourly') {
+                        throw new BookingException('Chỉ đổi đơn giá giờ cho nhân viên đang hưởng lương theo giờ.', 422);
+                    }
+                    $employeeVersion = payroll_integer($input, 'employee_version', PHP_INT_MAX);
+                    if ((int)$employee['version'] !== $employeeVersion) {
+                        throw new BookingException('Hồ sơ nhân viên đã thay đổi. Tải lại trước khi đổi đơn giá.', 409);
+                    }
+                    if (!array_key_exists('hourly_rate', $input)) {
+                        throw new BookingException('Nhập đơn giá giờ mới.', 422);
+                    }
+                    $data['hourly_rate'] = payroll_integer($input, 'hourly_rate', 1000000000);
+                    foreach ($data['shifts'] as &$shift) {
+                        unset($shift['hourly_rate']);
+                    }
+                    unset($shift);
+                    $updateEmployee = $pdo->prepare('UPDATE payroll_employees SET hourly_rate=?,version=version+1,updated_at=? WHERE id=? AND version=?');
+                    $updateEmployee->execute([$data['hourly_rate'], gmdate('Y-m-d H:i:s'), $employeeId, $employeeVersion]);
+                    if ($updateEmployee->rowCount() !== 1) {
+                        throw new BookingException('Hồ sơ nhân viên đã thay đổi. Tải lại trước khi đổi đơn giá.', 409);
+                    }
                 }
                 $values = payroll_calculate($data, $period);
                 $values['details'] = json_encode($values['details'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);

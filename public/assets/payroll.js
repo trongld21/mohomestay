@@ -25,6 +25,8 @@
     let requestNumber = 0;
     let resolveQuestion = null;
     let previousFocus = null;
+    let createTrigger = null;
+    let restoreCreateFocus = false;
     let importPreview = null;
     let importFile = null;
     let periodPage = Math.max(1, Number(new URLSearchParams(window.location.search).get("page")) || 1);
@@ -144,6 +146,13 @@
     }
 
     function notify(message, error = false) {
+        const inlineError = find("[data-create-error]");
+        if (error && personnel && createPanel.open) {
+            inlineError.textContent = message;
+            inlineError.hidden = false;
+            inlineError.scrollIntoView({ block: "nearest" });
+            return;
+        }
         window.LangUI.toast({
             type: error ? "error" : "success",
             title: error ? "Không thể hoàn tất" : "Thành công",
@@ -177,7 +186,9 @@
         if (sourceSelect) sourceSelect.disabled = true;
         if (upload) upload.disabled = true;
         const buttons = [...root.querySelectorAll("button")].filter((button) => !button.disabled);
+        const rateInputs = [...root.querySelectorAll("[data-employee-rate]")].filter((input) => !input.disabled);
         buttons.forEach((button) => { button.disabled = true; });
+        rateInputs.forEach((input) => { input.disabled = true; });
         root.setAttribute("aria-busy", "true");
         try {
             await action();
@@ -188,6 +199,11 @@
             if (upload) upload.disabled = false;
             if (sourceSelect) sourceSelect.disabled = false;
             buttons.forEach((button) => { button.disabled = false; });
+            rateInputs.forEach((input) => { input.disabled = false; });
+            if (restoreCreateFocus) {
+                (createTrigger?.isConnected ? createTrigger : find("[data-new]"))?.focus();
+                restoreCreateFocus = false;
+            }
             root.removeAttribute("aria-busy");
             if (detail) updateAddEmployeeState();
         }
@@ -195,6 +211,8 @@
 
     function question(message) {
         previousFocus = document.activeElement;
+        // Keep confirmations inside the active modal's browser top layer.
+        if (personnel && createPanel.open) createPanel.append(find("[data-confirm]"));
         find("[data-confirm-text]").textContent = message;
         find("[data-confirm]").hidden = false;
         find("[data-confirm-cancel]").focus();
@@ -203,6 +221,7 @@
 
     function answer(value) {
         find("[data-confirm]").hidden = true;
+        root.append(find("[data-confirm]"));
         if (resolveQuestion) resolveQuestion(value);
         resolveQuestion = null;
         previousFocus?.focus();
@@ -211,6 +230,30 @@
     async function mayDiscard() {
         if (!dirty) return true;
         return question("Bạn có thay đổi chưa lưu. Bỏ các thay đổi này?");
+    }
+
+    function closeCreate() {
+        if (personnel) {
+            createPanel.close();
+            createPanel.hidden = true;
+            if (busy) restoreCreateFocus = true;
+            else createTrigger?.focus();
+        } else {
+            createPanel.hidden = true;
+        }
+    }
+
+    async function dismissCreate() {
+        if (busy || resolveQuestion || !await mayDiscard()) return;
+        dirty = false;
+        closeCreate();
+    }
+
+    if (personnel) {
+        createPanel.addEventListener("cancel", (event) => {
+            event.preventDefault();
+            dismissCreate();
+        });
     }
 
     function formValues(form) {
@@ -223,6 +266,11 @@
 
     function fill(form, values) {
         form.reset();
+        // Hidden input values also change their reset defaults when assigned.
+        // Clear record identity before filling another record or a new form.
+        form.querySelectorAll('input[type="hidden"]').forEach((field) => {
+            field.value = "";
+        });
         Object.entries(values).forEach(([key, value]) => {
             const field = form.elements.namedItem(key);
             if (!field) return;
@@ -321,8 +369,8 @@
             <thead><tr><th>Nhân viên</th><th>Số giờ / ngày công</th><th>Lương/h</th><th title="Số giờ T7/CN để tính tiền cộng thêm">Bonus</th><th data-column="base" class="hr-money">Lương cơ bản</th><th data-column="allowance" class="hr-money">Phụ cấp / thưởng</th><th data-column="deduction" class="hr-money">Khấu trừ</th><th class="hr-money">Thực nhận</th><th>Thao tác</th></tr></thead>
             <tbody>${rows.map((entry) => `<tr>
                 <td data-label="Nhân viên"><div class="grid gap-2"><strong>${escape(entry.employee_name)}</strong><span class="hr-muted text-xs">${escape(entry.employee_code)}${entry.role ? " / " + escape(entry.role) : ""}</span><span><span class="hr-tag" data-state="${entry.details.salary_type === "hourly" ? "active" : "draft"}">${entry.details.salary_type === "hourly" ? "Theo giờ" : "Lương tháng"}</span>${missing(entry) ? ' <span class="hr-tag" data-state="draft">Chưa có ca</span>' : ""}</span></div></td>
-                <td data-label="Giờ / ngày công"><div><div class="hr-actions"><span class="hr-ledger-value">${hours(entry.minutes)}h</span><button class="hr-button hr-icon-button hr-positive" type="button" data-attendance-open="${escape(entry.employee_id)}" aria-label="Xem ca của ${escape(entry.employee_name)}" title="Xem ca làm">${icon("calendar")}</button></div><p class="hr-muted mt-2 text-xs">${Number(entry.working_days)} ngày công</p></div></td>
-                <td data-label="Lương/h"><div><span class="hr-ledger-rate">${money(entry.details.salary_type === "hourly" ? entry.details.hourly_rate : entry.details.monthly_salary)}</span></div></td>
+                <td data-label="Giờ / ngày công"><div><div class="hr-actions"><span class="hr-ledger-value">${hours(entry.minutes)}</span><button class="hr-button hr-icon-button hr-positive" type="button" data-attendance-open="${escape(entry.employee_id)}" aria-label="Xem ca của ${escape(entry.employee_name)}" title="Xem ca làm">${icon("calendar")}</button></div><p class="hr-muted mt-2 text-xs">${Number(entry.working_days)} ngày công</p></div></td>
+                <td data-label="Lương/h">${renderEmployeeRate(entry)}</td>
                 <td data-label="Bonus"><label class="hr-label"><span class="sr-only">Giờ Bonus T7/CN của ${escape(entry.employee_name)}</span><input class="hr-field hr-bonus-hours" type="number" min="0" max="${(Number(entry.minutes) / 60).toFixed(2)}" step="0.01" value="${bonusHours(entry)}" data-bonus-hours="${escape(entry.employee_id)}" ${entry.details.salary_type !== "hourly" ? "disabled" : ""} title="Giờ T7/CN, cộng ${money(entry.details.weekend_bonus_rate ?? 1000)}/giờ. Để trống để tự tính lại từ ca."></label></td>
                 <td data-column="base" data-label="Lương cơ bản" class="hr-money">${money(entry.base_salary)}</td>
                 <td data-column="allowance" data-label="Phụ cấp / thưởng" class="hr-money hr-income">+${money(entry.allowance_total)}</td>
@@ -333,6 +381,20 @@
         root.querySelectorAll("[data-ledger-column]").forEach((input) => {
             find("[data-entries]").querySelectorAll(`[data-column="${input.dataset.ledgerColumn}"]`).forEach((cell) => { cell.hidden = !input.checked; });
         });
+    }
+
+    function renderEmployeeRate(entry) {
+        const employee = employees.find((row) => row.id === entry.employee_id);
+        if (entry.details.salary_type !== "hourly" || !employee || employee.salary_type !== "hourly") {
+            return `<span class="hr-ledger-rate">${money(entry.details.salary_type === "hourly" ? entry.details.hourly_rate : entry.details.monthly_salary)}</span>`;
+        }
+        return `<label class="inline-flex items-center gap-2">
+            <span class="sr-only">Lương mỗi giờ của ${escape(entry.employee_name)}</span>
+            <input class="hr-field hr-ledger-rate-input" type="number" min="0" max="1000000000" step="1" required
+                value="${Number(entry.details.hourly_rate)}" data-employee-rate="${escape(entry.employee_id)}"
+                title="Đổi đơn giá các ca trong kỳ và lưu mức mới vào hồ sơ nhân viên">
+            <span class="hr-muted text-xs" aria-hidden="true">đ</span>
+        </label>`;
     }
 
     function bonusHours(entry) {
@@ -455,6 +517,56 @@
     }
 
     createForm.addEventListener("input", () => { dirty = true; });
+    root.addEventListener("keydown", (event) => {
+        const input = event.target.closest("[data-employee-rate]");
+        if (!input || resolveQuestion || !["Enter", "Escape"].includes(event.key)) return;
+        event.preventDefault();
+        if (event.key === "Escape") {
+            const entry = detail?.entries.find((row) => row.employee_id === input.dataset.employeeRate);
+            if (entry) input.value = Number(entry.details.hourly_rate);
+        }
+        input.blur();
+    });
+    root.addEventListener("change", async (event) => {
+        const input = event.target.closest("[data-employee-rate]");
+        if (!input || !detail) return;
+        const entry = detail.entries.find((row) => row.employee_id === input.dataset.employeeRate);
+        const employee = employees.find((row) => row.id === input.dataset.employeeRate);
+        if (!entry || !employee) return;
+        const previousRate = Number(entry.details.hourly_rate);
+        if (busy || resolveQuestion || excelImport?.isBusy() || dirty) {
+            input.value = previousRate;
+            return notify("Lưu hoặc đóng phần đang sửa trước khi đổi đơn giá giờ.", true);
+        }
+        if (!input.reportValidity()) return;
+        const rate = Number(input.value);
+        if (rate === previousRate) return;
+        const employeeVersion = Number(employee.version);
+        const confirmed = await question(`Đổi lương giờ của “${entry.employee_name}” thành ${money(rate)}/giờ? Mức mới áp dụng cho tất cả ca trong kỳ này và được lưu vào hồ sơ nhân viên cho các kỳ sau. Các kỳ khác giữ nguyên.`);
+        if (!confirmed) {
+            input.value = previousRate;
+            input.focus();
+            return;
+        }
+        perform(async () => {
+            try {
+                detail = await api(null, {
+                    action: "entry/rate", period_id: detail.period.id, version: Number(detail.period.version),
+                    employee_id: employee.id, employee_version: employeeVersion, hourly_rate: rate,
+                });
+                employee.hourly_rate = rate;
+                employee.version = employeeVersion + 1;
+                clearImportPreview();
+                editor.hidden = true;
+                renderDetail();
+                find(`[data-employee-rate="${CSS.escape(employee.id)}"]`)?.focus({ preventScroll: true });
+                notify("Đã cập nhật lương giờ trong kỳ và hồ sơ nhân viên.");
+            } catch (error) {
+                input.value = previousRate;
+                throw error;
+            }
+        });
+    });
     root.querySelectorAll("[data-review-search], [data-review-role], [data-review-sort], [data-ledger-column]").forEach((control) => {
         control.addEventListener("input", renderLedger);
     });
@@ -557,10 +669,11 @@
         const values = formValues(createForm);
         if (personnel && values.id && !await question(`Lưu thay đổi hồ sơ nhân viên “${values.name}”?`)) return;
         perform(async () => {
+            if (personnel) find("[data-create-error]").hidden = true;
             if (!personnel) values.copy_employees = createForm.elements.copy_employees.checked;
             const result = await api(null, { action: personnel ? "employee/save" : "period/create", ...values });
             dirty = false;
-            createPanel.hidden = true;
+            closeCreate();
             notify(personnel ? "Đã lưu hồ sơ nhân viên." : "Đã tạo kỳ lương.");
             if (personnel) await loadList();
             else await openPeriod(result.period.id);
@@ -616,7 +729,7 @@
         if (!button || button.disabled) return;
         if (button.hasAttribute("data-confirm-cancel")) return answer(false);
         if (button.hasAttribute("data-confirm-accept")) return answer(true);
-        if (busy || excelImport?.isBusy()) return;
+        if (busy || resolveQuestion || excelImport?.isBusy()) return;
         if (button.hasAttribute("data-period-excel-open")) {
             if (!await mayDiscard()) return;
             dirty = false;
@@ -652,7 +765,7 @@
                 perform(async () => {
                     await api(null, { action: "employee/delete", id: employee.id, version: Number(employee.version) });
                     dirty = false;
-                    createPanel.hidden = true;
+                    closeCreate();
                     createForm.reset();
                     await loadList();
                     notify("Đã xóa nhân viên.");
@@ -714,9 +827,18 @@
             fill(createForm, employee || {});
             find("[data-create-title]").textContent = employee ? "Sửa hồ sơ nhân viên" : (personnel ? "Thêm nhân viên" : "Tạo kỳ lương");
             createPanel.hidden = false;
+            if (personnel) {
+                createTrigger = button;
+                find("[data-create-error]").hidden = true;
+                createPanel.showModal();
+            }
             dirty = false;
             createForm.querySelector("input:not([type=hidden])").focus();
         } else if (button.hasAttribute("data-close-create")) {
+            if (personnel) {
+                await dismissCreate();
+                return;
+            }
             if (!await mayDiscard()) return;
             dirty = false;
             createPanel.hidden = personnel;

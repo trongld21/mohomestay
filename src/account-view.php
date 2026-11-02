@@ -3,6 +3,11 @@
 function render_accounts(bool $permissionsOnly, string $error): void
 {
     $accounts = db()->query('SELECT id, name, email, is_active, permissions FROM accounts ORDER BY created_at, id')->fetchAll();
+    if ($permissionsOnly) {
+        require_once __DIR__ . '/permission-view.php';
+        render_permission_manager($accounts, $error);
+        return;
+    }
     $field = 'mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800';
     $button = 'min-h-11 rounded-lg bg-amber-900 px-5 py-3 font-semibold text-white enabled:hover:bg-amber-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800';
     ?>
@@ -33,28 +38,7 @@ function render_accounts(bool $permissionsOnly, string $error): void
                 <section class="min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
                     <h2 class="break-words text-xl font-semibold"><?= e($account['name']) ?></h2>
                     <p class="mt-2 break-words text-sm text-stone-600"><?= e($account['email']) ?> · <?= $account['is_active'] ? 'Đang hoạt động' : 'Đã khóa' ?></p>
-                    <?php if ($permissionsOnly): ?>
-                        <form method="post" class="mt-4 space-y-4">
-                            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-                            <input type="hidden" name="id" value="<?= e($account['id']) ?>">
-                            <p class="text-sm text-stone-600">Chọn từng thao tác được phép. Quyền thao tác tự kèm quyền xem trang tương ứng. Sửa thông tin phòng và quản lý ảnh là hai quyền riêng.</p>
-                            <?php $grants = expanded_account_permissions(json_decode($account['permissions'], true) ?: []); ?>
-                            <?php foreach (account_permission_groups() as $group => $actions): ?>
-                                <fieldset class="space-y-2 rounded-xl border border-stone-200 p-3">
-                                    <legend class="px-2 font-semibold"><?= e(account_permissions()[$group]) ?></legend>
-                                    <?php foreach ($actions as $key => $label): ?>
-                                        <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-amber-50">
-                                            <input class="h-5 w-5 shrink-0 accent-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800" type="checkbox" name="permissions[]" value="<?= e($key) ?>" <?= in_array($key, $grants, true) ? 'checked' : '' ?>>
-                                            <span><?= e($label) ?></span>
-                                        </label>
-                                    <?php endforeach ?>
-                                </fieldset>
-                            <?php endforeach ?>
-                            <button class="<?= $button ?>" type="submit">Lưu quyền</button>
-                        </form>
-                    <?php else: ?>
-                        <?php render_account_form($account, $field, $button) ?>
-                    <?php endif ?>
+                    <?php render_account_form($account, $field, $button) ?>
                 </section>
             <?php endforeach ?>
         </div>

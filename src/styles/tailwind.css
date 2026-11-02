@@ -7,6 +7,64 @@
 @source "../*.php";
 @source "../../public/assets/*.js";
 
+.hr-field.hr-ledger-rate-input {
+    @apply min-h-11 w-28 max-w-full px-3 py-2 text-sm tabular-nums;
+}
+
+.permission-button {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-[#dfd3c4] bg-[#fffdf9] px-4 py-2 text-sm font-semibold text-[#70432c] no-underline enabled:cursor-pointer enabled:hover:bg-[#f3eee6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70432c] disabled:cursor-default disabled:opacity-50;
+}
+
+a.permission-button:hover {
+    @apply bg-[#f3eee6];
+}
+
+.permission-button-primary {
+    @apply border-[#70432c] bg-[#70432c] text-white enabled:hover:bg-[#593520];
+}
+
+.permission-button-small {
+    @apply min-h-9 px-3 py-1 text-xs;
+}
+
+.permission-field {
+    @apply min-h-11 w-full rounded-lg border border-[#dfd3c4] bg-[#fffdf9] px-3 py-2 text-base text-[#3e322b] placeholder:text-[#70645b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70432c];
+}
+
+.permission-account {
+    @apply block rounded-lg border border-transparent px-3 py-3 text-[#3e322b] no-underline hover:bg-[#f3eee6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70432c];
+}
+
+.permission-account[aria-current="true"] {
+    @apply border-[#dfd3c4] bg-[#f3eee6];
+}
+
+.permission-choice {
+    @apply flex min-h-11 cursor-pointer items-start gap-3 rounded-lg px-2 py-3 hover:bg-[#f3eee6];
+}
+
+.permission-choice:has(input:checked) {
+    @apply bg-[#f3eee6];
+}
+
+[data-permission-manager] [hidden] {
+    @apply hidden;
+}
+
+.hr-personnel-dialog {
+    @apply fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[720px] overflow-auto overscroll-contain rounded-2xl border border-[#e3d4c4] bg-[#fffdf9] p-5 text-[#302d29] sm:p-6;
+    scrollbar-width: thin;
+    scrollbar-color: #b7a18d transparent;
+}
+
+.hr-personnel-dialog::backdrop {
+    @apply bg-black/50;
+}
+
+html:has(.hr-personnel-dialog[open]) {
+    @apply overflow-hidden;
+}
+
 .admin-sidebar {
     scrollbar-width: thin;
     scrollbar-color: #b7a18d transparent;

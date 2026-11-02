@@ -15,7 +15,7 @@ function render_payroll_salary_fields(): void
         <input class="hr-field" name="monthly_salary" type="number" min="0" max="1000000000" step="1" value="0" required>
     </label>
     <label class="hr-label">Ngày công chuẩn
-        <input class="hr-field" name="expected_days" type="number" min="1" max="31" step="1" value="26" required>
+        <input class="hr-field" name="expected_days" type="number" min="1" max="31" step="1" value="30" required>
     </label>
     <?php
 }
@@ -42,19 +42,26 @@ function render_payroll_page(bool $personnel): void
             </div>
         </header>
         <noscript><p class="hr-status" data-error="true">Bật JavaScript để quản lý nhân sự và tính lương.</p></noscript>
-        <section class="hr-surface" data-create <?= $personnel ? 'hidden' : '' ?>>
-            <h2 class="mb-5" data-create-title><?= $personnel ? 'Thêm nhân viên' : 'Tạo kỳ lương' ?></h2>
+        <?php if ($personnel): ?>
+            <dialog class="hr-personnel-dialog" data-create hidden aria-labelledby="hr-create-title">
+                <header class="mb-5 flex items-center justify-between gap-4">
+                    <h2 id="hr-create-title" data-create-title>Thêm nhân viên</h2>
+                    <button class="hr-button hr-icon-button shrink-0" type="button" data-close-create aria-label="Đóng hồ sơ nhân viên"><?= admin_icon('x') ?></button>
+                </header>
+                <p class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800" data-create-error role="alert" hidden></p>
+        <?php else: ?>
+            <section class="hr-surface" data-create>
+                <h2 class="mb-5" data-create-title>Tạo kỳ lương</h2>
+        <?php endif ?>
             <form data-create-form class="<?= $personnel ? '' : 'hr-period-create-form' ?>">
                 <?php if ($personnel): ?>
-                    <input type="hidden" name="id"><input type="hidden" name="version">
-                    <div class="hr-form-grid">
+                    <input type="hidden" name="id">
+                    <input type="hidden" name="version">
+                    <div class="grid gap-4 sm:grid-cols-2">
                         <label class="hr-label">Họ và tên<input class="hr-field" name="name" maxlength="150" required autocomplete="name"></label>
                         <label class="hr-label">Vị trí / công việc<input class="hr-field" name="role" maxlength="100" placeholder="Ví dụ: Lễ tân, buồng phòng"></label>
                         <label class="hr-label">Điện thoại<input class="hr-field" name="phone" type="tel" maxlength="30" autocomplete="tel"></label>
-                        <label class="hr-label">Email<input class="hr-field" name="email" type="email" maxlength="190" autocomplete="email"></label>
-                        <label class="hr-label">Ngày vào làm<input class="hr-field" name="start_date" type="date" value="<?= $today->format('Y-m-d') ?>" required></label>
                         <label class="hr-label">Trạng thái<select class="hr-field" name="status" data-native-select><option value="active">Đang làm</option><option value="inactive">Đã nghỉ việc</option></select></label>
-                        <label class="hr-label">Ngày nghỉ việc<input class="hr-field" name="end_date" type="date"></label>
                         <?php render_payroll_salary_fields(); ?>
                         <label class="hr-label sm:col-span-2">Ghi chú<textarea class="hr-field" name="note" rows="2" maxlength="2000"></textarea></label>
                     </div>
@@ -76,7 +83,11 @@ function render_payroll_page(bool $personnel): void
                     <label class="mt-4 flex min-h-11 items-center gap-3 text-sm hr-muted"><input type="checkbox" name="copy_employees" checked>Thêm nhân viên đang làm vào kỳ mới.</label>
                 <?php endif ?>
             </form>
-        </section>
+        <?php if ($personnel): ?>
+            </dialog>
+        <?php else: ?>
+            </section>
+        <?php endif ?>
         <section data-list-section class="grid min-w-0 gap-4">
             <form class="hr-actions" data-filter role="search">
                 <label class="hr-label flex-1">Tìm kiếm<input class="hr-field" type="search" name="q" placeholder="<?= $personnel ? 'Tên, mã, vị trí hoặc điện thoại' : 'Tên kỳ lương' ?>"></label>

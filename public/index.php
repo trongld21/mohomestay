@@ -70,7 +70,7 @@ if (in_array($path, ['/admin/accounts', '/admin/permissions'], true)) {
         require_csrf((string)($_POST['csrf'] ?? ''));
         try {
             save_account($_POST, $permissionPage);
-            redirect($path . '?saved=1');
+            redirect($path . '?saved=1' . ($permissionPage ? '&account=' . rawurlencode((string)($_POST['id'] ?? '')) : ''));
         } catch (BookingException $error) {
             $accountError = $error->getMessage();
         }

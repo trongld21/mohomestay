@@ -24,6 +24,7 @@ function payroll_reject(callable $action, int $status = 422): void
 }
 
 $period = ['start_date' => '2026-10-01', 'end_date' => '2026-10-31'];
+payroll_check(payroll_salary_settings(['salary_type' => 'hourly'])['expected_days'] === 30, 'Default standard working days must be 30.');
 $input = [
     'salary_type' => 'hourly', 'hourly_rate' => 25000, 'monthly_salary' => 6000000,
     'expected_days' => 26, 'paid_leave_days' => 0, 'prorate' => false,
@@ -93,6 +94,22 @@ $originalCode = $employee['code'];
 $secondEmployee = payroll_save_employee($pdo, $employeeInput);
 payroll_check($secondEmployee['code'] !== $originalCode, 'New employee codes must be unique even with the same supplied code.');
 payroll_reject(fn() => payroll_save_employee($pdo, array_replace($employeeInput, ['code' => 'NV002', 'email' => 'bad'])));
+$pdo->beginTransaction();
+$compactInput = $employeeInput;
+unset($compactInput['start_date']);
+$compact = payroll_save_employee($pdo, $compactInput);
+payroll_check($compact['start_date'] === (new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh')))->format('Y-m-d'), 'Compact personnel form must default the start date to today in Vietnam.');
+$compact = payroll_save_employee($pdo, array_replace($employeeInput, [
+    'id' => $compact['id'], 'version' => 1, 'email' => 'qa@example.test',
+    'status' => 'inactive', 'end_date' => '2026-10-31',
+]));
+$compact = payroll_save_employee($pdo, array_replace($compactInput, [
+    'id' => $compact['id'], 'version' => 2, 'status' => 'inactive',
+]));
+payroll_check($compact['email'] === 'qa@example.test' && $compact['start_date'] === '2026-09-01' && $compact['end_date'] === '2026-10-31', 'Omitted fields must preserve existing email and employment dates.');
+$compact = payroll_save_employee($pdo, array_replace($compactInput, ['id' => $compact['id'], 'version' => 3]));
+payroll_check($compact['status'] === 'active' && $compact['end_date'] === null, 'Reactivating personnel must clear the old end date.');
+$pdo->rollBack();
 $period = payroll_create_period($pdo, ['name' => 'Tháng 10', 'start_date' => '2026-10-01', 'end_date' => '2026-10-31'], 'admin');
 $mutation = ['action' => 'entry/save', 'period_id' => $period['id'], 'version' => 1, 'employee_id' => $employee['id'], 'details' => $input];
 $detail = payroll_mutate_period($pdo, $mutation, 'admin');
@@ -164,3 +181,57 @@ try {
     unlink($exportPath);
 }
 echo "Payroll XLSX export structure and formula injection protection: OK\n";
+
+$rateEmployee = payroll_save_employee($pdo, array_replace($employeeInput, ['name' => 'Đổi đơn giá']));
+$ratePeriod = payroll_create_period($pdo, ['name' => 'Đổi đơn giá', 'start_date' => '2026-10-01', 'end_date' => '2026-10-31'], 'admin');
+$historyPeriod = payroll_create_period($pdo, ['name' => 'Giữ lịch sử', 'start_date' => '2026-10-01', 'end_date' => '2026-10-31'], 'admin');
+$rateDetails = [
+    'salary_type' => 'hourly', 'hourly_rate' => 15000, 'expected_days' => 30,
+    'shifts' => [
+        ['date' => '2026-10-01', 'in' => '08:00', 'out' => '09:00'],
+        ['date' => '2026-10-02', 'in' => '08:00', 'out' => '09:00', 'hourly_rate' => 25000],
+    ],
+];
+foreach ([$ratePeriod, $historyPeriod] as $target) {
+    payroll_mutate_period($pdo, [
+        'action' => 'entry/save', 'period_id' => $target['id'], 'version' => 1,
+        'employee_id' => $rateEmployee['id'], 'details' => $rateDetails,
+    ], 'admin');
+}
+$historyBefore = payroll_period_detail($pdo, $historyPeriod['id']);
+$rateMutation = [
+    'action' => 'entry/rate', 'period_id' => $ratePeriod['id'], 'version' => 2,
+    'employee_id' => $rateEmployee['id'], 'employee_version' => 1, 'hourly_rate' => 30000,
+];
+$rateResult = payroll_mutate_period($pdo, $rateMutation, 'admin');
+payroll_check($rateResult['entries'][0]['base_salary'] === 60000, 'Rate changes must apply to all current-period shifts, including previous overrides.');
+$rateProfile = payroll_find($pdo, 'payroll_employees', $rateEmployee['id']);
+payroll_check((int)$rateProfile['hourly_rate'] === 30000 && (int)$rateProfile['version'] === 2, 'Rate changes must update the personnel profile and its version.');
+payroll_check(payroll_period_detail($pdo, $historyPeriod['id']) === $historyBefore, 'Other payroll periods must keep their salary snapshots.');
+payroll_reject(fn() => payroll_mutate_period($pdo, $rateMutation, 'admin'), 409);
+payroll_reject(fn() => payroll_mutate_period($pdo, array_replace($rateMutation, ['version' => 3]), 'admin'), 409);
+foreach ([-1, 1.5, 1000000001, 'bad'] as $invalidRate) {
+    payroll_reject(fn() => payroll_mutate_period($pdo, array_replace($rateMutation, [
+        'version' => 3, 'employee_version' => 2, 'hourly_rate' => $invalidRate,
+    ]), 'admin'));
+}
+$pdo->exec("CREATE TEMP TRIGGER reject_rate_write BEFORE UPDATE ON payroll_entries BEGIN SELECT RAISE(ABORT, 'rate write failed'); END");
+try {
+    payroll_mutate_period($pdo, array_replace($rateMutation, ['version' => 3, 'employee_version' => 2, 'hourly_rate' => 40000]), 'admin');
+    throw new RuntimeException('Failed entry write must abort the rate update.');
+} catch (PDOException $error) {
+    payroll_check(str_contains($error->getMessage(), 'rate write failed'), 'Expected the simulated entry write failure.');
+}
+$pdo->exec('DROP TRIGGER reject_rate_write');
+payroll_check(payroll_find($pdo, 'payroll_employees', $rateEmployee['id']) === $rateProfile, 'Failed recalculation must roll back the personnel update.');
+payroll_check((int)payroll_period_detail($pdo, $ratePeriod['id'])['period']['version'] === 3, 'Failed recalculation must preserve the period version.');
+$rateResult = payroll_mutate_period($pdo, array_replace($rateMutation, [
+    'version' => 3, 'employee_version' => 2, 'hourly_rate' => 0,
+]), 'admin');
+payroll_check($rateResult['entries'][0]['base_salary'] === 0, 'An explicit zero hourly rate must be supported.');
+$future = payroll_create_period($pdo, ['name' => 'Kỳ sau đổi đơn giá', 'start_date' => '2026-11-01', 'end_date' => '2026-11-30'], 'admin');
+$future = payroll_mutate_period($pdo, [
+    'action' => 'entry/save', 'period_id' => $future['id'], 'version' => 1, 'employee_id' => $rateEmployee['id'],
+], 'admin');
+payroll_check($future['entries'][0]['details']['hourly_rate'] === 0, 'New entries must inherit the updated personnel rate.');
+echo "Payroll inline rate: profile synchronization, recalculation, history, concurrency, validation and atomic rollback: OK\n";
