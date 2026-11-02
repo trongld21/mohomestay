@@ -28,7 +28,10 @@ const source = fs.readFileSync("public/assets/booking-success.js", "utf8");
                     roomImage: '/uploads/room.jpg', packageName: '3 giờ', guests: 2,
                     arrival: { isTest: true, guideUrl: 'javascript:bad()', rulesUrl: 'https://example.com/rules',
                         rules: '<script>rules()</script>', wifiName: 'mo home', wifiPassword: 'fixture-password',
-                        doorCodes: [{ code: '<real-test-code>', startsAt: '2026-10-23T13:00:00Z', endsAt: '2026-10-23T16:00:00Z' }] },
+                        doorCodes: [
+                            { code: '<real-test-code>', startsAt: '2026-10-23T13:00:00Z', endsAt: '2026-10-23T16:00:00Z' },
+                            { code: '*123456#' },
+                        ] },
                 }) };
             },
         });
@@ -50,7 +53,9 @@ const source = fs.readFileSync("public/assets/booking-success.js", "utf8");
             assert.ok(elements.content.innerHTML.includes('fixture-password'));
             assert.ok(!elements.content.innerHTML.includes('Bạn có thể lưu mã đơn'));
             assert.ok(!elements.content.innerHTML.includes('booking-success-email'));
-            assert.ok(elements.content.innerHTML.includes('Mật khẩu cổng: *&lt;real-test-code&gt;#'));
+            assert.ok(elements.content.innerHTML.includes('Mật khẩu cổng: &lt;real-test-code&gt;#'));
+            assert.ok(elements.content.innerHTML.includes('Mật khẩu cổng: 123456#'));
+            assert.ok(!elements.content.innerHTML.includes('Mật khẩu cổng: *'));
             assert.ok(!elements.content.innerHTML.includes('KHÔNG CẤP MÃ CỔNG'));
         }
         if (status === "NO_TOKEN") assert.equal(fetched, 0);

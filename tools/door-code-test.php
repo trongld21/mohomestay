@@ -42,6 +42,11 @@ foreach ([['endsAt'=>'2027-01-15T14:00'],['startsAt'=>'2027-02-30T14:00'],['peri
 }
 $booking = ['booking_code'=>'MO-TEST','guest_name'=>'An','room_name'=>'Pink','package_name_snapshot'=>'3 giờ','check_in'=>$at,'check_out'=>'2027-01-15 10:00:00','number_of_guests'=>2,'total_price'=>200000];
 $mail = build_booking_confirmation_email($booking + ['door_codes'=>[array_replace($base,['code'=>'<0012>'])]]);
+foreach (['123456', '*123456#', '123456#'] as $rawCode) {
+    $message = build_booking_confirmation_email($booking + ['door_codes' => [array_replace($base, ['code' => $rawCode])]]);
+    expect_door(str_contains($message['html'], '>123456#</strong>'), 'Guest email shows digits and one trailing hash only');
+    expect_door(!str_contains($message['html'], 'Bấm *'), 'Email instructions must not ask guests to enter a leading star');
+}
 expect_door(str_contains($mail['html'],'&lt;0012&gt;') && str_contains($mail['html'],'Mã mở cửa'), 'Email includes escaped code');
 expect_door(str_contains(build_booking_confirmation_email($booking)['html'],'chưa có mã mở cửa'), 'Missing code gives contact instructions');
 echo "Door code tests: OK\n";

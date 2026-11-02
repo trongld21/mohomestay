@@ -29,12 +29,20 @@ function build_booking_confirmation_email(array $booking): array
                 . 'style="margin:8px 0;padding:12px;border:2px solid #d8c3b2;border-radius:12px;background:#faf5ee;text-align:center">'
                 . '<strong class="block break-all text-4xl font-extrabold tracking-widest" '
                 . 'style="display:block;font-family:Arial,sans-serif;font-size:36px;font-weight:800;line-height:1.3;letter-spacing:3px;color:#70432c;word-break:break-all">'
-                . $escape('*' . trim((string)$door['code'], " \t\n\r\0\x0B*#") . '#') . '</strong>'
+                . $escape(trim((string)$door['code'], " \t\n\r\0\x0B*#") . '#') . '</strong>'
                 . '</div>';
         }
 
     }
     $subject = 'Mơ Home xác nhận đặt phòng ' . $code;
+    $doorInstructions = 'Mã dùng được nhiều lần trong thời gian hiệu lực, bạn có thể ra ngoài rồi vào lại. ';
+    if (!empty($booking['generated_door_code'])) {
+        $doorInstructions .= 'Cần dùng lần đầu trong 24 giờ từ lúc mã bắt đầu hiệu lực để kích hoạt. ';
+    }
+    $doorInstructions .= 'Nhập mã, rồi bấm # để mở cổng.';
+    if (empty($booking['generated_door_code'])) {
+        $doorInstructions .= ' Giữ riêng mã cổng trong thời gian lưu trú.';
+    }
     $html = '<!doctype html><html lang="vi"><body style="margin:0;background:#f7f3ed;color:#3e322b;font-family:Arial,sans-serif">'
         .'<div style="max-width:620px;margin:0 auto;padding:12px"><div style="background:#fff;border:1px solid #e7e0d7;border-radius:14px;padding:16px">'
         .'<p style="margin:0 0 8px;color:#70432c;font-size:12px;letter-spacing:1.5px">MƠ HOME · ĐẶT PHÒNG THÀNH CÔNG</p>'
@@ -51,7 +59,7 @@ function build_booking_confirmation_email(array $booking): array
         .'<h2 style="margin:10px 0 6px;font-size:16px">Wi-Fi tại Mơ</h2>'
         .'<p style="margin:6px 0">Tên Wi-Fi: <strong>Mơ Home</strong></p>'
         .'<p style="margin:6px 0 10px">Mật khẩu: <strong style="font-family:Arial,sans-serif;letter-spacing:1px">82828282</strong></p>'
-        .(!empty($booking['generated_door_code']) ? '<p style="margin:8px 0;font-size:12px">Mã dùng được nhiều lần trong thời gian hiệu lực, bạn có thể ra ngoài rồi vào lại. Cần dùng lần đầu trong 24 giờ từ lúc mã bắt đầu hiệu lực để kích hoạt. Bấm * trước, nhập mã, rồi bấm # để mở cổng.</p>' : '<p style="margin:8px 0;font-size:12px">Mã dùng được nhiều lần trong thời gian hiệu lực, bạn có thể ra ngoài rồi vào lại. Bấm * trước, nhập mã, rồi bấm # để mở cổng. Giữ riêng mã cổng trong thời gian lưu trú.</p>')
+        .'<p style="margin:8px 0;font-size:12px">'.$doorInstructions.'</p>'
         .'<p style="margin:10px 0 0;padding:10px;font-size:13px;line-height:1.5;background:#edf4e9;border-radius:8px">Mơ sẽ liên hệ riêng để hướng dẫn nhận phòng. Cần hỗ trợ, gọi <a href="tel:0357907153" style="color:#70432c">0357 907 153</a>.</p>'
         .'</div></div></body></html>';
     return ['subject'=>$subject,'html'=>$html];
