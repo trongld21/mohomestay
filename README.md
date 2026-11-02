@@ -36,6 +36,10 @@ Super Admin mở **Nhân sự & tính lương** trong menu quản trị để qu
 ngày vào/nghỉ, mức lương giờ/tháng và lập kỳ lương. Nhập ca làm, phút nghỉ,
 phụ cấp và khấu trừ trên từng nhân viên; mọi kỳ đều cho phép chỉnh sửa.
 Hồ sơ nhân sự độc lập với tài khoản đăng nhập. Tính lương không tự ghi nhận chi tiền.
+Cột **Lương/h** trong chi tiết kỳ cho phép sửa trực tiếp đơn giá nhân viên hưởng lương giờ.
+Sau khi xác nhận, mức mới áp dụng cho tất cả ca của nhân viên trong kỳ đang mở
+(thay đơn giá riêng từng ca), đồng thời lưu vào hồ sơ nhân sự cho các kỳ sau.
+Các kỳ khác giữ nguyên. Nếu kỳ hoặc hồ sơ đã được sửa ở nơi khác, cần tải lại trước khi đổi.
 Trong chi tiết lương nhân viên có thể nhập ca từ Excel `.xlsx`, xem trước và xác nhận
 thay ca. Chỉ lấy ngày/giờ, không lấy tiền lương hay thưởng cuối tuần từ file.
 Chạy migration `030_personnel_payroll.sql` bằng `php tools/migrate.php` trước khi dùng.

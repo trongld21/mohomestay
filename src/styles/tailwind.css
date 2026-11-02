@@ -7,6 +7,10 @@
 @source "../*.php";
 @source "../../public/assets/*.js";
 
+.hr-field.hr-ledger-rate-input {
+    @apply min-h-11 w-28 max-w-full px-3 py-2 text-sm tabular-nums;
+}
+
 .permission-button {
     @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-[#dfd3c4] bg-[#fffdf9] px-4 py-2 text-sm font-semibold text-[#70432c] no-underline enabled:cursor-pointer enabled:hover:bg-[#f3eee6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70432c] disabled:cursor-default disabled:opacity-50;
 }

@@ -580,6 +580,7 @@ function session(staff = false) {
         assert.equal((await staff.request.get(base + "/admin/timesheet")).status(), 403);
         assert.equal((await staff.request.post(base + "/api/admin/payroll", { multipart: { action: "timesheet/preview" } })).status(), 403);
         assert.equal((await staff.request.post(base + "/api/admin/payroll", { data: { action: "employee/save" } })).status(), 403);
+        assert.equal((await staff.request.post(base + "/api/admin/payroll", { data: { action: "entry/rate" } })).status(), 403);
         assert.equal((await staff.request.post(base + "/api/admin/payroll", { data: { action: "employee/delete", id: createdEmployeeId, version: 2 } })).status(), 403);
         const staffPage = await staff.newPage();
         await staffPage.goto(base + "/admin/no-access");
