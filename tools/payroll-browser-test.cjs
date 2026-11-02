@@ -85,13 +85,14 @@ function session(staff = false) {
         assert.equal(await form.locator('[name="code"]').count(), 0, "Employee code must not be an input.");
         await form.getByLabel("Họ và tên").fill("Nhân viên QA <test>");
         await form.getByLabel("Vị trí / công việc").fill("Lễ tân");
-        await form.getByLabel("Ngày vào làm", { exact: true }).fill("2026-10-01");
         await form.getByLabel("Đơn giá giờ (đ)").fill("25000");
         const createdResponse = page.waitForResponse((response) => response.url().endsWith("/api/admin/payroll") && response.request().method() === "POST");
         await form.getByRole("button", { name: "Lưu hồ sơ" }).click();
         const createdEmployee = (await (await createdResponse).json()).employee;
         employeeCode = createdEmployee.code;
         createdEmployeeId = createdEmployee.id;
+        // Keep this October payroll fixture eligible independently of today's date.
+        php('db()->prepare("UPDATE payroll_employees SET start_date=? WHERE id=?")->execute([$argv[1],$argv[2]]);', ["2026-10-01", createdEmployeeId]);
         assert.match(employeeCode, /^NV-[A-F0-9]{12}$/);
         await page.getByText("Đã lưu hồ sơ nhân viên.", { exact: true }).waitFor();
         assert.equal(await page.locator("[data-payroll] [data-status]").count(), 0, "Inline notification banner must be removed.");
@@ -101,7 +102,6 @@ function session(staff = false) {
         await page.getByRole("button", { name: "Sửa hồ sơ Nhân viên QA <test>", exact: true }).click();
         await form.getByLabel("Điện thoại", { exact: true }).fill("0900000000");
         await form.locator('select[name="status"]').selectOption("inactive");
-        await form.getByLabel("Ngày nghỉ việc", { exact: true }).fill("2026-10-31");
         await form.getByRole("button", { name: "Lưu hồ sơ" }).click();
         assert.equal(await page.locator("[data-confirm]").evaluate((overlay) => getComputedStyle(overlay).backgroundColor), "rgba(0, 0, 0, 0.5)", "Confirmation must dim the existing page through a translucent dark backdrop.");
         await page.screenshot({ path: path.join(output, "confirmation-backdrop-desktop.png"), fullPage: true });
@@ -278,6 +278,12 @@ function session(staff = false) {
             return { width: input.width, aligned: Math.abs(input.y + input.height / 2 - unit.y - unit.height / 2) < 2 };
         });
         assert.ok(rateLayout.width <= 100 && rateLayout.aligned, "Rate input must be compact with đ/h on the same line.");
+        const hoursAlignment = await attendanceDialog.locator("[data-shifts] tr").first().evaluate((row) => {
+            const hours = row.querySelector('td[data-label="Số giờ"] > div').getBoundingClientRect();
+            const time = row.querySelector('[data-shift-key="in"]').getBoundingClientRect();
+            return Math.abs(hours.y + hours.height / 2 - time.y - time.height / 2);
+        });
+        assert.ok(hoursAlignment < 2, "Hours and hourly rate must be centered with the time inputs.");
         await attendanceDialog.locator('[data-shift-key="out"]').fill("05:00");
         assert.equal(await attendanceDialog.locator("[data-total]").innerText(), "7.00");
         await attendanceDialog.getByRole("button", { name: "Đóng chi tiết chấm công", exact: true }).click();

@@ -468,16 +468,16 @@ html:has(.hr-attendance-dialog[open]) { overflow: hidden; }
 .hr-attendance-table th { @apply sticky top-0 z-10; background: var(--hr-paper); }
 .hr-attendance-table td { @apply py-5; }
 @media (min-width: 640px) {
-    .hr-attendance-table td { @apply align-top; }
+    .hr-attendance-table td { @apply align-middle; }
     .hr-attendance-table td[data-label="TT"] .hr-shift-order { @apply min-h-12; }
     .hr-attendance-table td[data-label="Ngày"] .manual-date-trigger,
     .hr-attendance-table td[data-label="Giờ vào"] input,
     .hr-attendance-table td[data-label="Giờ ra"] input,
     .hr-attendance-table td[data-label="Đổi giờ"] button,
     .hr-attendance-table td[data-label="Thao tác"] > button:first-child { @apply h-12; }
-    .hr-attendance-table td[data-label="Số giờ"] > div { @apply relative gap-0 pt-0; }
-    .hr-attendance-table [data-row-hours] { @apply absolute -top-4 text-xs leading-4; }
-    .hr-attendance-table .hr-shift-rate .hr-field { @apply h-12; }
+    .hr-attendance-table td[data-label="Số giờ"] > div { @apply gap-0; }
+    .hr-attendance-table [data-row-hours] { @apply text-xs leading-4; }
+    .hr-attendance-table .hr-shift-rate .hr-field { @apply h-8 min-h-8 py-1; }
 }
 .hr-shift-order { @apply inline-flex items-center gap-2; }
 .hr-button.hr-drag-shift {
@@ -511,7 +511,7 @@ html:has(.hr-attendance-dialog[open]) { overflow: hidden; }
 .hr-attendance-table input[data-shift-key="in"],
 .hr-attendance-table input[data-shift-key="out"] { @apply w-24 tabular-nums; }
 .hr-shift-rate { @apply inline-flex w-fit max-w-full flex-nowrap items-center gap-2; }
-.hr-shift-rate .hr-field { @apply h-10 min-h-10 w-24 shrink-0 rounded-xl text-center text-sm tabular-nums; }
+.hr-shift-rate .hr-field { @apply h-10 min-h-10 w-24 shrink-0 rounded-xl py-1 text-center text-sm tabular-nums; }
 .hr-shift-rate > span:last-child { @apply shrink-0 whitespace-nowrap; }
 .hr-button.hr-swap-time {
     @apply rounded-full;

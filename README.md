@@ -390,13 +390,20 @@ Tài khoản `ADMIN_EMAIL` / `ADMIN_PASSWORD_HASH` trong môi trường máy ch�
 luôn có toàn quyền và là tài khoản duy nhất được quản lý tài khoản, cấp quyền.
 
 - `/admin/accounts`: tạo, sửa tên/email, đặt lại mật khẩu, khóa hoặc mở tài khoản.
-- `/admin/permissions`: cấp quyền riêng cho đặt phòng, quản lý phòng và mã mở cửa.
+- `/admin/permissions`: chọn từng tài khoản và cấp quyền theo nhóm chức năng đang có trong hệ thống.
 - Tài khoản mới mặc định không có quyền. Menu và API kiểm tra quyền theo từng chức năng.
 - Thu hồi quyền áp dụng từ yêu cầu tiếp theo. Khóa tài khoản hoặc lưu thông tin tài khoản
   sẽ vô hiệu hóa phiên cũ; nhân viên cần đăng nhập lại.
 - Kiểm thử quyền độc lập bằng `php tools/account-test.php` (cần PDO SQLite).
 
 ### Quyền chi tiết cho nhân viên
+
+Màn hình phân quyền có tìm tài khoản theo tên/email, tìm chức năng không dấu,
+chọn hoặc bỏ cả nhóm quyền, bộ đếm quyền đã chọn và hoàn tác thay đổi chưa lưu.
+Khi chuyển tài khoản, màn hình hỏi lại nếu đang có thay đổi chưa lưu. Sau khi lưu,
+tài khoản vừa chỉnh vẫn được chọn. Quyền thao tác tự chọn quyền xem tương ứng;
+bỏ quyền xem sẽ bỏ các thao tác phụ thuộc, riêng quyền xem tổng quan đặt phòng độc lập.
+Nhân sự, tính lương, chấm công và lượt vào / ra vẫn chỉ dành cho Super Admin.
 
 Trang `/admin/permissions` chia quyền theo thao tác:
 - Đặt phòng: xem tổng quan/danh sách, tạo đơn, cập nhật lưu trú/hủy đơn, xác nhận thu tiền.

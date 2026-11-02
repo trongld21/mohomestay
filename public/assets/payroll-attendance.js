@@ -38,7 +38,13 @@
             <header class="hr-attendance-header"><h2 id="hr-attendance-title">Chi tiết chấm công</h2><div class="hr-actions"><strong class="hr-attendance-person" data-person></strong><button class="hr-button hr-icon-button" type="button" data-close-attendance aria-label="Đóng chi tiết chấm công">${icon("x")}</button></div></header>
             <div class="hr-attendance-stats"><div><span>Số ca</span><strong data-count></strong></div><div><span>Cần sửa</span><strong data-invalid></strong></div><div><span>Giờ thực làm</span><strong data-hours></strong></div></div>
             <p class="hr-muted px-5 py-3 text-xs" data-attendance-note>Giờ ra trước giờ vào là ca qua đêm.</p><span class="sr-only" id="hr-shift-drag-help">Kéo tay nắm trong cột TT hoặc dùng phím mũi tên lên, xuống để đổi thứ tự ca. Home và End đưa ca về đầu hoặc cuối.</span><span class="sr-only" data-order-status aria-live="polite"></span>
-            <div class="hr-attendance-scroll"><table class="hr-table hr-attendance-table"><caption class="sr-only">Danh sách ca làm</caption><thead><tr><th>TT</th><th>Ngày</th><th>Giờ vào</th><th></th><th>Giờ ra</th><th>Số giờ</th><th>Thao tác</th></tr></thead><tbody data-shifts></tbody></table><p class="hr-state" data-empty>Chưa có ca làm. Chọn Thêm ca để bắt đầu.</p></div>
+            <div class="hr-attendance-scroll">
+                <table class="hr-table hr-attendance-table"><caption class="sr-only">Danh sách ca làm</caption><thead><tr><th>TT</th><th>Ngày</th><th>Giờ vào</th><th></th><th>Giờ ra</th><th>Số giờ</th><th>Thao tác</th></tr></thead><tbody data-shifts></tbody></table>
+                <div class="hr-state" data-empty>
+                    <p>Chưa có ca làm. Chọn Thêm ca để bắt đầu.</p>
+                    <button class="hr-button hr-positive mt-4" type="button" data-first-shift>${icon("plus")}Thêm ca</button>
+                </div>
+            </div>
             <p class="hr-status mx-5 my-2" data-error="true" data-attendance-error hidden role="alert"></p>
             <footer class="hr-attendance-footer"><button class="hr-button" type="button" data-new-shift>${icon("plus")}Thêm ca</button><div class="hr-actions"><span class="hr-muted">Tổng giờ <strong class="hr-income" data-total></strong></span><button class="hr-button hr-positive" type="submit" data-save-attendance>${icon("device-floppy")}Lưu thay đổi</button></div></footer>
         </form><div class="hr-attendance-confirm" data-attendance-confirm hidden role="alertdialog" aria-modal="true" aria-labelledby="hr-attendance-confirm-title"><div class="hr-surface"><h3 id="hr-attendance-confirm-title">Xác nhận thao tác</h3><p class="mt-3" data-confirm-message></p><div class="hr-actions mt-4 justify-end"><button class="hr-button" type="button" data-no>Hủy</button><button class="hr-button hr-positive" type="button" data-yes>Xác nhận</button></div></div></div>`;
@@ -99,6 +105,7 @@
             find("[data-empty]").hidden = values.length > 0;
             find("[data-save-attendance]").disabled = busy || states.some((state) => state.message);
             find("[data-new-shift]").disabled = busy || values.length >= 200;
+            find("[data-first-shift]").disabled = busy || values.length >= 200;
         }
 
         function append(shift = { date: period.start_date, in: "", out: "", break_minutes: 0 }, after = null) {
@@ -297,7 +304,7 @@
             if (button.hasAttribute("data-yes")) return answer(true);
             if (busy || confirmAction) return;
             if (button.hasAttribute("data-close-attendance")) return close();
-            if (button.hasAttribute("data-new-shift")) {
+            if (button.hasAttribute("data-new-shift") || button.hasAttribute("data-first-shift")) {
                 const row = append();
                 changed = true;
                 row.scrollIntoView({ block: "nearest" });
