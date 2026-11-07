@@ -183,17 +183,50 @@ function logo(): void
 }
 
 function render_header(): void
-                                                                                                                                                                                        { ?><header class="site-header">
-        <div class="container nav-inner"><a href="/" aria-label="Mơ Home — Trang chủ"><?php logo(); ?></a>
-            <nav class="nav-links" id="nav"><a class="header-link" href="/">Trang chủ</a><a class="header-link" href="/#ve-mo">Về Mơ</a><a class="header-link" href="/rooms">Phòng & giá</a><a class="header-link" href="/calendar">Lịch phòng</a><a class="header-link" href="/#lien-he">Liên hệ</a></nav>
-            <div class="nav-actions"><a class="nav-phone" href="tel:0357907153"><svg class="nav-phone-icon" aria-hidden="true" viewBox="0 0 24 24">
+{
+    ?>
+    <header class="site-header">
+        <div class="container nav-inner max-[430px]:gap-2! min-[761px]:max-[960px]:gap-3!">
+            <a href="/" aria-label="Mơ Home — Trang chủ" class="max-[360px]:[&_.brand-art]:w-[108px]!"><?php logo(); ?></a>
+            <nav class="nav-links min-[761px]:max-[960px]:gap-3!" id="nav">
+                <a class="header-link" href="/">Trang chủ</a>
+                <a class="header-link" href="/#ve-mo">Về Mơ</a>
+                <a class="header-link" href="/rooms">Phòng & giá</a>
+                <a class="header-link" href="/calendar">Lịch phòng</a>
+                <a class="header-link" href="/#lien-he">Liên hệ</a>
+            </nav>
+            <div class="nav-actions max-[430px]:gap-1.5!">
+                <a class="nav-phone max-[960px]:hidden!" href="tel:0357907153">
+                    <svg class="nav-phone-icon" aria-hidden="true" viewBox="0 0 24 24">
                         <path class="phone-body" fill="currentColor" d="M7 10h10l3 8v3H4v-3l3-8Zm5 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" fill-rule="evenodd" />
                         <g class="phone-handset" fill="currentColor">
                             <path d="M2 7c0-4 4-6 10-6s10 2 10 6v2h-6V6c-2.5-1.2-5.5-1.2-8 0v3H2V7Z" />
                         </g>
-                    </svg><span>0357 907 153</span></a><a class="button small" href="/bookings">Đặt phòng ↗</a><button class="menu-toggle" data-menu aria-label="Mở menu">☰</button></div>
+                    </svg><span>0357 907 153</span>
+                </a>
+                <a href="/bookings"
+                    class="inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-solid border-[#c8cfb3] bg-linear-to-b from-[#51633c] to-[#40502e] px-2 text-xs font-semibold text-white! shadow-[0_3px_8px_#40502e33] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#40502e] not-aria-disabled:hover:brightness-110 motion-safe:transition-[filter] max-[360px]:gap-1 max-[360px]:px-1.5 sm:gap-2.5 sm:px-3.5 sm:text-sm">
+                    <!-- Tabler Icons (MIT): calendar-month and arrow-right. -->
+                    <svg class="size-5 shrink-0 sm:size-6" aria-hidden="true" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z" />
+                        <path d="M16 3v4M8 3v4M4 11h16M8 15h.01M12 15h.01M16 15h.01M8 18h.01M12 18h.01M16 18h.01" />
+                    </svg>
+                    <span class="h-5 w-px bg-[#c8cfb3]" aria-hidden="true"></span>
+                    Đặt phòng
+                    <span class="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[#64774c] sm:size-6" aria-hidden="true">
+                        <svg class="size-3.5 sm:size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M13 18l6 -6M13 6l6 6" />
+                        </svg>
+                    </span>
+                </a>
+                <button class="menu-toggle" data-menu aria-label="Mở menu">☰</button>
+            </div>
         </div>
-    </header><?php }
+    </header>
+    <?php
+}
                                                                                                                                                                                         function render_footer(): void
                                                                                                                                                                                         { ?><footer id="lien-he" class="site-footer">
         <div class="container footer-top">
