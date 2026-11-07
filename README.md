@@ -1,5 +1,18 @@
 # Mơ Home — PHP cho DirectAdmin
 
+## Dashboard tổng quan kinh doanh
+
+`/admin/overview` dùng quyền `bookings.overview`, tổng hợp tiền đã nhận theo thời điểm
+thanh toán ở Việt Nam. Bộ lọc có hôm nay, hôm qua, 7 ngày qua, tháng này, tháng trước
+và khoảng tùy chọn tối đa 93 ngày. Dashboard gồm nguồn thu, phương thức thanh toán,
+phiếu chi, dòng tiền theo ngày, biểu đồ ngày/giờ, tiền nhận theo phòng và giao dịch gần đây.
+Biểu đồ theo giờ cộng gộp cùng khung giờ trong toàn bộ khoảng đã chọn. Số lượt thu
+là số giao dịch, không phải số khách hay số đơn duy nhất. Thu trừ chi chưa phải lợi nhuận.
+Nút **Xuất dữ liệu** tải CSV UTF-8 gồm toàn bộ giao dịch trong khoảng đã chọn, mở được
+bằng Excel; không chỉ xuất 10 giao dịch đang hiển thị. Công thức tính tiền nhận và quyền
+truy cập được giữ nguyên. Kiểm tra bằng `php tools/overview-page-test.php` và
+`node tools/overview-browser-test.cjs` (cần Playwright/Chrome).
+
 ## Ưu đãi lặp lại và khách quay lại
 
 Chạy migration `030_recurring_promotions.sql` trước khi sử dụng tính năng. Trang
