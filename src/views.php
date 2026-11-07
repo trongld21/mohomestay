@@ -205,12 +205,16 @@ function render_header(): void
                     </svg><span>0357 907 153</span>
                 </a>
                 <a href="/bookings"
-                    class="inline-flex min-h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-tr-2xl rounded-bl-2xl border-4 border-solid border-transparent
+                    class="relative inline-flex min-h-11 shrink-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-tr-2xl rounded-bl-2xl border-4 border-solid border-transparent
                         [background:linear-gradient(#fbfaf5,#fbfaf5)_padding-box,linear-gradient(128deg,#78951d_56%,#4b6118_56%)_border-box]
                         px-4 text-xs font-semibold text-[#4b6118]! shadow-[inset_0_0_0_1px_#b5c46b]
                         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4b6118] not-aria-disabled:hover:brightness-95
-                        motion-safe:transition-[filter] sm:px-6 sm:text-sm">
-                    Đặt phòng
+                        motion-safe:transition-[filter] sm:px-6 sm:text-sm
+                        before:pointer-events-none before:absolute before:inset-y-0 before:left-[-60%] before:w-1/2 before:-skew-x-20
+                        before:bg-linear-to-r before:from-transparent before:via-white before:to-transparent before:content-[''] motion-reduce:before:hidden
+                        motion-safe:not-aria-disabled:hover:before:translate-x-[350%]
+                        motion-safe:not-aria-disabled:hover:before:transition-transform motion-safe:not-aria-disabled:hover:before:duration-600">
+                    <span class="relative">Đặt phòng</span>
                 </a>
                 <button class="menu-toggle" data-menu aria-label="Mở menu">☰</button>
             </div>
