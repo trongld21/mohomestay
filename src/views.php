@@ -268,7 +268,7 @@ function render_privacy_policy(): void
                 <p>
                     Hộ Kinh Doanh Mơ Homestay - Mã Kinh Doanh: 094095002480<br>
                     Địa chỉ: số 82, B18, KDC 91B, Phường Tân An, Thành phố Cần Thơ, Việt Nam<br>
-                    Người đại diện: Nguyễn Đông Nam &nbsp; CCCD số: 094095002480<br>
+                    Người đại diện: Nguyễn Đông Nam - CCCD số: 094095002480<br>
                     Điện thoại: <a class="rounded-sm underline underline-offset-2 hover:text-[#70432c] focus-visible:outline-2 focus-visible:outline-offset-2" href="tel:0357907153">0357907153</a>
                 </p>
             </section>
