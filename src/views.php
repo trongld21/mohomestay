@@ -205,25 +205,12 @@ function render_header(): void
                     </svg><span>0357 907 153</span>
                 </a>
                 <a href="/bookings"
-                    class="inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-tr-2xl rounded-bl-2xl border-4 border-solid border-transparent
+                    class="inline-flex min-h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-tr-2xl rounded-bl-2xl border-4 border-solid border-transparent
                         [background:linear-gradient(#fbfaf5,#fbfaf5)_padding-box,linear-gradient(128deg,#78951d_56%,#4b6118_56%)_border-box]
-                        px-[5px] text-xs font-semibold text-[#4b6118]! shadow-[inset_0_0_0_1px_#b5c46b]
+                        px-4 text-xs font-semibold text-[#4b6118]! shadow-[inset_0_0_0_1px_#b5c46b]
                         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4b6118] not-aria-disabled:hover:brightness-95
-                        motion-safe:transition-[filter] max-[360px]:gap-1 max-[360px]:px-[3px] sm:gap-2.5 sm:px-[11px] sm:text-sm">
-                    <!-- Tabler Icons (MIT): calendar-month and arrow-right. -->
-                    <svg class="size-5 shrink-0 sm:size-6" aria-hidden="true" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z" />
-                        <path d="M16 3v4M8 3v4M4 11h16M8 15h.01M12 15h.01M16 15h.01M8 18h.01M12 18h.01M16 18h.01" />
-                    </svg>
-                    <span class="h-5 w-px bg-[#b5c46b]" aria-hidden="true"></span>
+                        motion-safe:transition-[filter] sm:px-6 sm:text-sm">
                     Đặt phòng
-                    <span class="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[#edf0d7] sm:size-6" aria-hidden="true">
-                        <svg class="size-3.5 sm:size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M5 12h14M13 18l6 -6M13 6l6 6" />
-                        </svg>
-                    </span>
                 </a>
                 <button class="menu-toggle" data-menu aria-label="Mở menu">☰</button>
             </div>
