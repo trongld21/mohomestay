@@ -343,10 +343,10 @@ function render_room_cards(bool $liveAvailability = false): void
             <h1>Chạm vào<br>một chốn <em>mơ.</em></h1>
             <p>Một căn phòng ấm. Một khoảng trời riêng.<br>Để bạn nghỉ ngơi, kết nối và tận hưởng những điều nhỏ bé.</p>
             <a href="/rooms"
-                class="group inline-flex min-h-[52px] max-w-full items-stretch bg-[#4b6118] text-xs font-semibold uppercase tracking-[0.12em] text-[#fff7e9]!
-                    shadow-[0_3px_0_#303e13] not-aria-disabled:hover:bg-[#3d5015]
+                class="group inline-flex min-h-[52px] max-w-full items-stretch bg-[#f5e8d5] text-xs font-semibold uppercase tracking-[0.12em] text-[#523422]!
+                    shadow-[0_3px_0_#a18365] not-aria-disabled:hover:bg-[#fff6e7]
                     focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#fff2dc] motion-safe:transition-colors">
-                <span class="grid w-12 shrink-0 place-items-center bg-[#657b29]" aria-hidden="true">
+                <span class="grid w-12 shrink-0 place-items-center bg-[#d7b695]" aria-hidden="true">
                     <svg class="size-5 motion-safe:transition-transform motion-safe:group-hover:group-not-aria-disabled:translate-x-1"
                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M5 12h14M13 18l6 -6M13 6l6 6" />
