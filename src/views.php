@@ -258,18 +258,18 @@ function render_privacy_policy(): void
     ?>
     <article class="mx-auto max-w-3xl px-5 py-10 text-base leading-relaxed sm:px-8 sm:py-16">
         <header class="mb-8 border-0 border-b border-solid border-[#e7e0d7] pb-6">
-            <h1 class="text-3xl! leading-tight text-[#4b3327] sm:text-5xl!">Chính sách bảo mật dữ liệu cá nhân</h1>
-            <p class="mt-3 text-sm text-[#6e5b4d]">Cập nhật lần cuối: <time datetime="2026-09-18">18/09/2026</time>.</p>
+            <h1 class="text-3xl! leading-tight text-[#4b3327] sm:text-5xl!">CHÍNH SÁCH BẢO MẬT DỮ LIỆU CÁ NHÂN</h1>
+            <p class="mt-3 text-sm text-[#6e5b4d]">Cập nhật lần cuối: <time datetime="2026-10-16">16/10/2026</time>.</p>
         </header>
 
         <div class="grid gap-8 [&_h2]:mb-3! [&_h2]:text-xl! [&_h2]:leading-snug [&_h2]:text-[#70432c] sm:[&_h2]:text-2xl! [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5">
             <section>
                 <h2>1. Bên kiểm soát dữ liệu</h2>
                 <p>
-                    Công ty TNHH Thương Mại Dịch Vụ Đầu Tư Tổng Hợp T-N — Mã số thuế: 1801702806<br>
-                    Địa chỉ: 701/78, đường 30 tháng 4, phường Tân An, Thành phố Cần Thơ<br>
-                    Người đại diện: ….<br>
-                    Email: … — Điện thoại: ….
+                    Hộ Kinh Doanh Mơ Homestay - Mã Kinh Doanh: 094095002480<br>
+                    Địa chỉ: số 82, B18, KDC 91B, Phường Tân An, Thành phố Cần Thơ, Việt Nam<br>
+                    Người đại diện: Nguyễn Đông Nam &nbsp; CCCD số: 094095002480<br>
+                    Điện thoại: <a class="rounded-sm underline underline-offset-2 hover:text-[#70432c] focus-visible:outline-2 focus-visible:outline-offset-2" href="tel:0357907153">0357907153</a>
                 </p>
             </section>
             <section>
@@ -300,9 +300,9 @@ function render_privacy_policy(): void
                 <ul>
                     <li>Cơ quan nhà nước có thẩm quyền khi pháp luật yêu cầu (bao gồm khai báo lưu trú).</li>
                     <li>Đơn vị phát triển và vận hành hệ thống, với vai trò bên xử lý dữ liệu theo hợp đồng.</li>
-                    <li>Amazon Web Services (máy chủ lưu trữ tại Singapore) — lưu ảnh và bản sao lưu dưới dạng riêng tư, chỉ truy cập được bằng đường dẫn có chữ ký và có thời hạn.</li>
-                    <li>Cổng thanh toán PayOS và ngân hàng thụ hưởng — xử lý giao dịch chuyển khoản.</li>
-                    <li>Google, Meta (Facebook), TikTok và các công cụ phân tích hành vi trên trang — nhận dữ liệu kỹ thuật và cookie, máy chủ có thể đặt ngoài Việt Nam.</li>
+                    <li>Amazon Web Services (máy chủ lưu trữ tại Singapore) - lưu ảnh và bản sao lưu dưới dạng riêng tư, chỉ truy cập được bằng đường dẫn có chữ ký và có thời hạn.</li>
+                    <li>Cổng thanh toán PayOS và ngân hàng thụ hưởng - xử lý giao dịch chuyển khoản.</li>
+                    <li>Google, Meta (Facebook), TikTok và các công cụ phân tích hành vi trên trang - nhận dữ liệu kỹ thuật và cookie, máy chủ có thể đặt ngoài Việt Nam.</li>
                 </ul>
                 <p class="mt-3">Chúng tôi không bán dữ liệu cá nhân của bạn.</p>
             </section>
@@ -310,8 +310,8 @@ function render_privacy_policy(): void
                 <h2>6. Quyền của bạn</h2>
                 <p>
                     Bạn có quyền được biết, đồng ý hoặc rút lại sự đồng ý, truy cập, chỉnh sửa, yêu cầu xoá, hạn chế hoặc phản đối việc xử lý dữ liệu, và khiếu nại theo quy định của pháp luật về bảo vệ dữ liệu cá nhân.
-                    Gửi yêu cầu qua email <a class="break-all rounded-sm underline underline-offset-2 hover:text-[#70432c] focus-visible:outline-2 focus-visible:outline-offset-2" href="mailto:congtycinex@gmail.com">congtycinex@gmail.com</a>
-                    hoặc số <a class="rounded-sm underline underline-offset-2 hover:text-[#70432c] focus-visible:outline-2 focus-visible:outline-offset-2" href="tel:0843665588">0843665588</a>; chúng tôi phản hồi trong vòng 72 giờ.
+                    Gửi yêu cầu qua email <a class="break-all rounded-sm underline underline-offset-2 hover:text-[#70432c] focus-visible:outline-2 focus-visible:outline-offset-2" href="mailto:mohomestay01@gmail.com">mohomestay01@gmail.com</a>
+                    hoặc số <a class="rounded-sm underline underline-offset-2 hover:text-[#70432c] focus-visible:outline-2 focus-visible:outline-offset-2" href="tel:0357907153">0357907153</a>; chúng tôi phản hồi trong vòng 72 giờ.
                     Việc rút lại sự đồng ý không ảnh hưởng tới nghĩa vụ khai báo lưu trú đã phát sinh.
                 </p>
             </section>
