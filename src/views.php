@@ -221,18 +221,108 @@ function render_header(): void
     </header>
     <?php
 }
-                                                                                                                                                                                        function render_footer(): void
-                                                                                                                                                                                        { ?><footer id="lien-he" class="site-footer">
-        <div class="container footer-top">
-            <div><?php logo(); ?><p>Một chốn riêng. Một nhịp chậm.<br>Một chút bình yên dành cho bạn.</p>
+function render_footer(): void
+{
+    ?>
+    <footer id="lien-he" class="site-footer">
+        <div class="container footer-top grid-cols-2! gap-8! lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]!">
+            <div>
+                <?php logo(); ?>
+                <p>Một chốn riêng. Một nhịp chậm.<br>Một chút bình yên dành cho bạn.</p>
             </div>
-            <div><span class="eyebrow">KHÁM PHÁ MƠ</span><a href="/rooms">Phòng & bảng giá</a><a href="/calendar">Xem lịch phòng</a><a href="/bookings#tra-cuu">Tra cứu đặt phòng</a></div>
-            <div><span class="eyebrow">MÌNH KẾT NỐI NHÉ</span><a class="footer-phone" href="tel:0357907153">☎ 0357 907 153</a>
-                <p>82 đường B18, KDC 91B<br>Ninh Kiều, Cần Thơ</p><a href="https://zalo.me/0357907153" target="_blank" rel="noreferrer">Trò chuyện qua Zalo ↗</a>
+            <div>
+                <span class="eyebrow">KHÁM PHÁ MƠ</span>
+                <a href="/rooms">Phòng & bảng giá</a>
+                <a href="/calendar">Xem lịch phòng</a>
+            </div>
+            <nav class="grid content-start gap-1" aria-label="Hỗ trợ">
+                <h2 class="mb-1 font-sans! text-xs! font-semibold! tracking-widest text-[#f4dfc9]">HỖ TRỢ</h2>
+                <a class="w-fit rounded-sm py-1.5 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4dfc9]" href="/bookings#tra-cuu">Tra cứu đặt phòng</a>
+                <a class="w-fit rounded-sm py-1.5 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4dfc9]" href="#lien-he-footer">Liên hệ</a>
+                <a class="w-fit rounded-sm py-1.5 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4dfc9]" href="/chinh-sach-bao-mat">Chính sách bảo mật</a>
+            </nav>
+            <div id="lien-he-footer" class="max-[760px]:col-span-2">
+                <span class="eyebrow">MÌNH KẾT NỐI NHÉ</span>
+                <a class="footer-phone" href="tel:0357907153">☎ 0357 907 153</a>
+                <p>82 đường B18, KDC 91B<br>Ninh Kiều, Cần Thơ</p>
+                <a href="https://zalo.me/0357907153" target="_blank" rel="noreferrer">Trò chuyện qua Zalo ↗</a>
             </div>
         </div>
         <div class="container footer-bottom"><span>© <?= date('Y') ?> Mơ Home.</span><span>Được chăm chút, từ những điều nhỏ nhất.</span></div>
-    </footer><?php }
+    </footer>
+    <?php
+}
+
+function render_privacy_policy(): void
+{
+    ?>
+    <article class="mx-auto max-w-3xl px-5 py-10 text-base leading-relaxed sm:px-8 sm:py-16">
+        <header class="mb-8 border-b border-solid border-[#e7e0d7] pb-6">
+            <h1 class="text-3xl leading-tight text-[#4b3327] sm:text-5xl">Chính sách bảo mật dữ liệu cá nhân</h1>
+            <p class="mt-3 text-sm text-[#6e5b4d]">Cập nhật lần cuối: <time datetime="2026-09-18">18/09/2026</time>.</p>
+        </header>
+
+        <div class="grid gap-8 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:leading-snug [&_h2]:text-[#70432c] sm:[&_h2]:text-2xl [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5">
+            <section>
+                <h2>1. Bên kiểm soát dữ liệu</h2>
+                <p>
+                    Công ty TNHH Thương Mại Dịch Vụ Đầu Tư Tổng Hợp T-N — Mã số thuế: 1801702806<br>
+                    Địa chỉ: 701/78, đường 30 tháng 4, phường Tân An, Thành phố Cần Thơ<br>
+                    Người đại diện: ….<br>
+                    Email: … — Điện thoại: ….
+                </p>
+            </section>
+            <section>
+                <h2>2. Dữ liệu chúng tôi thu thập</h2>
+                <ul>
+                    <li>Họ tên, số điện thoại, email và ghi chú bạn nhập khi đặt phòng.</li>
+                    <li>Ảnh hai mặt căn cước công dân/hộ chiếu của người đặt phòng (dữ liệu cá nhân nhạy cảm).</li>
+                    <li>Số giấy tờ tuỳ thân, ngày sinh và các thông tin khác được trích từ ảnh giấy tờ để lập hồ sơ khách lưu trú.</li>
+                    <li>Thông tin đặt phòng và thanh toán: phòng, thời gian, số tiền, mã giao dịch. Chúng tôi không lưu thông tin thẻ hay tài khoản ngân hàng của bạn.</li>
+                    <li>Dữ liệu kỹ thuật: địa chỉ IP, loại thiết bị, cookie và hành vi sử dụng trang.</li>
+                </ul>
+            </section>
+            <section>
+                <h2>3. Mục đích xử lý</h2>
+                <ul>
+                    <li>Xác nhận, thực hiện và hỗ trợ đơn đặt phòng; gửi mã cửa và hướng dẫn nhận phòng.</li>
+                    <li>Thực hiện nghĩa vụ khai báo lưu trú theo quy định của pháp luật.</li>
+                    <li>Phòng chống gian lận, giải quyết khiếu nại và tranh chấp.</li>
+                    <li>Đo lường, cải thiện website và quảng cáo (chỉ với dữ liệu kỹ thuật).</li>
+                </ul>
+            </section>
+            <section>
+                <h2>4. Thời gian lưu trữ</h2>
+                <p>Ảnh căn cước công dân/hộ chiếu thông tin cá nhân sẽ được lưu trữ theo quy định pháp luật. Thông tin đặt phòng và thanh toán được lưu theo thời hạn pháp luật về kế toán, thuế yêu cầu.</p>
+            </section>
+            <section>
+                <h2>5. Bên nhận dữ liệu và chuyển dữ liệu ra nước ngoài</h2>
+                <ul>
+                    <li>Cơ quan nhà nước có thẩm quyền khi pháp luật yêu cầu (bao gồm khai báo lưu trú).</li>
+                    <li>Đơn vị phát triển và vận hành hệ thống, với vai trò bên xử lý dữ liệu theo hợp đồng.</li>
+                    <li>Amazon Web Services (máy chủ lưu trữ tại Singapore) — lưu ảnh và bản sao lưu dưới dạng riêng tư, chỉ truy cập được bằng đường dẫn có chữ ký và có thời hạn.</li>
+                    <li>Cổng thanh toán PayOS và ngân hàng thụ hưởng — xử lý giao dịch chuyển khoản.</li>
+                    <li>Google, Meta (Facebook), TikTok và các công cụ phân tích hành vi trên trang — nhận dữ liệu kỹ thuật và cookie, máy chủ có thể đặt ngoài Việt Nam.</li>
+                </ul>
+                <p class="mt-3">Chúng tôi không bán dữ liệu cá nhân của bạn.</p>
+            </section>
+            <section>
+                <h2>6. Quyền của bạn</h2>
+                <p>
+                    Bạn có quyền được biết, đồng ý hoặc rút lại sự đồng ý, truy cập, chỉnh sửa, yêu cầu xoá, hạn chế hoặc phản đối việc xử lý dữ liệu, và khiếu nại theo quy định của pháp luật về bảo vệ dữ liệu cá nhân.
+                    Gửi yêu cầu qua email <a class="break-all rounded-sm underline underline-offset-2 hover:text-[#70432c] focus-visible:outline-2 focus-visible:outline-offset-2" href="mailto:congtycinex@gmail.com">congtycinex@gmail.com</a>
+                    hoặc số <a class="rounded-sm underline underline-offset-2 hover:text-[#70432c] focus-visible:outline-2 focus-visible:outline-offset-2" href="tel:0843665588">0843665588</a>; chúng tôi phản hồi trong vòng 72 giờ.
+                    Việc rút lại sự đồng ý không ảnh hưởng tới nghĩa vụ khai báo lưu trú đã phát sinh.
+                </p>
+            </section>
+            <section>
+                <h2>7. Bảo mật</h2>
+                <p>Dữ liệu được truyền qua kết nối mã hoá (HTTPS); ảnh giấy tờ được lưu ở chế độ riêng tư và chỉ nhân viên được phân quyền mới xem được. Nếu xảy ra sự cố ảnh hưởng tới dữ liệu của bạn, chúng tôi sẽ thông báo theo quy định của pháp luật.</p>
+            </section>
+        </div>
+    </article>
+    <?php
+}
 
                                                                                                                                                                                         function package_timing_label(array $package): string
                                                                                                                                                                                         {
