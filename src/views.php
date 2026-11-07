@@ -257,12 +257,12 @@ function render_privacy_policy(): void
 {
     ?>
     <article class="mx-auto max-w-3xl px-5 py-10 text-base leading-relaxed sm:px-8 sm:py-16">
-        <header class="mb-8 border-b border-solid border-[#e7e0d7] pb-6">
-            <h1 class="text-3xl leading-tight text-[#4b3327] sm:text-5xl">Chính sách bảo mật dữ liệu cá nhân</h1>
+        <header class="mb-8 border-0 border-b border-solid border-[#e7e0d7] pb-6">
+            <h1 class="text-3xl! leading-tight text-[#4b3327] sm:text-5xl!">Chính sách bảo mật dữ liệu cá nhân</h1>
             <p class="mt-3 text-sm text-[#6e5b4d]">Cập nhật lần cuối: <time datetime="2026-09-18">18/09/2026</time>.</p>
         </header>
 
-        <div class="grid gap-8 [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:leading-snug [&_h2]:text-[#70432c] sm:[&_h2]:text-2xl [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5">
+        <div class="grid gap-8 [&_h2]:mb-3! [&_h2]:text-xl! [&_h2]:leading-snug [&_h2]:text-[#70432c] sm:[&_h2]:text-2xl! [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5">
             <section>
                 <h2>1. Bên kiểm soát dữ liệu</h2>
                 <p>
