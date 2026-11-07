@@ -341,7 +341,19 @@ function render_room_cards(bool $liveAvailability = false): void
         <div class="hero-shade"></div>
         <div class="container hero-content" data-home-reveal><span class="eyebrow"><span class="tiny-line"></span> CHÀO BẠN, MƠ ĐÂY</span>
             <h1>Chạm vào<br>một chốn <em>mơ.</em></h1>
-            <p>Một căn phòng ấm. Một khoảng trời riêng.<br>Để bạn nghỉ ngơi, kết nối và tận hưởng những điều nhỏ bé.</p><a href="/rooms" class="button cream">Khám phá không gian ↗</a>
+            <p>Một căn phòng ấm. Một khoảng trời riêng.<br>Để bạn nghỉ ngơi, kết nối và tận hưởng những điều nhỏ bé.</p>
+            <a href="/rooms"
+                class="group inline-flex min-h-[52px] max-w-full items-stretch overflow-hidden rounded-lg bg-[#f8eedc] text-sm font-semibold text-[#523422]!
+                    shadow-[0_5px_16px_#2b1a1638] not-aria-disabled:hover:bg-[#fff7e9]
+                    focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#fff2dc] motion-safe:transition-colors">
+                <span class="flex items-center px-4 py-3 sm:px-5">Khám phá không gian</span>
+                <span class="grid w-12 shrink-0 place-items-center bg-[#6b4630] text-[#fff2dc]" aria-hidden="true">
+                    <svg class="size-5 motion-safe:transition-transform motion-safe:group-hover:group-not-aria-disabled:translate-x-1"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14M13 18l6 -6M13 6l6 6" />
+                    </svg>
+                </span>
+            </a>
         </div>
         <div class="hero-carousel-controls" data-hero-controls hidden>
             <button type="button" data-hero-prev aria-label="Ảnh trước">‹</button>
