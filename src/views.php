@@ -343,16 +343,16 @@ function render_room_cards(bool $liveAvailability = false): void
             <h1>Chạm vào<br>một chốn <em>mơ.</em></h1>
             <p>Một căn phòng ấm. Một khoảng trời riêng.<br>Để bạn nghỉ ngơi, kết nối và tận hưởng những điều nhỏ bé.</p>
             <a href="/rooms"
-                class="group inline-flex min-h-[52px] max-w-full items-stretch overflow-hidden rounded-lg bg-[#f8eedc] text-sm font-semibold text-[#523422]!
-                    shadow-[0_5px_16px_#2b1a1638] not-aria-disabled:hover:bg-[#fff7e9]
+                class="group inline-flex min-h-[52px] max-w-full items-stretch bg-[#a23c08] text-xs font-semibold uppercase tracking-[0.12em] text-[#fff7e9]!
+                    shadow-[0_3px_0_#663017] not-aria-disabled:hover:bg-[#8f3307]
                     focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#fff2dc] motion-safe:transition-colors">
-                <span class="flex items-center px-4 py-3 sm:px-5">Khám phá không gian</span>
-                <span class="grid w-12 shrink-0 place-items-center bg-[#6b4630] text-[#fff2dc]" aria-hidden="true">
+                <span class="grid w-12 shrink-0 place-items-center bg-[#bd540f]" aria-hidden="true">
                     <svg class="size-5 motion-safe:transition-transform motion-safe:group-hover:group-not-aria-disabled:translate-x-1"
                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M5 12h14M13 18l6 -6M13 6l6 6" />
                     </svg>
                 </span>
+                <span class="flex items-center px-3 py-3 sm:px-5">Khám phá không gian</span>
             </a>
         </div>
         <div class="hero-carousel-controls" data-hero-controls hidden>
