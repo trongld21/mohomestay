@@ -9,8 +9,12 @@
     const message = root.querySelector("[data-map-message]");
     const retry = root.querySelector("[data-map-retry]");
     const center = [Number(root.dataset.mapLatitude), Number(root.dataset.mapLongitude)];
-    const sdkBase = "https://unpkg.com/leaflet@1.9.4/dist/";
-    let sdkPromise;
+    const sdkSources = [
+        "https://unpkg.com/leaflet@1.9.4/dist/",
+        "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/",
+    ];
+    let stylesheetPromise;
+    let scriptPromise;
     let map;
     let resizeObserver;
     let timer;
@@ -20,7 +24,7 @@
     function loadAsset(tag, url, integrity) {
         return new Promise((resolve, reject) => {
             const element = document.createElement(tag);
-            const timeout = setTimeout(fail, 12000);
+            const timeout = setTimeout(fail, 8000);
             function fail() {
                 clearTimeout(timeout);
                 element.remove();
@@ -44,17 +48,25 @@
         });
     }
 
+    function loadFromCdn(tag, filename, integrity) {
+        return loadAsset(tag, sdkSources[0] + filename, integrity)
+            .catch(() => loadAsset(tag, sdkSources[1] + filename, integrity));
+    }
+
     function loadSdk() {
-        if (!sdkPromise) {
-            sdkPromise = Promise.all([
-                loadAsset("link", sdkBase + "leaflet.css", "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="),
-                window.L ? Promise.resolve() : loadAsset("script", sdkBase + "leaflet.js", "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="),
-            ]).catch((error) => {
-                sdkPromise = null;
+        stylesheetPromise ??= loadFromCdn("link", "leaflet.css", "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=")
+            .catch((error) => {
+                stylesheetPromise = null;
                 throw error;
             });
+        if (!window.L) {
+            scriptPromise ??= loadFromCdn("script", "leaflet.js", "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=")
+                .catch((error) => {
+                    scriptPromise = null;
+                    throw error;
+                });
         }
-        return sdkPromise;
+        return Promise.all([stylesheetPromise, scriptPromise]);
     }
 
     function destroyMap() {
@@ -108,24 +120,18 @@
                 referrerPolicy: "strict-origin-when-cross-origin",
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             });
-            let loadedTiles = 0;
             timer = setTimeout(showError, 15000);
             tiles.on("tileload", () => {
-                loadedTiles++;
-            });
-            tiles.on("load", () => {
                 if (map !== activeMap || !loading) return;
-                if (!loadedTiles) {
-                    // Let Leaflet finish its tile event before removing the map.
-                    queueMicrotask(() => {
-                        if (map === activeMap && loading) showError();
-                    });
-                    return;
-                }
                 clearTimeout(timer);
                 loading = false;
                 status.hidden = true;
-                map.invalidateSize({ pan: false });
+            });
+            tiles.on("load", () => {
+                // If every tile failed, let Leaflet finish its event before removing the map.
+                queueMicrotask(() => {
+                    if (map === activeMap && loading) showError();
+                });
             });
             tiles.addTo(map);
             const markerLabel = "Mơ Home";
