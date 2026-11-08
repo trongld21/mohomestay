@@ -256,13 +256,7 @@ html:has(.hr-personnel-dialog[open]) {
 }
 
 .ui-toast-region:has(.booking-identity-toast) {
-    @apply w-[min(420px,calc(100%-2rem))];
-}
-
-@media (max-width: 760px) {
-    .ui-toast-region:has(.booking-identity-toast) {
-        @apply top-20 right-4 bottom-auto;
-    }
+    @apply top-4 right-4 bottom-auto w-[min(420px,calc(100%-2rem))];
 }
 
 .ui-toast.booking-identity-toast {
