@@ -225,29 +225,32 @@ function render_footer(): void
 {
     ?>
     <footer id="lien-he" class="site-footer">
-        <div class="container footer-top grid-cols-2! gap-8! lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]!">
+        <div class="container footer-top grid-cols-2! gap-8! lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]!
+            [&_h2]:mb-2 [&_h2]:font-sans! [&_h2]:text-xs! [&_h2]:font-semibold! [&_h2]:tracking-widest [&_h2]:text-[#f4dfc9]
+            [&_a]:w-fit [&_a]:rounded-sm [&_a]:py-1.5 [&_a]:text-sm [&_a:hover]:text-white [&_a:hover]:underline
+            [&_a:focus-visible]:outline-2! [&_a:focus-visible]:outline-offset-2! [&_a:focus-visible]:outline-[#f4dfc9]!">
             <div>
                 <?php logo(); ?>
                 <p>Một chốn riêng. Một nhịp chậm.<br>Một chút bình yên dành cho bạn.</p>
             </div>
-            <div>
-                <span class="eyebrow">KHÁM PHÁ MƠ</span>
+            <nav class="grid content-start gap-1" aria-label="Khám phá Mơ">
+                <h2>KHÁM PHÁ MƠ</h2>
                 <a href="/rooms">Phòng & bảng giá</a>
                 <a href="/calendar">Xem lịch phòng</a>
-            </div>
-            <nav class="grid content-start gap-1" aria-label="Hỗ trợ">
-                <h2 class="mb-1 font-sans! text-xs! font-semibold! tracking-widest text-[#f4dfc9]">HỖ TRỢ</h2>
-                <a class="w-fit rounded-sm py-1.5 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4dfc9]" href="/bookings#tra-cuu">Tra cứu đặt phòng</a>
-                <a class="w-fit rounded-sm py-1.5 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4dfc9]" href="#lien-he-footer">Liên hệ</a>
-                <a class="w-fit rounded-sm py-1.5 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4dfc9]" href="/chinh-sach-bao-mat">Chính sách bảo mật</a>
-                <a class="w-fit rounded-sm py-1.5 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4dfc9]" href="/dieu-khoan-su-dung">Điều khoản sử dụng</a>
             </nav>
-            <div id="lien-he-footer" class="max-[760px]:col-span-2">
-                <span class="eyebrow">MÌNH KẾT NỐI NHÉ</span>
-                <a class="footer-phone" href="tel:0357907153">☎ 0357 907 153</a>
-                <p>82 đường B18, KDC 91B<br>Ninh Kiều, Cần Thơ</p>
+            <nav class="grid content-start gap-1" aria-label="Hỗ trợ">
+                <h2>HỖ TRỢ</h2>
+                <a href="/bookings#tra-cuu">Tra cứu đặt phòng</a>
+                <a href="#lien-he-footer">Liên hệ</a>
+                <a href="/chinh-sach-bao-mat">Chính sách bảo mật</a>
+                <a href="/dieu-khoan-su-dung">Điều khoản sử dụng</a>
+            </nav>
+            <section id="lien-he-footer" class="grid content-start gap-1 max-[760px]:col-span-2" aria-labelledby="footer-contact-title">
+                <h2 id="footer-contact-title">MÌNH KẾT NỐI NHÉ</h2>
+                <a href="tel:0357907153">☎ 0357 907 153</a>
+                <p class="m-0! py-1.5 text-sm!">82 đường B18, KDC 91B<br>Ninh Kiều, Cần Thơ</p>
                 <a href="https://zalo.me/0357907153" target="_blank" rel="noreferrer">Trò chuyện qua Zalo ↗</a>
-            </div>
+            </section>
         </div>
         <div class="container footer-bottom"><span>© <?= date('Y') ?> Mơ Home.</span><span>Được chăm chút, từ những điều nhỏ nhất.</span></div>
     </footer>
