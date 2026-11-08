@@ -240,6 +240,7 @@ function render_footer(): void
                 <a class="w-fit rounded-sm py-1.5 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4dfc9]" href="/bookings#tra-cuu">Tra cứu đặt phòng</a>
                 <a class="w-fit rounded-sm py-1.5 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4dfc9]" href="#lien-he-footer">Liên hệ</a>
                 <a class="w-fit rounded-sm py-1.5 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4dfc9]" href="/chinh-sach-bao-mat">Chính sách bảo mật</a>
+                <a class="w-fit rounded-sm py-1.5 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4dfc9]" href="/dieu-khoan-su-dung">Điều khoản sử dụng</a>
             </nav>
             <div id="lien-he-footer" class="max-[760px]:col-span-2">
                 <span class="eyebrow">MÌNH KẾT NỐI NHÉ</span>
@@ -250,6 +251,50 @@ function render_footer(): void
         </div>
         <div class="container footer-bottom"><span>© <?= date('Y') ?> Mơ Home.</span><span>Được chăm chút, từ những điều nhỏ nhất.</span></div>
     </footer>
+    <?php
+}
+
+function render_terms_of_use(): void
+{
+    ?>
+    <article class="mx-auto max-w-3xl px-5 py-10 text-base leading-relaxed sm:px-8 sm:py-16">
+        <header class="mb-8 border-0 border-b border-solid border-[#e7e0d7] pb-6">
+            <h1 class="text-3xl! leading-tight text-[#4b3327] sm:text-5xl!">Điều khoản sử dụng</h1>
+            <p class="mt-3 text-[#6e5b4d]">Các điều khoản áp dụng khi bạn xem thông tin, đặt phòng, thanh toán hoặc tra cứu đơn trên website Mơ Homestay.</p>
+        </header>
+
+        <div class="grid gap-8 [&_a]:rounded-sm [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-[#70432c] [&_a:focus-visible]:outline-2 [&_a:focus-visible]:outline-offset-2 [&_h2]:mb-3! [&_h2]:text-xl! [&_h2]:leading-snug [&_h2]:text-[#70432c] sm:[&_h2]:text-2xl!">
+            <section>
+                <h2>1. Đơn vị vận hành</h2>
+                <p>Website do Hộ Kinh Doanh Mơ Homestay vận hành tại số 82, B18, KDC 91B, Phường Tân An, Thành phố Cần Thơ, Việt Nam.</p>
+            </section>
+            <section>
+                <h2>2. Sử dụng website</h2>
+                <p>Khi đặt phòng, bạn cần cung cấp thông tin chính xác để Mơ liên hệ, xác nhận đơn và hỗ trợ nhận phòng. Bạn chỉ được tra cứu đơn của mình hoặc đơn mà bạn được phép quản lý. Hãy giữ kín liên kết tra cứu và mã mở cửa.</p>
+                <p class="mt-3">Bạn không được giả mạo Mơ Homestay, sử dụng nội dung website cho mục đích thương mại khi chưa được cho phép, gửi yêu cầu giả, truy cập trái phép hoặc can thiệp vào hoạt động của hệ thống.</p>
+            </section>
+            <section>
+                <h2>3. Giá, đặt phòng và thanh toán</h2>
+                <p>Giá và tình trạng phòng phụ thuộc vào phòng, gói lưu trú, ngày giờ và ưu đãi áp dụng. Trước khi thanh toán, hãy kiểm tra phòng, giờ nhận và trả phòng, số khách và tổng tiền trên đơn.</p>
+                <p class="mt-3">Khi đặt phòng trực tuyến được mở, đơn chờ thanh toán chỉ giữ chỗ đến thời hạn hiển thị trên trang thanh toán. Hãy kiểm tra trạng thái tại <a href="/bookings#tra-cuu">Tra cứu đặt phòng</a>. Nếu đã chuyển tiền mà đơn chưa được xác nhận, hãy liên hệ Mơ để đối soát và tránh chuyển thêm lần nữa.</p>
+                <p class="mt-3">Nếu phát hiện sai lệch về giá hoặc tình trạng phòng ảnh hưởng đến đơn, Mơ sẽ liên hệ qua thông tin bạn đã cung cấp để trao đổi cách xử lý.</p>
+            </section>
+            <section>
+                <h2>4. Nhận phòng, đổi lịch và hủy đơn</h2>
+                <p>Giờ nhận và trả phòng theo đơn đã xác nhận. Khi lưu trú, bạn cần làm theo hướng dẫn nhận phòng và cung cấp thông tin cần thiết để Mơ thực hiện việc khai báo lưu trú.</p>
+                <p class="mt-3">Nếu cần đổi lịch, hủy đơn hoặc đề nghị hoàn tiền, hãy gửi mã đặt phòng để Mơ kiểm tra. Việc xử lý căn cứ vào điều kiện đã thông báo cho đơn của bạn và quy định áp dụng. Hủy đơn trên hệ thống không tự động hoàn tiền.</p>
+            </section>
+            <section>
+                <h2>5. Dữ liệu cá nhân</h2>
+                <p>Mơ sử dụng thông tin bạn cung cấp để xử lý đơn, hỗ trợ lưu trú và thực hiện các nghĩa vụ liên quan. Xem <a href="/chinh-sach-bao-mat">Chính sách bảo mật</a> để biết dữ liệu được thu thập, mục đích sử dụng và cách gửi yêu cầu về dữ liệu cá nhân.</p>
+            </section>
+            <section>
+                <h2>6. Cập nhật và hỗ trợ</h2>
+                <p>Mơ đăng các cập nhật điều khoản trên trang này. Việc xử lý đơn đã xác nhận căn cứ vào điều kiện đã thông báo cho đơn đó và quy định áp dụng.</p>
+                <p class="mt-3">Để được hỗ trợ hoặc gửi khiếu nại, hãy gọi <a href="tel:0357907153">0357907153</a> hoặc gửi email đến <a class="break-all" href="mailto:mohomestay01@gmail.com">mohomestay01@gmail.com</a>.</p>
+            </section>
+        </div>
+    </article>
     <?php
 }
 

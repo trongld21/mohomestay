@@ -97,6 +97,7 @@ elseif (preg_match('#^/admin/rooms/([a-zA-Z0-9_-]+)/preview$#', $path, $m)) {
 elseif ($path === '/calendar') render_page('Lịch phòng', fn() => render_calendar());
 elseif ($path === '/bookings') render_page('Đặt phòng', fn() => render_bookings());
 elseif ($path === '/chinh-sach-bao-mat') render_page('Chính sách bảo mật dữ liệu cá nhân', fn() => render_privacy_policy());
+elseif ($path === '/dieu-khoan-su-dung') render_page('Điều khoản sử dụng', fn() => render_terms_of_use());
 elseif ($path === '/checkout-payment') {
     render_page('Thanh toán phụ thu', fn() => print(
         '<section class="mx-auto my-12 max-w-lg rounded-2xl border border-stone-200 bg-[#fffdf9] p-6 text-[#45382f]">'
@@ -203,7 +204,7 @@ elseif ($path === '/admin') {
 } elseif ($path === '/sitemap.xml') {
     header('Content-Type: application/xml');
     echo '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
-    $urls = ['/', '/rooms', '/calendar', '/bookings', '/chinh-sach-bao-mat'];
+    $urls = ['/', '/rooms', '/calendar', '/bookings', '/chinh-sach-bao-mat', '/dieu-khoan-su-dung'];
     foreach (rooms() as $room) $urls[] = '/rooms/' . $room['slug'];
     foreach ($urls as $url) echo '<url><loc>' . e(rtrim((string)config('app_url'), '/') . $url) . '</loc></url>';
     echo '</urlset>';
