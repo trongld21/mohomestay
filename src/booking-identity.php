@@ -115,11 +115,17 @@ function render_booking_identity_fields(bool $required = true): void
                 <label class="grid gap-2 text-sm font-medium"><?= e($label) ?> <?= $required ? '*' : '' ?>
                     <input type="file" name="identity_<?= e($side) ?>" accept="image/jpeg,image/png,image/webp" <?= $required ? 'required' : '' ?> class="min-h-11 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">
                 </label>
-                <img data-identity-preview hidden alt="Xem trước CCCD <?= e(mb_strtolower($label)) ?>" class="max-h-40 w-full rounded-lg object-contain">
-                <button type="button" data-identity-remove hidden aria-label="Xóa ảnh <?= e(mb_strtolower($label)) ?> CCCD"
-                    class="min-h-11 w-fit rounded-lg border border-solid border-[#dfc6be] bg-white px-3 text-sm! font-semibold text-red-800 enabled:hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-800">
-                    Xóa ảnh
-                </button>
+                <div class="relative mx-auto w-fit max-w-full">
+                    <img data-identity-preview hidden alt="Xem trước CCCD <?= e(mb_strtolower($label)) ?>" class="max-h-40 w-auto max-w-full rounded-lg align-top">
+                    <button type="button" data-identity-remove hidden aria-label="Xóa ảnh <?= e(mb_strtolower($label)) ?> CCCD"
+                        class="absolute -top-1 -right-1 size-11 rounded-full border-0 bg-transparent p-0 text-red-800 enabled:hover:text-red-950 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-red-800">
+                        <span class="mx-auto grid size-8 place-items-center rounded-full border border-solid border-[#dfc6be] bg-white" aria-hidden="true">
+                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                <path d="m6 6 12 12M18 6 6 18" />
+                            </svg>
+                        </span>
+                    </button>
+                </div>
             </div>
         <?php endforeach ?>
         <p data-identity-upload-message role="status" class="text-sm text-red-800 sm:col-span-2"></p>

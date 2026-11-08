@@ -86,7 +86,6 @@
             preview.hidden = true;
             input.setCustomValidity('');
             const file = input.files[0];
-            side.querySelector('[data-identity-remove]').hidden = !file;
             if (file && (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 3 * 1024 * 1024)) {
                 input.setCustomValidity('Chọn ảnh JPG, PNG hoặc WebP tối đa 3 MiB. Ảnh HEIC cần đổi sang JPG trước khi tải.');
             } else if (file) {
@@ -95,6 +94,7 @@
                 preview.src = url;
                 preview.hidden = false;
             }
+            side.querySelector('[data-identity-remove]').hidden = preview.hidden;
             updateMessage();
         });
         group.addEventListener('click', event => {
