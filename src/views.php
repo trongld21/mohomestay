@@ -291,7 +291,10 @@ function render_terms_of_use(): void
             <section>
                 <h2>6. Cập nhật và hỗ trợ</h2>
                 <p>Mơ đăng các cập nhật điều khoản trên trang này. Việc xử lý đơn đã xác nhận căn cứ vào điều kiện đã thông báo cho đơn đó và quy định áp dụng.</p>
-                <p class="mt-3">Để được hỗ trợ hoặc gửi khiếu nại, hãy gọi <a href="tel:0357907153">0357907153</a> hoặc gửi email đến <a class="break-all" href="mailto:mohomestay01@gmail.com">mohomestay01@gmail.com</a>.</p>
+                <p class="mt-3">
+                    Để được hỗ trợ hoặc gửi khiếu nại, hãy gọi <a href="tel:0357907153">0357907153</a>
+                    hoặc gửi email đến <a class="whitespace-nowrap" href="mailto:mohomestay01@gmail.com">mohomestay01@gmail.com</a>.
+                </p>
             </section>
         </div>
     </article>
