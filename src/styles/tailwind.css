@@ -250,6 +250,30 @@ html:has(.hr-personnel-dialog[open]) {
     @apply text-white;
 }
 
+.booking-policy-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #7892b8 transparent;
+}
+
+@supports selector(::-webkit-scrollbar) {
+    .booking-policy-scroll {
+        scrollbar-width: auto;
+        scrollbar-color: auto;
+    }
+
+    .booking-policy-scroll::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .booking-policy-scroll::-webkit-scrollbar-thumb {
+        @apply rounded-full bg-[#7892b8];
+    }
+
+    .booking-policy-scroll::-webkit-scrollbar-button {
+        @apply hidden h-0 w-0;
+    }
+}
+
 .admin-page [data-counter-tabs] a[aria-current="page"]:hover,
 .admin-page [data-counter-tabs] a[aria-current="page"]:focus-visible {
     @apply text-white;

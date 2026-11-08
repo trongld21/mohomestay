@@ -267,24 +267,37 @@ function render_booking_policy_consent(): void
         </button>
         <span data-booking-policy-status role="status" class="text-[#654831]">Chưa chấp nhận</span>
     </div>
-    <dialog data-booking-policy-dialog aria-labelledby="booking-policy-title" class="m-auto w-[calc(100%-2rem)] max-w-3xl overflow-hidden rounded-2xl border-0 bg-[#fffdf9] p-0 text-[#3e322b] shadow-xl backdrop:bg-stone-950/60">
-        <div class="flex max-h-[85dvh] flex-col">
-            <header class="px-4 pt-5 sm:px-6">
-                <h2 id="booking-policy-title" tabindex="-1" autofocus class="text-xl! font-semibold sm:text-2xl!">Điều khoản và bảo mật dữ liệu</h2>
-                <p class="mt-2 text-sm">Đọc các nội dung dưới đây trước khi đồng ý gửi thông tin đặt phòng và ảnh CCCD cho Mơ.</p>
+    <dialog data-booking-policy-dialog aria-labelledby="booking-policy-title" aria-describedby="booking-policy-intro"
+        class="m-auto w-[calc(100%-2rem)] max-w-3xl overflow-hidden rounded-2xl border-0 bg-[#f7faff] p-0 text-[#24324a] shadow-[0_24px_64px_#101c3a40] backdrop:bg-stone-950/60 sm:rounded-3xl">
+        <div class="flex h-[min(90dvh,48rem)] flex-col gap-3 p-3 sm:gap-5 sm:p-6">
+            <header class="grid shrink-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1.5 rounded-xl bg-linear-to-br from-[#e5efff] to-[#f7faff] p-3 sm:gap-x-4 sm:p-4">
+                <span class="grid size-10 place-items-center rounded-xl bg-[#d6e7ff] text-[#174da8] sm:row-span-2 sm:size-14" aria-hidden="true">
+                    <svg class="size-6 sm:size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22c5-2 8-6 8-11V6l-8-4-8 4v5c0 5 3 9 8 11Z" />
+                        <rect x="9" y="10" width="6" height="5" rx="1" />
+                        <path d="M10 10V8a2 2 0 0 1 4 0v2" />
+                    </svg>
+                </span>
+                <h2 id="booking-policy-title" tabindex="-1" autofocus class="mb-0! self-center text-lg! leading-tight! font-semibold text-[#17294d] sm:text-3xl!">Điều khoản và bảo mật dữ liệu</h2>
+                <p id="booking-policy-intro" class="col-span-2 m-0! text-sm leading-snug! text-[#41516a] sm:col-span-1">Đọc các nội dung dưới đây trước khi đồng ý gửi thông tin đặt phòng và ảnh CCCD cho Mơ.</p>
             </header>
-            <div class="min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-6" tabindex="0" role="region" aria-label="Nội dung điều khoản và chính sách bảo mật">
+            <div class="booking-policy-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl border border-solid border-[#d1def2] bg-white px-3
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174da8] sm:px-5
+                [&_article+article]:border-0 [&_article+article]:border-t [&_article+article]:border-solid [&_article+article]:border-[#d1def2]
+                [&_article_header]:mb-4! [&_article_header]:pb-4! [&_article]:text-sm! sm:[&_article]:text-base!
+                [&_h3]:text-[#17294d]! [&_h4]:rounded-md [&_h4]:bg-[#eef4ff] [&_h4]:px-2.5 [&_h4]:py-1.5 [&_h4]:text-base! [&_h4]:text-[#17458f]!"
+                tabindex="0" role="region" aria-label="Nội dung điều khoản và chính sách bảo mật">
                 <?php render_terms_of_use(true); ?>
                 <?php render_privacy_policy(true); ?>
             </div>
-            <div class="grid gap-3 border-0 border-t border-solid border-[#e7e0d7] px-4 py-4 sm:px-6">
-                <label class="flex cursor-pointer items-start gap-2 text-sm leading-relaxed">
-                    <input type="checkbox" data-booking-policy-check class="mt-1 size-4 shrink-0 accent-[#70432c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70432c]">
+            <div class="grid shrink-0 gap-3">
+                <label class="flex cursor-pointer items-start gap-2.5 rounded-xl bg-[#e8f0ff] p-3 text-sm leading-snug sm:p-4">
+                    <input type="checkbox" data-booking-policy-check class="mt-0.5 size-5 shrink-0 accent-[#174da8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174da8]">
                     <span>Tôi đã đọc và chấp nhận Điều khoản sử dụng, điều kiện đặt phòng và Chính sách bảo mật dữ liệu cá nhân. Tôi đồng ý để Mơ xử lý thông tin đặt phòng và ảnh CCCD cho các mục đích nêu trong chính sách.</span>
                 </label>
-                <div class="flex flex-wrap justify-end gap-2">
-                    <button type="button" data-booking-policy-close class="min-h-11 rounded-lg border-0 bg-transparent px-4 text-sm font-semibold text-[#70432c] enabled:hover:bg-[#f3ece1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70432c]">Đóng</button>
-                    <button type="button" data-booking-policy-confirm disabled class="min-h-11 rounded-lg border-0 bg-[#70432c] px-4 text-sm font-semibold text-white enabled:hover:bg-[#53301f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70432c] disabled:opacity-50">Xác nhận chấp nhận</button>
+                <div class="grid grid-cols-[auto_minmax(0,1fr)] gap-2 sm:flex sm:justify-end">
+                    <button type="button" data-booking-policy-close class="min-h-11 rounded-lg border border-solid border-[#a6b8d3] bg-transparent px-3 text-sm! font-semibold text-[#24324a] enabled:hover:bg-[#e8f0ff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174da8] sm:px-4">Đóng</button>
+                    <button type="button" data-booking-policy-confirm disabled class="min-h-11 rounded-lg border-0 bg-[#174da8] px-3 text-sm! font-semibold text-white enabled:hover:bg-[#123d88] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174da8] disabled:bg-[#dbe5f5] disabled:text-[#536788] sm:px-4">Xác nhận chấp nhận</button>
                 </div>
             </div>
         </div>
