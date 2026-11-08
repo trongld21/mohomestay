@@ -54,21 +54,45 @@
         const urls = new Map();
         const inputs = [...group.querySelectorAll('input[type="file"]')];
         const message = group.querySelector('[data-identity-upload-message]');
+        const publicBooking = form && group.closest('form') === form;
+        let activeToast = null;
         let showMissing = false;
 
         function updateMessage() {
             const invalidFile = inputs.find(input => input.validity.customError);
             const missing = showMissing ? inputs.filter(input => input.validity.valueMissing) : [];
             const side = missing[0]?.name === 'identity_front' ? 'mặt trước' : 'mặt sau';
-            message.textContent = invalidFile?.validationMessage
+            const error = invalidFile?.validationMessage
                 || (missing.length === 2 ? 'Vui lòng tải ảnh cả hai mặt CCCD.'
                     : missing.length ? 'Vui lòng tải ảnh ' + side + ' CCCD.' : '');
+            if (!publicBooking || !window.LangUI?.toast) {
+                message.textContent = error;
+                return;
+            }
+            if (activeToast?.error === error && activeToast.element.isConnected
+                && !activeToast.element.classList.contains('is-leaving')) return;
+            activeToast?.close();
+            activeToast = null;
+            if (error) {
+                const toast = window.LangUI.toast({ type: 'error', title: 'Kiểm tra ảnh CCCD', message: error });
+                if (toast) {
+                    toast.element.classList.add('booking-identity-toast');
+                    activeToast = { ...toast, error };
+                    return;
+                }
+            }
+            message.textContent = error;
         }
 
         group.addEventListener('invalid', event => {
-            if (inputs.includes(event.target) && event.target.validity.valueMissing) {
-                showMissing = true;
-                updateMessage();
+            if (!inputs.includes(event.target)) return;
+            if (event.target.validity.valueMissing) showMissing = true;
+            updateMessage();
+            if (publicBooking && activeToast) {
+                event.preventDefault();
+                if (form.querySelector('input:invalid, select:invalid, textarea:invalid') === event.target) {
+                    event.target.focus();
+                }
             }
         }, true);
 
@@ -118,7 +142,7 @@
                 button.hidden = true;
             });
             showMissing = false;
-            message.textContent = '';
+            updateMessage();
         });
         window.addEventListener('pagehide', () => [...urls.keys()].forEach(revoke));
     });
