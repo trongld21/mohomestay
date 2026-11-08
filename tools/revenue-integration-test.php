@@ -18,10 +18,19 @@ INSERT INTO retail_sales VALUES('BH1',200,'PAID','2026-10-25 16:59:59','Phòng M
 CREATE TABLE expense_vouchers(voucher_code TEXT,amount REAL,spent_at TEXT,include_cashflow INTEGER,category TEXT);
 INSERT INTO expense_vouchers VALUES('PC1',50,'2026-10-24 17:00:00',1,'Vật tư'),('PC2',999,'2026-10-24 18:00:00',0,'Khác');");
 $r=mo_revenue_report($p,'2026-10-25','2026-10-25');
-check($r['totals']['room']===1000.0, 'Room excludes test and cancelled, uses paid UTC date');
+check($r['totals']['room']===1000.0, 'Room excludes test and cancelled, uses check-in UTC date');
 check($r['totals']['retail']===200.0 && $r['totals']['surcharge']===100.0, 'Retail and checkout');
 check($r['totals']['collected']===1300.0 && $r['totals']['expense']===50.0,'Total without double counting');
 check($r['days'][0]['date']==='2026-10-25', 'Vietnam date');
 check(count($r['days'][0]['transactions'])===4, 'All receipt and expense details');
 check($r['totals']['cash']===1000.0 && $r['totals']['transfer']===300.0, 'Payment split');
+$p->exec("UPDATE bookings SET check_in='2026-10-25 17:00:00' WHERE id='b'");
+$bookingDay = mo_revenue_report($p, '2026-10-25', '2026-10-25');
+check($bookingDay['totals']['room'] === 0.0 && $bookingDay['totals']['surcharge'] === 0.0, 'Room and surcharge excluded from payment day when check-in is later');
+$arrivalDay = mo_revenue_report($p, '2026-10-26', '2026-10-26');
+check($arrivalDay['totals']['room'] === 1000.0 && $arrivalDay['totals']['surcharge'] === 100.0, 'Room and surcharge use Vietnam check-in date even when paid earlier');
+check($arrivalDay['totals']['bookings'] === 1.0, 'Booking count follows check-in date');
+check($arrivalDay['days'][0]['transactions'][0]['time'] === '2026-10-25T17:00:00+00:00', 'Room transaction time follows check-in for chart and export');
+$p->exec("UPDATE bookings SET check_in='2026-10-24 20:00:00' WHERE id='b'");
+
 echo "Mo revenue: PASS\n";

@@ -28,7 +28,7 @@ check(str_contains($html, 'role="img"'), 'Charts have an accessible representati
 $dashboard = overview_dashboard_data(mo_revenue_report($p, '2026-10-25', '2026-10-25'));
 check($dashboard['receipt_count'] === 3, 'Count receipts without expenses');
 check($dashboard['net'] === 1250.0, 'Net cash flow subtracts actual expenses');
-check(count($dashboard['hours']) === 24 && $dashboard['hours'][0]['collected'] === 1000.0 && $dashboard['hours'][1]['collected'] === 100.0, 'Hourly chart uses Vietnam payment time');
+check(count($dashboard['hours']) === 24 && $dashboard['hours'][3]['collected'] === 1100.0, 'Hourly chart uses Vietnam check-in time for room and surcharge');
 check($dashboard['rooms'][0]['amount'] === 1100.0, 'Room ranking excludes retail and expenses');
 
 $_GET = ['from' => '2026-10-26', 'to' => '2026-10-25'];

@@ -2,8 +2,8 @@
 
 ## Dashboard tổng quan kinh doanh
 
-`/admin/overview` dùng quyền `bookings.overview`, tổng hợp tiền đã nhận theo thời điểm
-thanh toán ở Việt Nam. Bộ lọc có hôm nay, hôm qua, 7 ngày qua, tháng này, tháng trước
+`/admin/overview` dùng quyền `bookings.overview`, tổng hợp tiền phòng và phụ thu đã thanh toán
+theo ngày nhận phòng ở Việt Nam; bán hàng theo ngày thanh toán, phiếu chi theo ngày chi. Bộ lọc có hôm nay, hôm qua, 7 ngày qua, tháng này, tháng trước
 và khoảng tùy chọn tối đa 93 ngày. Dashboard gồm nguồn thu, phương thức thanh toán,
 phiếu chi, dòng tiền theo ngày, biểu đồ ngày/giờ, tiền nhận theo phòng và giao dịch gần đây.
 Biểu đồ theo giờ cộng gộp cùng khung giờ trong toàn bộ khoảng đã chọn. Số lượt thu

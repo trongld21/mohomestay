@@ -30,15 +30,15 @@ function mo_revenue_report(PDO $pdo, string $from, string $to): array
     }
     $utc = new DateTimeZone('UTC');
     $params = [$start->setTimezone($utc)->format('Y-m-d H:i:s'), $end->setTimezone($utc)->format('Y-m-d H:i:s')];
-    // The payment record is the receipt. Never add booking.total_price on top of it.
+    // Use paid amounts once, attributed to the booking check-in date for room revenue.
     $queries = [
-        'room' => "SELECT p.paid_at AS happened_at,p.amount,b.booking_code AS code,r.name AS room,p.payment_method AS method
+        'room' => "SELECT b.check_in AS happened_at,p.amount,b.booking_code AS code,r.name AS room,p.payment_method AS method
             FROM payments p JOIN bookings b ON b.id=p.booking_id LEFT JOIN rooms r ON r.id=b.room_id
             WHERE p.status='PAID' AND b.payment_status='PAID' AND b.status<>'CANCELLED' AND b.is_test=0
-            AND p.paid_at>=? AND p.paid_at<?",
-        'surcharge' => "SELECT c.paid_at AS happened_at,c.amount,b.booking_code AS code,r.name AS room,'payos' AS method
+            AND b.check_in>=? AND b.check_in<?",
+        'surcharge' => "SELECT b.check_in AS happened_at,c.amount,b.booking_code AS code,r.name AS room,'payos' AS method
             FROM booking_checkout_charges c JOIN bookings b ON b.id=c.booking_id LEFT JOIN rooms r ON r.id=b.room_id
-            WHERE c.payment_status='PAID' AND b.status<>'CANCELLED' AND b.is_test=0 AND c.paid_at>=? AND c.paid_at<?",
+            WHERE c.payment_status='PAID' AND b.status<>'CANCELLED' AND b.is_test=0 AND b.check_in>=? AND b.check_in<?",
         'retail' => "SELECT paid_at AS happened_at,total AS amount,sale_code AS code,room_name_snapshot AS room,completion_method AS method
             FROM retail_sales WHERE status='PAID' AND paid_at>=? AND paid_at<?",
         'expense' => "SELECT spent_at AS happened_at,amount,voucher_code AS code,category AS room,'' AS method

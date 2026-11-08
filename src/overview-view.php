@@ -85,7 +85,7 @@ function render_overview_dashboard(?array $report, string $error, string $from, 
             </div>
             <section class="overview-panel" aria-labelledby="overview-summary-title">
                 <header class="overview-panel-heading">
-                    <div><h2 id="overview-summary-title">Bức tranh dòng tiền</h2><p>Tổng hợp theo ngày thanh toán thành công.</p></div>
+                    <div><h2 id="overview-summary-title">Bức tranh dòng tiền</h2><p>Tiền phòng và phụ thu theo ngày nhận phòng; bán hàng theo ngày thanh toán.</p></div>
                     <span class="text-xs text-[#70645b]">Đơn vị: VND</span>
                 </header>
                 <div class="overview-summary">
