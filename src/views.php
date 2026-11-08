@@ -285,7 +285,7 @@ function render_booking_policy_consent(): void
                     </svg>
                 </span>
                 <h2 id="booking-policy-title" tabindex="-1" autofocus class="mb-0! self-center text-lg! leading-tight! font-semibold text-[#17294d] sm:text-3xl!">Điều khoản và bảo mật dữ liệu</h2>
-                <p id="booking-policy-intro" class="col-span-2 m-0! text-sm leading-snug! text-[#41516a] sm:col-span-1">Đọc các nội dung dưới đây trước khi đồng ý gửi thông tin đặt phòng và ảnh CCCD cho Mơ.</p>
+                <p id="booking-policy-intro" class="col-span-2 m-0! text-sm leading-snug! text-[#41516a] sm:col-span-1">Đọc các nội dung dưới đây trước khi đồng ý gửi thông tin đặt phòng cho Mơ.</p>
             </header>
             <div class="booking-policy-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl border border-solid border-[#d1def2] bg-white px-3
                 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174da8] sm:px-5
@@ -299,7 +299,7 @@ function render_booking_policy_consent(): void
             <div class="grid shrink-0 gap-3">
                 <label class="flex cursor-pointer items-start gap-2.5 rounded-xl bg-[#e8f0ff] p-3 text-sm leading-snug sm:p-4">
                     <input type="checkbox" data-booking-policy-check class="mt-0.5 size-5 shrink-0 accent-[#174da8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174da8]">
-                    <span>Tôi đã đọc và chấp nhận Điều khoản sử dụng, điều kiện đặt phòng và Chính sách bảo mật dữ liệu cá nhân. Tôi đồng ý để Mơ xử lý thông tin đặt phòng và ảnh CCCD cho các mục đích nêu trong chính sách.</span>
+                    <span>Tôi đã đọc và chấp nhận Điều khoản sử dụng, điều kiện đặt phòng và Chính sách bảo mật dữ liệu cá nhân. Tôi đồng ý để Mơ xử lý thông tin đặt phòng cho các mục đích nêu trong chính sách.</span>
                 </label>
                 <div class="grid grid-cols-[auto_minmax(0,1fr)] gap-2 sm:flex sm:justify-end">
                     <button type="button" data-booking-policy-close class="min-h-11 rounded-lg border border-solid border-[#a6b8d3] bg-transparent px-3 text-sm! font-semibold text-[#24324a] enabled:hover:bg-[#e8f0ff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174da8] sm:px-4">Đóng</button>
