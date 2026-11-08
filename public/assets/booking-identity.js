@@ -1,4 +1,55 @@
 (() => {
+    const form = document.querySelector('[data-booking-form]');
+    if (form) {
+        const dialog = form.querySelector('[data-booking-policy-dialog]');
+        const open = form.querySelector('[data-booking-policy-open]');
+        const checkbox = dialog.querySelector('[data-booking-policy-check]');
+        const confirm = dialog.querySelector('[data-booking-policy-confirm]');
+        const acceptance = form.elements.acceptBookingPolicies;
+        const status = form.querySelector('[data-booking-policy-status]');
+
+        function updateAcceptance() {
+            status.textContent = acceptance.value === '1' ? 'Đã chấp nhận' : 'Chưa chấp nhận';
+            acceptance.dispatchEvent(new Event('change'));
+        }
+
+        function showPolicies() {
+            if (dialog.open) return;
+            checkbox.checked = acceptance.value === '1';
+            confirm.disabled = !checkbox.checked;
+            dialog.showModal();
+        }
+
+        open.addEventListener('click', showPolicies);
+        form.addEventListener('change', event => {
+            const input = event.target;
+            if (input instanceof HTMLInputElement && input.type === 'file'
+                && input.closest('[data-identity-upload]') && input.files.length
+                && input.validity.valid && acceptance.value !== '1') {
+                showPolicies();
+            }
+        });
+        checkbox.addEventListener('change', () => {
+            confirm.disabled = !checkbox.checked;
+            if (!checkbox.checked && acceptance.value === '1') {
+                acceptance.value = '';
+                updateAcceptance();
+            }
+        });
+        confirm.addEventListener('click', () => {
+            if (!checkbox.checked) return;
+            acceptance.value = '1';
+            updateAcceptance();
+            dialog.close();
+        });
+        dialog.querySelector('[data-booking-policy-close]').addEventListener('click', () => dialog.close());
+        form.addEventListener('reset', () => queueMicrotask(() => {
+            acceptance.value = '';
+            updateAcceptance();
+            if (dialog.open) dialog.close();
+        }));
+    }
+
     document.querySelectorAll('[data-identity-upload]').forEach(group => {
         const urls = new Map();
         const revoke = input => {

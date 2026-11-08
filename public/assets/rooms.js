@@ -366,7 +366,8 @@
                 window = selectedWindow(),
                 state = window ? slotTools.slotState(window, info?.intervals || []) : "needs-time",
                 canSubmit = (availability.onlineBooking || testPayment?.checked) && info?.active && state === "available";
-            submit.disabled = !canSubmit || !priceQuote;
+            const policiesAccepted = form.elements.acceptBookingPolicies.value === "1";
+            submit.disabled = !canSubmit || !priceQuote || !policiesAccepted;
             submit.textContent = !availability.onlineBooking && !testPayment?.checked
                 ? "Đặt online chưa mở"
                 : !slot
@@ -378,7 +379,8 @@
                       : state === "past"
                         ? "Khung giờ đã qua"
                         : priceError ? "Chưa kiểm tra được giá"
-                          : !priceQuote ? "Đang kiểm tra giá…" : "Tiếp tục thanh toán →";
+                          : !priceQuote ? "Đang kiểm tra giá…"
+                            : !policiesAccepted ? "Chấp nhận điều khoản để tiếp tục" : "Tiếp tục thanh toán →";
         }
         async function loadAvailability() {
             availability = null;
@@ -447,6 +449,7 @@
             renderSummary();
         });
         form.date.onchange = loadAvailability;
+        form.elements.acceptBookingPolicies.addEventListener("change", renderSlots);
         form.time.onchange = () => {
             durationTime = form.time.value;
             invalidatePrice();
@@ -456,7 +459,7 @@
         }
         form.onsubmit = async (event) => {
             event.preventDefault();
-            if (submitting || !priceQuote || submit.disabled) return;
+            if (submitting || !priceQuote || submit.disabled || form.elements.acceptBookingPolicies.value !== "1") return;
             message.innerHTML = "";
             if (!selectedSlot()) {
                 message.innerHTML = '<p class="notice error">Vui lòng chọn một gói còn trống.</p>';
@@ -467,7 +470,6 @@
             const upload = new FormData(form);
             const data = Object.fromEntries([...upload].filter(([, value]) => !(value instanceof File)));
             data.numberOfGuests = Number(data.numberOfGuests);
-            data.acceptTerms = !!data.acceptTerms;
             const testing = !!testPayment?.checked;
             if (testing) {
                 const payload = JSON.stringify(data);
@@ -477,7 +479,6 @@
                 data.requestId = testRequest.id;
             }
             upload.set('numberOfGuests', String(data.numberOfGuests));
-            upload.set('acceptTerms', String(data.acceptTerms));
             submitting = true;
             submit.disabled = true;
             submit.setAttribute("aria-busy", "true");

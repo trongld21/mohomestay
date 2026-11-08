@@ -203,7 +203,12 @@ function availability_api(): never
 function create_booking_api(): never
 {
     if (!payment_enabled()) throw new BookingException('Đặt phòng trực tuyến chưa mở. Vui lòng gọi 0357 907 153 hoặc nhắn Zalo để đặt phòng.', 503);
-    $q = quote_booking(booking_form_body());
+    $body = booking_form_body();
+    if (($body['acceptBookingPolicies'] ?? null) !== '1') {
+        throw new BookingException('Vui lòng chấp nhận Điều khoản sử dụng và Chính sách bảo mật dữ liệu trước khi đặt phòng.', 422);
+    }
+    $body['acceptTerms'] = true;
+    $q = quote_booking($body);
     $identity = read_booking_identity_uploads($_FILES);
     $pdo = db(); $pdo->beginTransaction();
     try {

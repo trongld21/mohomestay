@@ -257,42 +257,79 @@ function render_footer(): void
     <?php
 }
 
-function render_terms_of_use(): void
+function render_booking_policy_consent(): void
 {
     ?>
-    <article class="mx-auto max-w-3xl px-5 py-10 text-base leading-relaxed sm:px-8 sm:py-16">
+    <div class="my-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <input type="hidden" name="acceptBookingPolicies" value="">
+        <button type="button" data-booking-policy-open class="min-h-11 rounded-md border-0 bg-transparent px-1 font-semibold text-[#70432c] underline underline-offset-4 hover:text-[#4b3327] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70432c]">
+            Đọc điều khoản và chính sách bảo mật
+        </button>
+        <span data-booking-policy-status role="status" class="text-[#654831]">Chưa chấp nhận</span>
+    </div>
+    <dialog data-booking-policy-dialog aria-labelledby="booking-policy-title" class="m-auto w-[calc(100%-2rem)] max-w-3xl overflow-hidden rounded-2xl border-0 bg-[#fffdf9] p-0 text-[#3e322b] shadow-xl backdrop:bg-stone-950/60">
+        <div class="flex max-h-[85dvh] flex-col">
+            <header class="px-4 pt-5 sm:px-6">
+                <h2 id="booking-policy-title" tabindex="-1" autofocus class="text-xl! font-semibold sm:text-2xl!">Điều khoản và bảo mật dữ liệu</h2>
+                <p class="mt-2 text-sm">Đọc các nội dung dưới đây trước khi đồng ý gửi thông tin đặt phòng và ảnh CCCD cho Mơ.</p>
+            </header>
+            <div class="min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-6" tabindex="0" role="region" aria-label="Nội dung điều khoản và chính sách bảo mật">
+                <?php render_terms_of_use(true); ?>
+                <?php render_privacy_policy(true); ?>
+            </div>
+            <div class="grid gap-3 border-0 border-t border-solid border-[#e7e0d7] px-4 py-4 sm:px-6">
+                <label class="flex cursor-pointer items-start gap-2 text-sm leading-relaxed">
+                    <input type="checkbox" data-booking-policy-check class="mt-1 size-4 shrink-0 accent-[#70432c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70432c]">
+                    <span>Tôi đã đọc và chấp nhận Điều khoản sử dụng, điều kiện đặt phòng và Chính sách bảo mật dữ liệu cá nhân. Tôi đồng ý để Mơ xử lý thông tin đặt phòng và ảnh CCCD cho các mục đích nêu trong chính sách.</span>
+                </label>
+                <div class="flex flex-wrap justify-end gap-2">
+                    <button type="button" data-booking-policy-close class="min-h-11 rounded-lg border-0 bg-transparent px-4 text-sm font-semibold text-[#70432c] enabled:hover:bg-[#f3ece1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70432c]">Đóng</button>
+                    <button type="button" data-booking-policy-confirm disabled class="min-h-11 rounded-lg border-0 bg-[#70432c] px-4 text-sm font-semibold text-white enabled:hover:bg-[#53301f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70432c] disabled:opacity-50">Xác nhận chấp nhận</button>
+                </div>
+            </div>
+        </div>
+    </dialog>
+    <?php
+}
+
+function render_terms_of_use(bool $embedded = false): void
+{
+    $titleTag = $embedded ? 'h3' : 'h1';
+    $sectionTag = $embedded ? 'h4' : 'h2';
+    ?>
+    <article class="<?= $embedded ? 'py-5' : 'mx-auto max-w-3xl px-5 py-10 sm:px-8 sm:py-16' ?> text-base leading-relaxed">
         <header class="mb-8 border-0 border-b border-solid border-[#e7e0d7] pb-6">
-            <h1 class="text-3xl! leading-tight text-[#4b3327] sm:text-5xl!">Điều khoản sử dụng</h1>
+            <<?= $titleTag ?> class="<?= $embedded ? 'text-xl!' : 'text-3xl! sm:text-5xl!' ?> leading-tight text-[#4b3327]">Điều khoản sử dụng</<?= $titleTag ?>>
             <p class="mt-3 text-[#6e5b4d]">Các điều khoản áp dụng khi bạn xem thông tin, đặt phòng, thanh toán hoặc tra cứu đơn trên website Mơ Homestay.</p>
         </header>
 
-        <div class="grid gap-8 [&_a]:rounded-sm [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-[#70432c] [&_a:focus-visible]:outline-2 [&_a:focus-visible]:outline-offset-2 [&_h2]:mb-3! [&_h2]:text-xl! [&_h2]:leading-snug [&_h2]:text-[#70432c] sm:[&_h2]:text-2xl!">
+        <div class="grid gap-8 [&_a]:rounded-sm [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-[#70432c] [&_a:focus-visible]:outline-2 [&_a:focus-visible]:outline-offset-2 [&_:is(h2,h4)]:mb-3! [&_:is(h2,h4)]:text-xl! [&_:is(h2,h4)]:leading-snug [&_:is(h2,h4)]:text-[#70432c] sm:[&_:is(h2,h4)]:text-2xl!">
             <section>
-                <h2>1. Đơn vị vận hành</h2>
+                <<?= $sectionTag ?>>1. Đơn vị vận hành</<?= $sectionTag ?>>
                 <p>Website do Hộ Kinh Doanh Mơ Homestay vận hành tại số 82, B18, KDC 91B, Phường Tân An, Thành phố Cần Thơ, Việt Nam.</p>
             </section>
             <section>
-                <h2>2. Sử dụng website</h2>
+                <<?= $sectionTag ?>>2. Sử dụng website</<?= $sectionTag ?>>
                 <p>Khi đặt phòng, bạn cần cung cấp thông tin chính xác để Mơ liên hệ, xác nhận đơn và hỗ trợ nhận phòng. Bạn chỉ được tra cứu đơn của mình hoặc đơn mà bạn được phép quản lý. Hãy giữ kín liên kết tra cứu và mã mở cửa.</p>
                 <p class="mt-3">Bạn không được giả mạo Mơ Homestay, sử dụng nội dung website cho mục đích thương mại khi chưa được cho phép, gửi yêu cầu giả, truy cập trái phép hoặc can thiệp vào hoạt động của hệ thống.</p>
             </section>
             <section>
-                <h2>3. Giá, đặt phòng và thanh toán</h2>
+                <<?= $sectionTag ?>>3. Giá, đặt phòng và thanh toán</<?= $sectionTag ?>>
                 <p>Giá và tình trạng phòng phụ thuộc vào phòng, gói lưu trú, ngày giờ và ưu đãi áp dụng. Trước khi thanh toán, hãy kiểm tra phòng, giờ nhận và trả phòng, số khách và tổng tiền trên đơn.</p>
                 <p class="mt-3">Khi đặt phòng trực tuyến được mở, đơn chờ thanh toán chỉ giữ chỗ đến thời hạn hiển thị trên trang thanh toán. Hãy kiểm tra trạng thái tại <a href="/bookings#tra-cuu">Tra cứu đặt phòng</a>. Nếu đã chuyển tiền mà đơn chưa được xác nhận, hãy liên hệ Mơ để đối soát và tránh chuyển thêm lần nữa.</p>
                 <p class="mt-3">Nếu phát hiện sai lệch về giá hoặc tình trạng phòng ảnh hưởng đến đơn, Mơ sẽ liên hệ qua thông tin bạn đã cung cấp để trao đổi cách xử lý.</p>
             </section>
             <section>
-                <h2>4. Nhận phòng, đổi lịch và hủy đơn</h2>
+                <<?= $sectionTag ?>>4. Nhận phòng, đổi lịch và hủy đơn</<?= $sectionTag ?>>
                 <p>Giờ nhận và trả phòng theo đơn đã xác nhận. Khi lưu trú, bạn cần làm theo hướng dẫn nhận phòng và cung cấp thông tin cần thiết để Mơ thực hiện việc khai báo lưu trú.</p>
                 <p class="mt-3">Nếu cần đổi lịch, hủy đơn hoặc đề nghị hoàn tiền, hãy gửi mã đặt phòng để Mơ kiểm tra. Việc xử lý căn cứ vào điều kiện đã thông báo cho đơn của bạn và quy định áp dụng. Hủy đơn trên hệ thống không tự động hoàn tiền.</p>
             </section>
             <section>
-                <h2>5. Dữ liệu cá nhân</h2>
+                <<?= $sectionTag ?>>5. Dữ liệu cá nhân</<?= $sectionTag ?>>
                 <p>Mơ sử dụng thông tin bạn cung cấp để xử lý đơn, hỗ trợ lưu trú và thực hiện các nghĩa vụ liên quan. Xem <a href="/chinh-sach-bao-mat">Chính sách bảo mật</a> để biết dữ liệu được thu thập, mục đích sử dụng và cách gửi yêu cầu về dữ liệu cá nhân.</p>
             </section>
             <section>
-                <h2>6. Cập nhật và hỗ trợ</h2>
+                <<?= $sectionTag ?>>6. Cập nhật và hỗ trợ</<?= $sectionTag ?>>
                 <p>Mơ đăng các cập nhật điều khoản trên trang này. Việc xử lý đơn đã xác nhận căn cứ vào điều kiện đã thông báo cho đơn đó và quy định áp dụng.</p>
                 <p class="mt-3">
                     Để được hỗ trợ hoặc gửi khiếu nại, hãy gọi <a href="tel:0357907153">0357907153</a>
@@ -304,18 +341,20 @@ function render_terms_of_use(): void
     <?php
 }
 
-function render_privacy_policy(): void
+function render_privacy_policy(bool $embedded = false): void
 {
+    $titleTag = $embedded ? 'h3' : 'h1';
+    $sectionTag = $embedded ? 'h4' : 'h2';
     ?>
-    <article class="mx-auto max-w-3xl px-5 py-10 text-base leading-relaxed sm:px-8 sm:py-16">
+    <article class="<?= $embedded ? 'py-5' : 'mx-auto max-w-3xl px-5 py-10 sm:px-8 sm:py-16' ?> text-base leading-relaxed">
         <header class="mb-8 border-0 border-b border-solid border-[#e7e0d7] pb-6">
-            <h1 class="text-3xl! leading-tight text-[#4b3327] sm:text-5xl!">CHÍNH SÁCH BẢO MẬT DỮ LIỆU CÁ NHÂN</h1>
+            <<?= $titleTag ?> class="<?= $embedded ? 'text-xl!' : 'text-3xl! sm:text-5xl!' ?> leading-tight text-[#4b3327]">CHÍNH SÁCH BẢO MẬT DỮ LIỆU CÁ NHÂN</<?= $titleTag ?>>
             <p class="mt-3 text-sm text-[#6e5b4d]">Cập nhật lần cuối: <time datetime="2026-10-16">16/10/2026</time>.</p>
         </header>
 
-        <div class="grid gap-8 [&_h2]:mb-3! [&_h2]:text-xl! [&_h2]:leading-snug [&_h2]:text-[#70432c] sm:[&_h2]:text-2xl! [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5">
+        <div class="grid gap-8 [&_:is(h2,h4)]:mb-3! [&_:is(h2,h4)]:text-xl! [&_:is(h2,h4)]:leading-snug [&_:is(h2,h4)]:text-[#70432c] sm:[&_:is(h2,h4)]:text-2xl! [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5">
             <section>
-                <h2>1. Bên kiểm soát dữ liệu</h2>
+                <<?= $sectionTag ?>>1. Bên kiểm soát dữ liệu</<?= $sectionTag ?>>
                 <p>
                     Hộ Kinh Doanh Mơ Homestay - Mã Kinh Doanh: 094095002480<br>
                     Địa chỉ: số 82, B18, KDC 91B, Phường Tân An, Thành phố Cần Thơ, Việt Nam<br>
@@ -324,7 +363,7 @@ function render_privacy_policy(): void
                 </p>
             </section>
             <section>
-                <h2>2. Dữ liệu chúng tôi thu thập</h2>
+                <<?= $sectionTag ?>>2. Dữ liệu chúng tôi thu thập</<?= $sectionTag ?>>
                 <ul>
                     <li>Họ tên, số điện thoại, email và ghi chú bạn nhập khi đặt phòng.</li>
                     <li>Ảnh hai mặt căn cước công dân/hộ chiếu của người đặt phòng (dữ liệu cá nhân nhạy cảm).</li>
@@ -334,7 +373,7 @@ function render_privacy_policy(): void
                 </ul>
             </section>
             <section>
-                <h2>3. Mục đích xử lý</h2>
+                <<?= $sectionTag ?>>3. Mục đích xử lý</<?= $sectionTag ?>>
                 <ul>
                     <li>Xác nhận, thực hiện và hỗ trợ đơn đặt phòng; gửi mã cửa và hướng dẫn nhận phòng.</li>
                     <li>Thực hiện nghĩa vụ khai báo lưu trú theo quy định của pháp luật.</li>
@@ -343,11 +382,11 @@ function render_privacy_policy(): void
                 </ul>
             </section>
             <section>
-                <h2>4. Thời gian lưu trữ</h2>
+                <<?= $sectionTag ?>>4. Thời gian lưu trữ</<?= $sectionTag ?>>
                 <p>Ảnh căn cước công dân/hộ chiếu thông tin cá nhân sẽ được lưu trữ theo quy định pháp luật. Thông tin đặt phòng và thanh toán được lưu theo thời hạn pháp luật về kế toán, thuế yêu cầu.</p>
             </section>
             <section>
-                <h2>5. Bên nhận dữ liệu và chuyển dữ liệu ra nước ngoài</h2>
+                <<?= $sectionTag ?>>5. Bên nhận dữ liệu và chuyển dữ liệu ra nước ngoài</<?= $sectionTag ?>>
                 <ul>
                     <li>Cơ quan nhà nước có thẩm quyền khi pháp luật yêu cầu (bao gồm khai báo lưu trú).</li>
                     <li>Đơn vị phát triển và vận hành hệ thống, với vai trò bên xử lý dữ liệu theo hợp đồng.</li>
@@ -358,7 +397,7 @@ function render_privacy_policy(): void
                 <p class="mt-3">Chúng tôi không bán dữ liệu cá nhân của bạn.</p>
             </section>
             <section>
-                <h2>6. Quyền của bạn</h2>
+                <<?= $sectionTag ?>>6. Quyền của bạn</<?= $sectionTag ?>>
                 <p>
                     Bạn có quyền được biết, đồng ý hoặc rút lại sự đồng ý, truy cập, chỉnh sửa, yêu cầu xoá, hạn chế hoặc phản đối việc xử lý dữ liệu, và khiếu nại theo quy định của pháp luật về bảo vệ dữ liệu cá nhân.
                     Gửi yêu cầu qua email <a class="break-all rounded-sm underline underline-offset-2 hover:text-[#70432c] focus-visible:outline-2 focus-visible:outline-offset-2" href="mailto:mohomestay01@gmail.com">mohomestay01@gmail.com</a>
@@ -367,7 +406,7 @@ function render_privacy_policy(): void
                 </p>
             </section>
             <section>
-                <h2>7. Bảo mật</h2>
+                <<?= $sectionTag ?>>7. Bảo mật</<?= $sectionTag ?>>
                 <p>Dữ liệu được truyền qua kết nối mã hoá (HTTPS); ảnh giấy tờ được lưu ở chế độ riêng tư và chỉ nhân viên được phân quyền mới xem được. Nếu xảy ra sự cố ảnh hưởng tới dữ liệu của bạn, chúng tôi sẽ thông báo theo quy định của pháp luật.</p>
             </section>
         </div>
@@ -984,7 +1023,8 @@ function render_room(array $r): void
                         <span><strong class="block">Test thanh toán tại local</strong>Tạo đơn thử, không chuyển tiền, không gửi email hoặc mã cửa.</span>
                     </label>
                 <?php endif ?>
-                <div class="notice" data-terms hidden></div><label class="check"><input type="checkbox" name="acceptTerms" required> Tôi đã đọc điều kiện đặt phòng và đồng ý để Mơ sử dụng thông tin liên hệ xử lý đơn này.</label>
+                <div class="notice" data-terms hidden></div>
+                <?php render_booking_policy_consent(); ?>
                 <div data-booking-message aria-live="assertive"></div><button class="button wide booking-submit" type="submit" disabled>Chọn một khung giờ để tiếp tục</button>
             </form>
             <aside class="panel booking-summary" data-summary aria-live="polite"></aside>
