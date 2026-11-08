@@ -971,9 +971,11 @@ function render_room(array $r): void
         </div>
     </div><?php }
 
-                                                                                                                                                                                        function render_bookings(): void
-                                                                                                                                                                                        {
-                                                                                                                                                                                            $active = array_filter(rooms(), fn($room) => $room['status'] === 'ACTIVE'); ?><div class="container section">
+function render_bookings(): void
+{
+    $active = array_filter(rooms(), fn($room) => $room['status'] === 'ACTIVE');
+    ?>
+    <div class="container section pt-8! sm:pt-10!">
         <div class="center-heading booking-heading"><span class="eyebrow">CHỌN MỘT CUỘC HẸN</span>
             <h1>Chọn khung giờ của bạn</h1>
             <p>Mỗi phòng có lịch riêng. Chọn ngày để xem giá và những khung giờ còn trống.</p>
