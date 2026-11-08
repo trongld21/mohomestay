@@ -413,24 +413,69 @@
         if (identityButton) {
             const id = identityButton.dataset.viewIdentity;
             let viewer = document.querySelector('[data-identity-viewer]');
-            if (viewer) viewer.remove();
+            if (viewer?.open) viewer.close();
+            else viewer?.remove();
             viewer = document.createElement('dialog');
             viewer.dataset.identityViewer = '';
             viewer.className = 'm-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-4xl overflow-auto rounded-2xl border border-stone-200 bg-white p-5 text-stone-800 shadow-xl backdrop:bg-black/40';
-            viewer.innerHTML = `<div class="flex items-center justify-between gap-4"><h2 class="text-lg font-semibold" id="identity-viewer-title">CCCD của người thuê</h2><button type="button" data-identity-close class="min-h-11 rounded-lg border border-stone-300 px-4 py-2 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Đóng</button></div><div class="mt-4 grid gap-4 sm:grid-cols-2">${[['front', 'Mặt trước'], ['back', 'Mặt sau']].map(([side, label]) => `<section><h3 class="mb-2 font-medium">${label}</h3><img class="max-h-[60dvh] w-full rounded-lg border border-stone-200 object-contain" src="/api/admin/bookings/${encodeURIComponent(id)}/identity/${side}" alt="CCCD ${label.toLowerCase()}"><p data-identity-load-error class="mt-2 text-sm text-red-800" hidden>Không tải được ảnh. Kiểm tra phiên đăng nhập và quyền xem CCCD.</p></section>`).join('')}</div>`;
+            viewer.innerHTML = `<div class="flex items-center justify-between gap-4"><h2 class="text-lg font-semibold" id="identity-viewer-title">CCCD của người thuê</h2><button type="button" data-identity-close class="min-h-11 rounded-lg border border-stone-300 px-4 py-2 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Đóng</button></div>
+                <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                    ${[['front', 'Mặt trước'], ['back', 'Mặt sau']].map(([side, label]) => `<section>
+                        <h3 class="mb-2 font-medium">${label}</h3>
+                        <img data-identity-side="${side}" class="max-h-[60dvh] w-full rounded-lg border border-stone-200 object-contain" alt="CCCD ${label.toLowerCase()}" hidden>
+                        <p data-identity-load-error role="status" class="mt-2 text-sm">Đang tải ảnh…</p>
+                    </section>`).join('')}
+                </div>`;
             viewer.setAttribute('aria-labelledby', 'identity-viewer-title');
-            viewer.querySelectorAll('img').forEach(image => image.addEventListener('error', () => {
-                image.hidden = true;
-                image.nextElementSibling.hidden = false;
-            }));
+            const controller = new AbortController();
+            const objectUrls = [];
             document.body.append(viewer);
             viewer.querySelector('[data-identity-close]').onclick = () => viewer.close();
             viewer.addEventListener('close', () => {
-                viewer.querySelectorAll('img').forEach(image => image.removeAttribute('src'));
+                controller.abort();
+                objectUrls.forEach(url => URL.revokeObjectURL(url));
                 viewer.remove();
                 if (identityButton.isConnected) identityButton.focus();
             }, {once: true});
             viewer.showModal();
+            viewer.querySelectorAll('img').forEach(async image => {
+                const status = image.nextElementSibling;
+                const errors = {
+                    401: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+                    403: 'Tài khoản chưa được cấp quyền xem ảnh CCCD.',
+                    404: 'Đơn này chưa có ảnh CCCD cho mặt này.',
+                };
+                try {
+                    const response = await fetch(`/api/admin/bookings/${encodeURIComponent(id)}/identity/${image.dataset.identitySide}`, {
+                        cache: 'no-store',
+                        redirect: 'error',
+                        signal: controller.signal,
+                    });
+                    if (!response.ok) {
+                        throw new Error(errors[response.status] || `Máy chủ không tải được ảnh CCCD (HTTP ${response.status}).`);
+                    }
+                    const blob = await response.blob();
+                    if (!['image/jpeg', 'image/png', 'image/webp'].includes(blob.type) || !blob.size) {
+                        throw new Error('Máy chủ trả về dữ liệu ảnh CCCD không hợp lệ.');
+                    }
+                    if (!viewer.open) return;
+                    const url = URL.createObjectURL(blob);
+                    objectUrls.push(url);
+                    image.src = url;
+                    try {
+                        await image.decode();
+                    } catch {
+                        throw new Error('Trình duyệt không đọc được ảnh CCCD.');
+                    }
+                    if (!viewer.open) return;
+                    image.hidden = false;
+                    status.hidden = true;
+                } catch (error) {
+                    if (!viewer.open || controller.signal.aborted) return;
+                    status.textContent = error instanceof TypeError ? 'Không kết nối được máy chủ để tải ảnh CCCD.' : error.message;
+                    status.classList.add('text-red-800');
+                }
+            });
             return;
         }
         const paymentButton = event.target.closest("[data-booking-payment]");
