@@ -115,7 +115,7 @@ function render_booking_identity_fields(bool $required = true): void
                 <label class="grid gap-2 text-sm font-medium"><?= e($label) ?> <?= $required ? '*' : '' ?>
                     <input type="file" name="identity_<?= e($side) ?>" accept="image/jpeg,image/png,image/webp" <?= $required ? 'required' : '' ?>
                         class="w-full min-w-0 truncate rounded-xl border border-solid border-[#d8c9b8] bg-[#fffdf9] p-1 text-sm text-[#514237]
-                            file:mr-2 file:min-h-11 file:rounded-lg file:border-0 file:bg-[#eee4d6] file:px-3 file:text-sm file:font-semibold file:text-[#563722]
+                            file:mr-2 file:min-h-9 file:rounded-lg file:border-0 file:bg-[#eee4d6] file:px-3 file:text-sm file:font-semibold file:text-[#563722]
                             enabled:file:cursor-pointer enabled:hover:file:bg-[#e4d3bd] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e]">
                 </label>
                 <div class="relative mx-auto w-fit max-w-full">
