@@ -52,6 +52,26 @@
 
     document.querySelectorAll('[data-identity-upload]').forEach(group => {
         const urls = new Map();
+        const inputs = [...group.querySelectorAll('input[type="file"]')];
+        const message = group.querySelector('[data-identity-upload-message]');
+        let showMissing = false;
+
+        function updateMessage() {
+            const invalidFile = inputs.find(input => input.validity.customError);
+            const missing = showMissing ? inputs.filter(input => input.validity.valueMissing) : [];
+            const side = missing[0]?.name === 'identity_front' ? 'mặt trước' : 'mặt sau';
+            message.textContent = invalidFile?.validationMessage
+                || (missing.length === 2 ? 'Vui lòng tải ảnh cả hai mặt CCCD.'
+                    : missing.length ? 'Vui lòng tải ảnh ' + side + ' CCCD.' : '');
+        }
+
+        group.addEventListener('invalid', event => {
+            if (inputs.includes(event.target) && event.target.validity.valueMissing) {
+                showMissing = true;
+                updateMessage();
+            }
+        }, true);
+
         const revoke = input => {
             if (urls.has(input)) URL.revokeObjectURL(urls.get(input));
             urls.delete(input);
@@ -65,20 +85,18 @@
             preview.hidden = true;
             input.setCustomValidity('');
             const file = input.files[0];
-            let error = '';
             if (file && (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 3 * 1024 * 1024)) {
-                error = 'Chọn ảnh JPG, PNG hoặc WebP tối đa 3 MiB. Ảnh HEIC cần đổi sang JPG trước khi tải.';
-                input.setCustomValidity(error);
+                input.setCustomValidity('Chọn ảnh JPG, PNG hoặc WebP tối đa 3 MiB. Ảnh HEIC cần đổi sang JPG trước khi tải.');
             } else if (file) {
                 const url = URL.createObjectURL(file);
                 urls.set(input, url);
                 preview.src = url;
                 preview.hidden = false;
             }
-            group.querySelector('[data-identity-upload-message]').textContent = error;
+            updateMessage();
         });
         group.closest('form')?.addEventListener('reset', () => {
-            group.querySelectorAll('input[type="file"]').forEach(input => {
+            inputs.forEach(input => {
                 revoke(input);
                 input.setCustomValidity('');
             });
@@ -86,7 +104,8 @@
                 preview.hidden = true;
                 preview.removeAttribute('src');
             });
-            group.querySelector('[data-identity-upload-message]').textContent = '';
+            showMissing = false;
+            message.textContent = '';
         });
         window.addEventListener('pagehide', () => [...urls.keys()].forEach(revoke));
     });
