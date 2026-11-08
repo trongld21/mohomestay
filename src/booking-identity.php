@@ -111,10 +111,16 @@ function render_booking_identity_fields(bool $required = true): void
         <legend class="px-1 text-base font-semibold">CCCD người thuê nhận phòng <?= $required ? 'bắt buộc' : '(không bắt buộc)' ?></legend>
         <p class="text-sm text-stone-600 sm:col-span-2"><?= $required ? 'Tải đủ 2 mặt của cùng một CCCD, rõ chữ và đủ góc.' : 'Có thể bỏ trống hoặc tải từng mặt CCCD, rõ chữ và đủ góc.' ?> Ảnh được lưu bảo mật cùng đơn để Mơ quản lý lưu trú; chỉ nhân viên được phân quyền mới xem được. JPG, PNG hoặc WebP, tối đa 3 MiB mỗi ảnh.</p>
         <?php foreach (['front' => 'Mặt trước', 'back' => 'Mặt sau'] as $side => $label): ?>
-            <label class="grid content-start gap-2 text-sm font-medium"><?= e($label) ?> <?= $required ? '*' : '' ?>
-                <input type="file" name="identity_<?= e($side) ?>" accept="image/jpeg,image/png,image/webp" <?= $required ? 'required' : '' ?> class="min-h-11 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">
+            <div data-identity-side class="grid min-w-0 content-start gap-2">
+                <label class="grid gap-2 text-sm font-medium"><?= e($label) ?> <?= $required ? '*' : '' ?>
+                    <input type="file" name="identity_<?= e($side) ?>" accept="image/jpeg,image/png,image/webp" <?= $required ? 'required' : '' ?> class="min-h-11 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">
+                </label>
                 <img data-identity-preview hidden alt="Xem trước CCCD <?= e(mb_strtolower($label)) ?>" class="max-h-40 w-full rounded-lg object-contain">
-            </label>
+                <button type="button" data-identity-remove hidden aria-label="Xóa ảnh <?= e(mb_strtolower($label)) ?> CCCD"
+                    class="min-h-11 w-fit rounded-lg border border-solid border-[#dfc6be] bg-white px-3 text-sm! font-semibold text-red-800 enabled:hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-800">
+                    Xóa ảnh
+                </button>
+            </div>
         <?php endforeach ?>
         <p data-identity-upload-message role="status" class="text-sm text-red-800 sm:col-span-2"></p>
     </fieldset>

@@ -79,12 +79,14 @@
         group.addEventListener('change', event => {
             const input = event.target;
             if (!(input instanceof HTMLInputElement) || input.type !== 'file') return;
-            const preview = input.closest('label').querySelector('[data-identity-preview]');
+            const side = input.closest('[data-identity-side]');
+            const preview = side.querySelector('[data-identity-preview]');
             revoke(input);
             preview.removeAttribute('src');
             preview.hidden = true;
             input.setCustomValidity('');
             const file = input.files[0];
+            side.querySelector('[data-identity-remove]').hidden = !file;
             if (file && (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 3 * 1024 * 1024)) {
                 input.setCustomValidity('Chọn ảnh JPG, PNG hoặc WebP tối đa 3 MiB. Ảnh HEIC cần đổi sang JPG trước khi tải.');
             } else if (file) {
@@ -95,6 +97,14 @@
             }
             updateMessage();
         });
+        group.addEventListener('click', event => {
+            const remove = event.target.closest('[data-identity-remove]');
+            if (!remove) return;
+            const input = remove.closest('[data-identity-side]').querySelector('input[type="file"]');
+            input.value = '';
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.focus();
+        });
         group.closest('form')?.addEventListener('reset', () => {
             inputs.forEach(input => {
                 revoke(input);
@@ -103,6 +113,9 @@
             group.querySelectorAll('[data-identity-preview]').forEach(preview => {
                 preview.hidden = true;
                 preview.removeAttribute('src');
+            });
+            group.querySelectorAll('[data-identity-remove]').forEach(button => {
+                button.hidden = true;
             });
             showMissing = false;
             message.textContent = '';
