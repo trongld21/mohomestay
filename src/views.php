@@ -265,7 +265,13 @@ function render_booking_policy_consent(): void
         <button type="button" data-booking-policy-open class="min-h-11 rounded-md border-0 bg-transparent px-1 font-semibold text-[#70432c] underline underline-offset-4 hover:text-[#4b3327] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70432c]">
             Đọc điều khoản và chính sách bảo mật
         </button>
-        <span data-booking-policy-status role="status" class="text-[#654831]">Chưa chấp nhận</span>
+        <span data-booking-policy-status role="status" class="text-[#654831]">
+            <span data-booking-policy-status-text>Chưa chấp nhận</span>
+            <svg class="hidden size-5 text-green-700" aria-hidden="true" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m5 12 4 4L19 6" />
+            </svg>
+        </span>
     </div>
     <dialog data-booking-policy-dialog aria-labelledby="booking-policy-title" aria-describedby="booking-policy-intro"
         class="m-auto w-[calc(100%-2rem)] max-w-3xl overflow-hidden rounded-2xl border-0 bg-[#f7faff] p-0 text-[#24324a] shadow-[0_24px_64px_#101c3a40] backdrop:bg-stone-950/60 sm:rounded-3xl">

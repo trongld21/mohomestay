@@ -7,9 +7,14 @@
         const confirm = dialog.querySelector('[data-booking-policy-confirm]');
         const acceptance = form.elements.acceptBookingPolicies;
         const status = form.querySelector('[data-booking-policy-status]');
+        const statusText = status.querySelector('[data-booking-policy-status-text]');
+        const statusIcon = status.querySelector('svg');
 
         function updateAcceptance() {
-            status.textContent = acceptance.value === '1' ? 'Đã chấp nhận' : 'Chưa chấp nhận';
+            const accepted = acceptance.value === '1';
+            statusText.textContent = accepted ? 'Đã chấp nhận' : 'Chưa chấp nhận';
+            statusText.classList.toggle('sr-only', accepted);
+            statusIcon.classList.toggle('hidden', !accepted);
             acceptance.dispatchEvent(new Event('change'));
         }
 
