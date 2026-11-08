@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-function booking_identity_key(): string
+function booking_identity_key(?string $secret = null): string
 {
-    $secret = (string)config('app_key', '');
+    $secret ??= (string)config('app_key', '');
     if (strlen($secret) < 16) throw new BookingException('Chưa cấu hình khóa bảo vệ ảnh CCCD. Vui lòng liên hệ Mơ.', 503);
     return hash_hkdf('sha256', $secret, 32, 'mo-booking-identity-v1');
 }
@@ -21,8 +21,16 @@ function encrypt_booking_identity(string $bytes, string $context): string
 function decrypt_booking_identity(string $encrypted, string $context): string
 {
     if (strlen($encrypted) < 29) throw new RuntimeException('Dữ liệu ảnh CCCD không hợp lệ.');
-    $plain = openssl_decrypt(substr($encrypted, 28), 'aes-256-gcm', booking_identity_key(), OPENSSL_RAW_DATA,
-        substr($encrypted, 0, 12), substr($encrypted, 12, 16), $context);
+    $cipher = substr($encrypted, 28);
+    $iv = substr($encrypted, 0, 12);
+    $tag = substr($encrypted, 12, 16);
+    $plain = openssl_decrypt($cipher, 'aes-256-gcm', booking_identity_key(), OPENSSL_RAW_DATA, $iv, $tag, $context);
+    if ($plain === false) {
+        $legacy = (string)env_value('BOOKING_IDENTITY_LEGACY_APP_KEY', '');
+        if (strlen($legacy) >= 16) {
+            $plain = openssl_decrypt($cipher, 'aes-256-gcm', booking_identity_key($legacy), OPENSSL_RAW_DATA, $iv, $tag, $context);
+        }
+    }
     if ($plain === false) throw new RuntimeException('Không giải mã được ảnh CCCD.');
     return $plain;
 }

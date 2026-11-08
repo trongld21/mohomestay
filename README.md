@@ -466,6 +466,10 @@ Chạy migration `010_booking_identity.sql`. Hai ảnh được mã hóa AES-256
 trong bảng riêng, gắn với đơn trong cùng transaction. Cần `APP_KEY` hiện có
 ít nhất 16 ký tự; sao lưu khóa cùng quy trình bảo mật riêng và giữ nguyên khóa
 để đọc lại dữ liệu đã mã hóa. Không đổi APP_KEY tùy tiện sau khi đã có ảnh.
+Nếu hosting đã đổi `APP_KEY`, cấu hình `BOOKING_IDENTITY_LEGACY_APP_KEY` trong
+`.env` riêng trên hosting bằng giá trị `APP_KEY` từ bản sao lưu tại thời điểm
+lưu ảnh cũ. Hệ thống thử khóa hiện tại trước và chỉ dùng khóa cũ để đọc ảnh.
+Ảnh mới vẫn được mã hóa bằng `APP_KEY` hiện tại.
 Ảnh không nằm trong public/uploads, không trả trong API tra cứu khách và không
 gửi kèm email. Xóa đơn trong database sẽ xóa hai ảnh theo khóa ngoại.
 

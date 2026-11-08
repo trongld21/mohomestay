@@ -26,6 +26,18 @@ try {
     $encrypted = encrypt_booking_identity($images['front']['bytes'], 'booking:front');
     identity_expect($encrypted !== $images['front']['bytes'], 'No plaintext storage');
     identity_expect(decrypt_booking_identity($encrypted, 'booking:front') === $images['front']['bytes'], 'Encrypted image round trip');
+    $originalKey = getenv('APP_KEY');
+    putenv('APP_KEY=rotated-identity-test-key-for-synthetic-fixtures-only');
+    putenv('BOOKING_IDENTITY_LEGACY_APP_KEY=' . $originalKey);
+    try {
+        identity_expect(decrypt_booking_identity($encrypted, 'booking:front') === $images['front']['bytes'], 'Read existing images after key rotation');
+        $newImage = encrypt_booking_identity($images['front']['bytes'], 'booking:front');
+        putenv('BOOKING_IDENTITY_LEGACY_APP_KEY');
+        identity_expect(decrypt_booking_identity($newImage, 'booking:front') === $images['front']['bytes'], 'New images use the current key');
+    } finally {
+        putenv('APP_KEY=' . $originalKey);
+        putenv('BOOKING_IDENTITY_LEGACY_APP_KEY');
+    }
     foreach ([$encrypted . 'tampered', $encrypted] as $i => $data) {
         try {
             decrypt_booking_identity($data, $i === 0 ? 'booking:front' : 'other-booking:front');
