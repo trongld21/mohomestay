@@ -35,7 +35,7 @@ function reject_stay(callable $action, int $status): void
 
 $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
 $pdo->exec("CREATE TABLE rooms (id TEXT PRIMARY KEY,status TEXT,is_active INTEGER,max_guests INTEGER);
-CREATE TABLE bookings (id TEXT PRIMARY KEY,room_id TEXT,check_in TEXT,check_out TEXT,status TEXT,hold_expires_at TEXT,number_of_guests INTEGER,total_price INTEGER,payment_status TEXT,booking_code TEXT,created_at TEXT);
+CREATE TABLE bookings (id TEXT PRIMARY KEY,room_id TEXT,check_in TEXT,check_out TEXT,status TEXT,hold_expires_at TEXT,number_of_guests INTEGER,total_price INTEGER,payment_status TEXT,booking_code TEXT,created_at TEXT,continued_from_booking_id TEXT,payment_method TEXT);
 CREATE TABLE booking_checkout_charges (booking_id TEXT PRIMARY KEY,actual_checkout_at TEXT);
 CREATE TABLE room_emergency_locks (id TEXT,booking_id TEXT,room_id TEXT,starts_at TEXT,ended_at TEXT);
 CREATE TABLE room_quote_holds (id TEXT,room_id TEXT,starts_at TEXT,ends_at TEXT,released_at TEXT,expires_at TEXT);
@@ -44,7 +44,7 @@ CREATE TABLE booking_access_codes (booking_id TEXT PRIMARY KEY,starts_at TEXT,en
 CREATE TABLE booking_stay_changes (id TEXT PRIMARY KEY,booking_id TEXT,actor_id TEXT,old_room_id TEXT,new_room_id TEXT,old_check_in TEXT,old_check_out TEXT,new_check_in TEXT,new_check_out TEXT,reason TEXT);
 INSERT INTO rooms VALUES ('mo','ACTIVE',1,2),('black','ACTIVE',1,2),('hidden','HIDDEN',0,2);");
 $id = str_repeat('a', 32);
-$pdo->prepare("INSERT INTO bookings VALUES (?,'mo','2026-10-23 15:00:00','2026-10-24 03:00:00','CONFIRMED',NULL,2,330000,'PAID','MO-TEST','2026-10-20 01:00:00')")->execute([$id]);
+$pdo->prepare("INSERT INTO bookings VALUES (?,'mo','2026-10-23 15:00:00','2026-10-24 03:00:00','CONFIRMED',NULL,2,330000,'PAID','MO-TEST','2026-10-20 01:00:00',NULL,'bank_transfer')")->execute([$id]);
 $input = [
     'roomId' => 'black', 'checkIn' => '2026-10-23T22:00', 'checkOut' => '2026-10-24T10:00',
     'expectedRoomId' => 'mo', 'expectedCheckIn' => '2026-10-23 15:00:00', 'expectedCheckOut' => '2026-10-24 03:00:00',
@@ -77,7 +77,7 @@ $pdo->prepare("INSERT INTO room_quote_holds VALUES ('hold','black','2026-10-23 1
     ->execute([gmdate('Y-m-d H:i:s', time() + 3600)]);
 reject_stay(fn() => correct_booking_stay($pdo, $id, $input), 409);
 $pdo->exec('DELETE FROM room_quote_holds');
-$pdo->prepare("INSERT INTO bookings VALUES (?,'black','2026-10-24 03:29:00','2026-10-24 07:00:00','CONFIRMED',NULL,1,1,'PAID','MO-OTHER','2026-10-20 00:00:00')")->execute([str_repeat('b', 32)]);
+$pdo->prepare("INSERT INTO bookings VALUES (?,'black','2026-10-24 03:29:00','2026-10-24 07:00:00','CONFIRMED',NULL,1,1,'PAID','MO-OTHER','2026-10-20 00:00:00',NULL,'bank_transfer')")->execute([str_repeat('b', 32)]);
 reject_stay(fn() => correct_booking_stay($pdo, $id, $input), 409);
 expect_stay($pdo->query('SELECT COUNT(*) FROM booking_stay_changes')->fetchColumn() === 0, 'Rejected edit must not be audited as successful');
 $pdo->exec("DELETE FROM bookings WHERE booking_code='MO-OTHER'");

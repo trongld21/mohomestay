@@ -23,3 +23,21 @@ for (const isSuperAdmin of [false, true]) {
 console.log('Expired booking rows preserve cancellation and payment recovery: OK');
 const completed = context.renderBookingRow({ ...booking, status: 'CHECKED_OUT', actual_checkout_at: '2026-10-30 10:09:52', cleaning_until: '2026-10-30 10:39:52' });
 assert.ok(completed.includes('Trả thực tế') && completed.includes('Dọn đến'), 'Completed cards must expose the times used to block receipt');
+
+const extension = context.renderBookingRow({ ...booking, continued_from_booking_id: 'parent', guest_note: 'Ở tiếp đơn MO-GOC' });
+assert.match(extension, /data-continuation-label[^>]*>Ở tiếp đơn MO-GOC</, 'The linked booking is visible on the row');
+
+const eventStart = source.indexOf('    window.addEventListener("mo:booking-created",');
+const eventEnd = source.indexOf('    document.addEventListener(', eventStart);
+let listener;
+let reloaded = false;
+const staleFilters = { query: 'Khách cũ', status: 'CHECKED_IN', room: 'Mơ', from: '2026-11-18', to: '2026-11-18', showFinished: false };
+vm.runInNewContext(source.slice(eventStart, eventEnd), {
+    window: { addEventListener: (_name, handler) => { listener = handler; } },
+    bookingFilters: staleFilters,
+    bookingPagination: { reset() {} },
+    loadBookings: () => { reloaded = true; },
+});
+listener({ detail: { bookingCode: 'MO-GOI-MOI' } });
+assert.deepEqual(staleFilters, { query: 'MO-GOI-MOI', status: 'all', room: 'all', from: '', to: '', showFinished: true });
+assert.equal(reloaded, true, 'Reload after selecting the new booking');

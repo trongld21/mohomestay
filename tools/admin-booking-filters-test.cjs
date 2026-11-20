@@ -19,6 +19,8 @@ for (const payment_status of ['PAID', 'UNPAID', 'REFUNDED']) {
 }
 assert.equal(isFinished({...stay, status: 'CHECKED_OUT', payment_status: 'UNPAID'}), false, 'Uncollected stay remains visible');
 assert.equal(tone({...stay, status: 'CANCELLED'}), 'attention');
+assert.equal(matches({ ...stay, status: 'CANCELLED', continued_from_booking_id: 'parent' }, filters), true,
+    'Paid extension exceptions remain visible for reconciliation');
 assert.equal(tone(stay), 'confirmed');
 assert.equal(tone({...stay, status: 'CHECKED_IN', isOverdue: true}), 'overdue');
 assert.equal(tone({...stay, status: 'CHECKED_IN', isOverdue: false}), 'staying');

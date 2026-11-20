@@ -5,6 +5,7 @@
             || item.status === 'CHECKED_OUT' && ['UNPAID', 'PENDING', 'FAILED'].includes(item.payment_status);
     }
     function isFinished(item) {
+        if (item.continued_from_booking_id && needsAttention(item)) return false;
         return ['CANCELLED', 'EXPIRED'].includes(item.status)
             || item.status === 'CHECKED_OUT' && !needsAttention(item);
     }

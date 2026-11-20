@@ -322,6 +322,12 @@
             && !Number(booking.is_test) && !booking.continued_to_booking_id) {
             actions += `<button type="button" class="timeline-button" data-booking-continuation="${esc(booking.id)}">Ở tiếp / thêm gói</button>`;
         }
+        if (LANG_HOME.abilities.includes("bookings.create") && booking.continued_from_booking_id
+            && booking.status === "PENDING" && booking.payment_method === "payos") {
+            actions += `<button type="button" data-booking-continuation="${esc(booking.continued_from_booking_id)}"
+                data-continuation-payment-code="${esc(booking.booking_code)}"
+                class="min-h-11 rounded-lg border border-amber-200 px-3 py-2 text-sm font-semibold text-amber-950 enabled:hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Lấy link QR</button>`;
+        }
         if (LANG_HOME.manualDateOverride === true && ["PENDING", "CONFIRMED", "CHECKED_IN"].includes(booking.status)
             && !booking.continued_from_booking_id && !booking.continued_to_booking_id) {
             actions += `<button type="button" class="timeline-button" data-booking-stay="${esc(booking.id)}">Đổi phòng / sửa lịch</button>`;
@@ -342,6 +348,7 @@
             <td class="booking-photo-cell"><img class="booking-room-photo" src="${esc(booking.room_image || '/images/white-illustration.jpg')}" alt="Phòng ${esc(booking.room_name)}" width="104" height="78" loading="lazy"></td>
             <td class="booking-guest-cell"><div class="booking-cell">
                 <strong class="booking-code">${esc(booking.booking_code)}</strong>
+                ${booking.continued_from_booking_id ? `<span data-continuation-label class="text-xs font-medium text-amber-900">${esc(booking.guest_note || 'Gói ở tiếp')}</span>` : ''}
                 ${Number(booking.is_test) ? '<span class="booking-source">ĐƠN THỬ · Không có giao dịch thật</span>' : ""}
                 <span class="booking-meta booking-guest">${icon("user")} ${esc(booking.guest_name)}</span>
                 <div class="booking-contact-row">
@@ -349,7 +356,7 @@
                     <span class="booking-source">${icon(booking.booking_source === "PHONE" ? "phone" : "message-circle")} ${source}</span>
                 </div>
                 ${identity}
-                ${booking.guest_note ? `<details class="booking-note"><summary>Ghi chú khách</summary><p>${esc(booking.guest_note)}</p></details>` : ""}
+                ${booking.guest_note && !booking.continued_from_booking_id ? `<details class="booking-note"><summary>Ghi chú khách</summary><p>${esc(booking.guest_note)}</p></details>` : ""}
             </div></td>
             <td class="booking-stay-cell"><div class="booking-cell">
                 <div class="booking-room-row">
@@ -372,6 +379,158 @@
             <td class="booking-actions-cell"><div class="admin-actions">${actions || '<span class="booking-ended">—</span>'}</div></td>
         </tr>`;
     }
+    function exportRotatedIdentityImage(image, turns, type) {
+        const canvas = document.createElement('canvas');
+        const { naturalWidth: width, naturalHeight: height } = image;
+        const sideways = turns % 2 === 1;
+        canvas.width = sideways ? height : width;
+        canvas.height = sideways ? width : height;
+        const context = canvas.getContext('2d');
+        context.translate(canvas.width / 2, canvas.height / 2);
+        context.rotate(turns * Math.PI / 2);
+        context.drawImage(image, -width / 2, -height / 2);
+        return new Promise(resolve => canvas.toBlob(resolve, type, 0.95));
+    }
+
+    function openIdentityViewer(trigger) {
+        const id = trigger.dataset.viewIdentity;
+        const code = (bookings.find(booking => booking.id === id)?.booking_code || id).replace(/[^a-z0-9_-]/gi, '-');
+        const previous = one('[data-identity-viewer]');
+        if (previous?.open) previous.close();
+        else previous?.remove();
+
+        const viewer = document.createElement('dialog');
+        const buttonClass = 'min-h-11 rounded-lg border px-3 py-2 text-sm font-medium enabled:cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800 disabled:cursor-wait disabled:opacity-50';
+        const secondaryButtonClass = `${buttonClass} border-stone-300 enabled:hover:bg-stone-100`;
+        viewer.dataset.identityViewer = '';
+        viewer.className = 'm-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-4xl overflow-auto rounded-2xl border border-stone-200 bg-white p-5 text-stone-800 shadow-xl backdrop:bg-black/40';
+        viewer.innerHTML = `<div class="flex items-center justify-between gap-4">
+            <h2 class="text-lg font-semibold" id="identity-viewer-title">CCCD của người thuê</h2>
+            <button type="button" data-identity-close class="${secondaryButtonClass}">Đóng</button>
+        </div>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+            ${[['front', 'Mặt trước'], ['back', 'Mặt sau']].map(([side, label]) => `
+                <section data-identity-side="${side}" class="min-w-0" aria-labelledby="identity-title-${side}">
+                    <h3 id="identity-title-${side}" class="mb-2 font-medium">${label}</h3>
+                    <div data-identity-content hidden>
+                        <div class="relative mx-auto aspect-square w-full max-w-[60dvh] overflow-hidden rounded-lg border border-stone-200 bg-stone-50">
+                            <img class="absolute inset-0 size-full object-contain" alt="CCCD ${label.toLowerCase()}">
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button type="button" data-identity-rotate="-1" class="${secondaryButtonClass}">Xoay trái</button>
+                            <button type="button" data-identity-rotate="1" class="${secondaryButtonClass}">Xoay phải</button>
+                            <button type="button" data-identity-download class="${buttonClass} border-amber-800 bg-amber-800 text-white enabled:hover:bg-amber-900">Tải ảnh</button>
+                        </div>
+                    </div>
+                    <p data-identity-status role="status" class="mt-2 text-sm">Đang tải ảnh…</p>
+                </section>`).join('')}
+        </div>`;
+        viewer.setAttribute('aria-labelledby', 'identity-viewer-title');
+
+        const controller = new AbortController();
+        const objectUrls = new Set();
+        document.body.append(viewer);
+        one('[data-identity-close]', viewer).onclick = () => viewer.close();
+        viewer.addEventListener('close', () => {
+            controller.abort();
+            objectUrls.forEach(url => URL.revokeObjectURL(url));
+            viewer.remove();
+            if (trigger.isConnected) trigger.focus();
+        }, { once: true });
+        viewer.showModal();
+
+        const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+        const errors = {
+            401: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+            403: 'Tài khoản chưa được cấp quyền xem ảnh CCCD.',
+            404: 'Đơn này chưa có ảnh CCCD cho mặt này.',
+        };
+        const rotations = ['', 'rotate-90', 'rotate-180', '-rotate-90'];
+        all('[data-identity-side]', viewer).forEach(async section => {
+            const { identitySide: side } = section.dataset;
+            const status = one('[data-identity-status]', section);
+            const image = one('img', section);
+            const download = one('[data-identity-download]', section);
+            const showError = message => {
+                status.textContent = message;
+                status.classList.add('text-red-800');
+                status.hidden = false;
+            };
+
+            try {
+                const response = await fetch(`/api/admin/bookings/${encodeURIComponent(id)}/identity/${side}`, {
+                    cache: 'no-store',
+                    redirect: 'error',
+                    signal: controller.signal,
+                });
+                if (!response.ok) {
+                    throw new Error(errors[response.status] || `Máy chủ không tải được ảnh CCCD (HTTP ${response.status}).`);
+                }
+                const blob = await response.blob();
+                if (!Object.hasOwn(extensions, blob.type) || !blob.size) {
+                    throw new Error('Máy chủ trả về dữ liệu ảnh CCCD không hợp lệ.');
+                }
+                if (!viewer.open) return;
+
+                const originalUrl = URL.createObjectURL(blob);
+                objectUrls.add(originalUrl);
+                image.src = originalUrl;
+                try {
+                    await image.decode();
+                } catch {
+                    throw new Error('Trình duyệt không đọc được ảnh CCCD.');
+                }
+                if (!viewer.open) return;
+
+                let turns = 0;
+                let rotatedUrl;
+                all('[data-identity-rotate]', section).forEach(button => {
+                    button.onclick = () => {
+                        if (turns) image.classList.remove(rotations[turns]);
+                        turns = (turns + Number(button.dataset.identityRotate) + 4) % 4;
+                        if (turns) image.classList.add(rotations[turns]);
+                    };
+                });
+                download.onclick = async () => {
+                    download.disabled = true;
+                    status.hidden = true;
+                    try {
+                        let file = blob;
+                        let url = originalUrl;
+                        if (turns) {
+                            file = await exportRotatedIdentityImage(image, turns, blob.type);
+                            if (!viewer.open) return;
+                            if (!file) throw new Error('Image export failed');
+                            if (rotatedUrl) {
+                                URL.revokeObjectURL(rotatedUrl);
+                                objectUrls.delete(rotatedUrl);
+                            }
+                            rotatedUrl = URL.createObjectURL(file);
+                            objectUrls.add(rotatedUrl);
+                            url = rotatedUrl;
+                        }
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `CCCD-${code}-${side === 'front' ? 'mat-truoc' : 'mat-sau'}.${extensions[file.type]}`;
+                        viewer.append(link);
+                        link.click();
+                        link.remove();
+                    } catch {
+                        showError('Không tải được ảnh. Vui lòng thử lại.');
+                    } finally {
+                        download.disabled = false;
+                    }
+                };
+                one('[data-identity-content]', section).hidden = false;
+                status.hidden = true;
+            } catch (error) {
+                if (!viewer.open || controller.signal.aborted) return;
+                showError(error instanceof TypeError ? 'Không kết nối được máy chủ để tải ảnh CCCD.' : error.message);
+            }
+        });
+    }
+
+
     async function bookingAction(event) {
         const copyLinkButton = event.target.closest("[data-copy-booking-link]");
         if (copyLinkButton) {
@@ -411,71 +570,7 @@
         }
         const identityButton = event.target.closest('[data-view-identity]');
         if (identityButton) {
-            const id = identityButton.dataset.viewIdentity;
-            let viewer = document.querySelector('[data-identity-viewer]');
-            if (viewer?.open) viewer.close();
-            else viewer?.remove();
-            viewer = document.createElement('dialog');
-            viewer.dataset.identityViewer = '';
-            viewer.className = 'm-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-4xl overflow-auto rounded-2xl border border-stone-200 bg-white p-5 text-stone-800 shadow-xl backdrop:bg-black/40';
-            viewer.innerHTML = `<div class="flex items-center justify-between gap-4"><h2 class="text-lg font-semibold" id="identity-viewer-title">CCCD của người thuê</h2><button type="button" data-identity-close class="min-h-11 rounded-lg border border-stone-300 px-4 py-2 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Đóng</button></div>
-                <div class="mt-4 grid gap-4 sm:grid-cols-2">
-                    ${[['front', 'Mặt trước'], ['back', 'Mặt sau']].map(([side, label]) => `<section>
-                        <h3 class="mb-2 font-medium">${label}</h3>
-                        <img data-identity-side="${side}" class="max-h-[60dvh] w-full rounded-lg border border-stone-200 object-contain" alt="CCCD ${label.toLowerCase()}" hidden>
-                        <p data-identity-load-error role="status" class="mt-2 text-sm">Đang tải ảnh…</p>
-                    </section>`).join('')}
-                </div>`;
-            viewer.setAttribute('aria-labelledby', 'identity-viewer-title');
-            const controller = new AbortController();
-            const objectUrls = [];
-            document.body.append(viewer);
-            viewer.querySelector('[data-identity-close]').onclick = () => viewer.close();
-            viewer.addEventListener('close', () => {
-                controller.abort();
-                objectUrls.forEach(url => URL.revokeObjectURL(url));
-                viewer.remove();
-                if (identityButton.isConnected) identityButton.focus();
-            }, {once: true});
-            viewer.showModal();
-            viewer.querySelectorAll('img').forEach(async image => {
-                const status = image.nextElementSibling;
-                const errors = {
-                    401: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
-                    403: 'Tài khoản chưa được cấp quyền xem ảnh CCCD.',
-                    404: 'Đơn này chưa có ảnh CCCD cho mặt này.',
-                };
-                try {
-                    const response = await fetch(`/api/admin/bookings/${encodeURIComponent(id)}/identity/${image.dataset.identitySide}`, {
-                        cache: 'no-store',
-                        redirect: 'error',
-                        signal: controller.signal,
-                    });
-                    if (!response.ok) {
-                        throw new Error(errors[response.status] || `Máy chủ không tải được ảnh CCCD (HTTP ${response.status}).`);
-                    }
-                    const blob = await response.blob();
-                    if (!['image/jpeg', 'image/png', 'image/webp'].includes(blob.type) || !blob.size) {
-                        throw new Error('Máy chủ trả về dữ liệu ảnh CCCD không hợp lệ.');
-                    }
-                    if (!viewer.open) return;
-                    const url = URL.createObjectURL(blob);
-                    objectUrls.push(url);
-                    image.src = url;
-                    try {
-                        await image.decode();
-                    } catch {
-                        throw new Error('Trình duyệt không đọc được ảnh CCCD.');
-                    }
-                    if (!viewer.open) return;
-                    image.hidden = false;
-                    status.hidden = true;
-                } catch (error) {
-                    if (!viewer.open || controller.signal.aborted) return;
-                    status.textContent = error instanceof TypeError ? 'Không kết nối được máy chủ để tải ảnh CCCD.' : error.message;
-                    status.classList.add('text-red-800');
-                }
-            });
+            openIdentityViewer(identityButton);
             return;
         }
         const paymentButton = event.target.closest("[data-booking-payment]");
@@ -650,10 +745,16 @@
             || bookingPanel.contains(active) || bookingPanel.getAttribute("aria-busy") === "true") return;
         loadBookings();
     }, 30000);
-    window.addEventListener("mo:booking-created", () => {
-        bookingFilters.query = "";
+    window.addEventListener("mo:booking-created", (event) => {
+        const bookingCode = event.detail?.bookingCode;
+        bookingFilters.query = bookingCode || "";
         bookingFilters.status = "all";
         bookingFilters.room = "all";
+        if (bookingCode) {
+            bookingFilters.from = "";
+            bookingFilters.to = "";
+            bookingFilters.showFinished = true;
+        }
         bookingPagination.reset();
         loadBookings();
     });

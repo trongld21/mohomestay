@@ -13,14 +13,14 @@ function manual_expect(bool $condition, string $message): void
 }
 
 $checkoutDb = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-$checkoutDb->exec('CREATE TABLE payments (booking_id TEXT,qr_code TEXT)');
+$checkoutDb->exec('CREATE TABLE payments (booking_id TEXT,checkout_url TEXT)');
 $checkoutBooking = [
     'id' => 'checkout-test', 'booking_code' => 'MO-CHECKOUT', 'access_token' => 'secret-token',
     'status' => 'PENDING', 'payment_status' => 'PENDING', 'payment_method' => 'payos',
     'hold_expires_at' => gmdate('Y-m-d H:i:s', time() + 900), 'order_code' => 1234567890123,
     'total_price' => 159000,
 ];
-$checkoutDb->exec("INSERT INTO payments VALUES ('checkout-test','cached-qr')");
+$checkoutDb->exec("INSERT INTO payments VALUES ('checkout-test','https://pay.payos.vn/web/cached-link')");
 $guestUrl = prepare_manual_guest_checkout($checkoutDb, $checkoutBooking, static function (): never {
     throw new RuntimeException('A retry must reuse the existing QR.');
 });

@@ -22,6 +22,22 @@ $returnBooking = ['bookingCode'=>'MO-ABCDEF1234','accessToken'=>str_repeat('a',6
 remember_payment_return($returnBooking);
 check(payment_return_credentials(['orderCode'=>'123456789']) === ['code'=>'MO-ABCDEF1234','token'=>str_repeat('a',64)], 'PayOS return phai khoi phuc don bang orderCode trong session');
 check(payment_return_credentials(['orderCode'=>'999']) === ['code'=>'','token'=>''], 'OrderCode la khong duoc lay token');
+$sharedOrder = [
+    'order_code' => '1234567890123456',
+    'booking_code' => 'MO-1234567890',
+    'access_token' => str_repeat('b', 64),
+    'payment_method' => 'payos',
+];
+$savedSession = $_SESSION;
+$_SESSION = [];
+remember_shared_checkout_return($sharedOrder, '');
+remember_shared_checkout_return($sharedOrder, strtoupper($sharedOrder['access_token']));
+check(payment_return_credentials(['orderCode' => $sharedOrder['order_code']]) === ['code' => '', 'token' => ''], 'Ưu tiên quyền từ token đã xác thực khi lưu phiên khách.');
+remember_shared_checkout_return($sharedOrder, $sharedOrder['access_token']);
+check(payment_return_credentials(['orderCode' => $sharedOrder['order_code']]) === [
+    'code' => $sharedOrder['booking_code'], 'token' => $sharedOrder['access_token'],
+], 'Link gửi riêng phải khôi phục đơn trên phiên trình duyệt của khách sau khi quay về từ payOS.');
+$_SESSION = $savedSession;
 
 $email = build_booking_confirmation_email([
     'booking_code'=>'MO-ABCDEF1234','guest_name'=>'Lê An','guest_email'=>'an@example.com',

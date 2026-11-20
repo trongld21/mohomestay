@@ -128,18 +128,31 @@ function handle_api(string $path, string $method): never
         if ($method === 'GET' && preg_match('#^/api/admin/bookings/([a-f0-9]{32})/identity/(front|back)$#', $path, $matches)) admin_booking_identity_image($matches[1], $matches[2]);
         if (preg_match('#^/api/admin/bookings/([a-f0-9]{32})/continuation$#', $path, $matches)) {
             require_permission('bookings.create');
+            header('Cache-Control: private, no-store');
             if ($method === 'GET') json_response(booking_continuation_context(db(), $matches[1]));
             if ($method !== 'POST') throw new BookingException('Phương thức không hợp lệ.', 405);
             require_csrf();
-            $input = json_body();
-            if (($input['paymentStatus'] ?? '') === 'PAID') require_permission('bookings.payment');
-            $booking = create_booking_continuation(db(), $matches[1], $input);
-            $result = ['bookingCode' => $booking['booking_code']];
-            if (($body['guestCheckout'] ?? false) === true) {
+            $multipart = str_starts_with(strtolower($_SERVER['CONTENT_TYPE'] ?? ''), 'multipart/form-data');
+            $input = $multipart ? booking_form_body() : json_body();
+            $pdo = db();
+            if (($input['resumePayment'] ?? false) === true) {
+                $booking = pending_booking_continuation($pdo, $matches[1]);
+                if (!$booking || ($input['bookingCode'] ?? null) !== $booking['booking_code']) {
+                    throw new BookingException('Gói ở tiếp không còn chờ thanh toán. Kiểm tra lại danh sách đặt phòng.', 409);
+                }
+            } else {
+                $input['guestCheckout'] = filter_var($input['guestCheckout'] ?? false, FILTER_VALIDATE_BOOL);
+                if (($input['paymentStatus'] ?? '') === 'PAID') require_permission('bookings.payment');
+                $identity = $multipart ? read_booking_identity_uploads($_FILES, false) : [];
+                $booking = create_booking_continuation($pdo, $matches[1], $input, $identity);
+            }
+            $result = ['bookingCode' => $booking['booking_code'], 'paymentStatus' => $booking['payment_status']];
+            if ($booking['payment_method'] === 'payos' && $booking['status'] === 'PENDING') {
                 try {
-                    $result['guestUrl'] = prepare_manual_guest_checkout(db(), $booking);
+                    $result['guestUrl'] = prepare_continuation_checkout($pdo, $booking['id']);
+                    if (!$result['guestUrl']) $result['paymentMessage'] = 'Gói này đã đổi trạng thái. Kiểm tra lại danh sách đặt phòng.';
                 } catch (Throwable $error) {
-                    throw new BookingException('Đơn ' . $booking['booking_code'] . ' đã lưu nhưng chưa tạo được QR/mã cổng. Thử lại cùng form để không tạo trùng đơn.', 502);
+                    $result['paymentError'] = 'Đã lưu gói ở tiếp nhưng chưa lấy được link QR. Kiểm tra thời hạn giữ phòng trước khi thử lại.';
                 }
             }
             json_response($result, 201);
@@ -270,6 +283,9 @@ function lookup_booking_api(): never
     if ($b['status'] !== 'PENDING' || $b['payment_status'] === 'PAID') {
         $b['qr_code'] = null;
         $b['checkout_url'] = null;
+    }
+    if (!$expired && !empty($b['checkout_url'])) {
+        remember_shared_checkout_return($b, $token);
     }
     $response = [
         'bookingCode' => $b['booking_code'],

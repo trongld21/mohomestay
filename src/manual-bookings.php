@@ -118,7 +118,14 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false, array
         $allowAnyDate = !$test && (bool)(current_account()['root'] ?? false);
         $quote = quote_manual_booking($room, $input, $allowAnyDate || $continuation !== null);
         $quote = promotion_apply_quote($pdo, $quote, array_key_exists('agreedPrice', $input) ? (int)$input['agreedPrice'] : null);
-        if ($continuation !== null) validate_booking_continuation($continuation, $quote);
+        if ($continuation !== null) {
+            validate_booking_continuation($continuation, $quote);
+            $expectedPrice = $input['expectedPrice'] ?? null;
+            if ($expectedPrice !== null && ((!is_int($expectedPrice) && !is_string($expectedPrice))
+                || (string)$expectedPrice !== (string)$quote['total'])) {
+                throw new BookingException('Giá gói đã thay đổi. Đóng và mở lại biểu mẫu để xem giá mới.', 409);
+            }
+        }
         $start = mysql_datetime($quote['start']);
         $end = mysql_datetime($quote['end']);
         assert_room_inventory($pdo, $room['id'], $start, $end, $continuation['id'] ?? null);
@@ -162,6 +169,9 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false, array
             $values['extra_hours_amount'] = $quote['extraHoursAmount'];
         }
         if (!$test && $quote['guestCheckout'] && $quote['paymentStatus'] !== 'PAID') {
+            if ($quote['total'] < 1) {
+                throw new BookingException('Đơn tạo QR phải có giá lớn hơn 0đ.', 422);
+            }
             if (!payment_enabled()) {
                 throw new BookingException('Thanh toán trực tuyến chưa được cấu hình.', 422);
             }
@@ -169,7 +179,14 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false, array
             $values['payment_status'] = 'PENDING';
             $values['payment_method'] = 'payos';
             $values['order_code'] = (int)(floor(microtime(true) * 1000) * 1000 + random_int(0, 999));
-            $values['hold_expires_at'] = gmdate('Y-m-d H:i:s', time() + 900);
+            $holdDeadline = time() + 900;
+            if ($continuation !== null) {
+                $holdDeadline = min($holdDeadline, $quote['end']->getTimestamp());
+                if ($holdDeadline <= time()) {
+                    throw new BookingException('Gói ở tiếp đã qua giờ trả phòng, không thể tạo QR.', 409);
+                }
+            }
+            $values['hold_expires_at'] = gmdate('Y-m-d H:i:s', $holdDeadline);
         }
         if ($test) {
             $values['is_test'] = 1;
@@ -186,12 +203,21 @@ function create_manual_booking(PDO $pdo, array $input, bool $test = false, array
             promotion_snapshot($pdo, $values['id'], $quote['package']);
         }
         if ($continuation !== null) {
-            $pdo->prepare('UPDATE bookings SET continued_to_booking_id=? WHERE id=?')->execute([$values['id'], $continuation['id']]);
+            $original = booking_continuation_identity($pdo, $continuation);
+            if (array_diff($original['missing'], array_keys($identity))) {
+                throw new BookingException('Vui lòng tải đủ các mặt CCCD còn thiếu của đơn gốc.', 422);
+            }
+            if (array_diff(array_keys($identity), $original['missing'])) {
+                throw new BookingException('Thông tin CCCD của đơn gốc đã thay đổi. Mở lại biểu mẫu để kiểm tra.', 409);
+            }
+            save_booking_identity($pdo, $original['id'], $identity, false);
+            if ($values['status'] === 'CONFIRMED') link_confirmed_booking_continuation($pdo, $values);
+        } elseif ($identity !== []) {
+            save_booking_identity($pdo, $values['id'], $identity, false);
         }
         if (!$test && $quote['paymentStatus'] === 'PAID') {
             record_manual_payment($pdo, $values['id'], $quote['total'], $quote['paymentMethod']);
         }
-        if ($identity !== []) save_booking_identity($pdo, $values['id'], $identity, false);
         if (!$test && $values['status'] === 'CONFIRMED') queue_staff_notification($pdo, $values, 'BOOKED');
         $pdo->commit();
         return $values;
@@ -259,7 +285,7 @@ function prepare_manual_guest_checkout(PDO $pdo, array $booking, ?callable $crea
         if (strtotime($booking['hold_expires_at'] . ' UTC') <= time()) {
             throw new BookingException('Đơn đã hết thời gian giữ phòng. Kiểm tra đơn trước khi tạo lại.', 409);
         }
-        $find = $pdo->prepare('SELECT qr_code FROM payments WHERE booking_id=?');
+        $find = $pdo->prepare('SELECT checkout_url FROM payments WHERE booking_id=?');
         $find->execute([$booking['id']]);
         if (!$find->fetchColumn()) {
             $createPayment ??= 'create_payment';
@@ -269,7 +295,10 @@ function prepare_manual_guest_checkout(PDO $pdo, array $booking, ?callable $crea
                 'holdExpiresAt' => $booking['hold_expires_at'],
                 'totalPrice' => $booking['total_price'],
             ]);
-            $pdo->prepare("INSERT INTO payments(id,booking_id,amount,payment_method,status,qr_code,checkout_url) VALUES(?,?,?,'payos','PENDING',?,?) ON DUPLICATE KEY UPDATE qr_code=VALUES(qr_code),checkout_url=VALUES(checkout_url)")
+            $update = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite'
+                ? 'ON CONFLICT(booking_id) DO UPDATE SET qr_code=excluded.qr_code, checkout_url=excluded.checkout_url'
+                : 'ON DUPLICATE KEY UPDATE qr_code=VALUES(qr_code), checkout_url=VALUES(checkout_url)';
+            $pdo->prepare("INSERT INTO payments(id,booking_id,amount,payment_method,status,qr_code,checkout_url) VALUES(?,?,?,'payos','PENDING',?,?) " . $update)
                 ->execute([uuid(), $booking['id'], $booking['total_price'], $payment['qrCode'], $payment['checkoutUrl']]);
         }
     }
