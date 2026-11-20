@@ -209,7 +209,7 @@
         one('[data-filter-count]').textContent = `${filtered.length} / ${bookings.length} đơn`;
         const view = bookingPagination.slice(filtered);
         one("[data-booking-results]").innerHTML = filtered.length
-            ? `<div class="admin-table-scroll" tabindex="0" role="region" aria-label="Danh sách đặt phòng"><table class="admin-booking-table booking-work-table"><thead><tr><th scope="col">Ảnh phòng</th><th scope="col">Mã / Khách hàng</th><th scope="col">Phòng / Thời gian</th><th scope="col">Thanh toán</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th></tr></thead><tbody>${view.items
+            ? `<div class="admin-table-scroll" tabindex="0" role="region" aria-label="Danh sách đặt phòng"><table class="admin-booking-table booking-work-table"><thead><tr><th scope="col">Ảnh phòng</th><th scope="col">Mã / Khách hàng</th><th scope="col">Phòng / Thời gian</th><th scope="col">Thanh toán</th><th scope="col">Trạng thái</th>${canShowBookingActions() ? '<th scope="col">Thao tác</th>' : ''}</tr></thead><tbody>${view.items
                   .map(
                       (booking) => renderBookingRow(booking),
                   )
@@ -290,7 +290,13 @@
         dialog.addEventListener('close', () => open.focus());
         updateLabel();
     }
+    function canShowBookingActions() {
+        const abilities = LANG_HOME.abilities;
+        return LANG_HOME.isSuperAdmin === true || ['bookings.create', 'bookings.update', 'availability.checkout'].some(permission => abilities.includes(permission));
+    }
+
     function bookingSuccessLink(booking) {
+        if (!LANG_HOME.abilities.some(permission => permission === 'bookings.create' || permission === 'bookings.update')) return '';
         if (!["CONFIRMED", "CHECKED_IN", "CHECKED_OUT"].includes(booking.status)
             || !/^(?:MO|LANG)-[A-F0-9]{10}$/.test(booking.booking_code || "")
             || !/^[a-f0-9]{64}$/.test(booking.access_token || "")) return "";
@@ -313,8 +319,10 @@
         const action = (status, label, symbol, danger = false) => `
             <button type="button" ${danger ? 'class="booking-cancel"' : ""} data-booking-action="${status}" data-id="${esc(booking.id)}" aria-label="${label} đơn ${esc(booking.booking_code)}">${icon(symbol)} ${label}</button>`;
         let actions = "";
-        if (["PENDING", "EXPIRED"].includes(booking.status)) actions = action("CANCELLED", "Hủy đơn", "x", true);
-        if (booking.status === "CONFIRMED") actions = action("CHECKED_IN", "Nhận sớm", "key") + action("CANCELLED", "Hủy", "x", true);
+        if (LANG_HOME.abilities.includes('bookings.update')) {
+            if (["PENDING", "EXPIRED"].includes(booking.status)) actions = action("CANCELLED", "Hủy đơn", "x", true);
+            if (booking.status === "CONFIRMED") actions = action("CHECKED_IN", "Nhận sớm", "key") + action("CANCELLED", "Hủy", "x", true);
+        }
         if (booking.status === "CHECKED_IN" && LANG_HOME.abilities.includes("availability.checkout")) {
             actions = `<a class="timeline-button" href="/admin/availability#booking-${encodeURIComponent(booking.id)}">Trả phòng & phụ thu</a>`;
         }
@@ -376,7 +384,7 @@
                 ${booking.failure_reason ? `<span class="admin-reconcile">${esc(booking.failure_reason)}</span>` : ""}
             </div></td>
             <td class="booking-status-cell"><div class="booking-cell"><span class="admin-booking-status booking-status-label" data-status="${esc(booking.status)}"><span class="booking-status-dot" aria-hidden="true"></span>${esc(booking.isOverdue ? "Quá giờ · Chưa trả phòng" : statusNames[booking.status] || booking.status)}</span>${MoBookingFilters.needsAttention(booking) ? '<strong class="text-sm text-red-800">Cần đối soát thanh toán</strong>' : ''}<span class="booking-meta">${icon(booking.statusSource === "MANUAL" ? "user" : "clock")}${booking.statusSource === "MANUAL" ? "Admin cập nhật" : "Tự động theo giờ"}</span></div></td>
-            <td class="booking-actions-cell"><div class="admin-actions">${actions || '<span class="booking-ended">—</span>'}</div></td>
+            ${canShowBookingActions() ? `<td class="booking-actions-cell"><div class="admin-actions">${actions || '<span class="booking-ended">—</span>'}</div></td>` : ''}
         </tr>`;
     }
     async function fetchIdentityImage(id, side, signal) {
@@ -423,6 +431,9 @@
         const viewer = document.createElement('dialog');
         const buttonClass = 'min-h-11 rounded-lg border px-3 py-2 text-sm font-medium enabled:cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800 disabled:cursor-wait disabled:opacity-50';
         const secondaryButtonClass = `${buttonClass} border-stone-300 enabled:hover:bg-stone-100`;
+        const downloadButton = LANG_HOME.abilities.includes('bookings.identity.download')
+            ? `<button type="button" data-identity-download class="${buttonClass} border-amber-800 bg-amber-800 text-white enabled:hover:bg-amber-900">Tải ảnh</button>`
+            : '';
         viewer.dataset.identityViewer = '';
         viewer.className = 'm-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-4xl overflow-auto rounded-2xl border border-stone-200 bg-white p-5 text-stone-800 shadow-xl backdrop:bg-black/40';
         viewer.innerHTML = `<div class="flex items-center justify-between gap-4">
@@ -440,7 +451,7 @@
                         <div class="mt-3 flex flex-wrap gap-2">
                             <button type="button" data-identity-rotate="-1" class="${secondaryButtonClass}">Xoay trái</button>
                             <button type="button" data-identity-rotate="1" class="${secondaryButtonClass}">Xoay phải</button>
-                            <button type="button" data-identity-download class="${buttonClass} border-amber-800 bg-amber-800 text-white enabled:hover:bg-amber-900">Tải ảnh</button>
+                            ${downloadButton}
                         </div>
                     </div>
                     <p data-identity-status role="status" class="mt-2 text-sm">Đang tải ảnh…</p>
@@ -517,7 +528,7 @@
                             if (turns) image.classList.add(rotations[turns]);
                         };
                     });
-                    download.onclick = async () => {
+                    if (download) download.onclick = async () => {
                         download.disabled = true;
                         status.hidden = true;
                         try {

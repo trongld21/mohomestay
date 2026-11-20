@@ -348,7 +348,9 @@ function admin_bookings_api(): never
     )->fetchAll();
     $now = time();
     $rooms = room_repository()->allRooms();
-    $rows = array_map(function ($booking) use ($now, $rooms) {
+    $canShare = can_share_booking_links();
+    $rows = array_map(function ($booking) use ($now, $rooms, $canShare) {
+        if (!$canShare) unset($booking['access_token']);
         $booking['room_image'] = $rooms[$booking['room_id']]['image'] ?? '/images/white-illustration.jpg';
         $booking['cleaning_until'] = $booking['status'] === 'CHECKED_OUT' && !empty($booking['actual_checkout_at'])
             ? room_occupied_until($booking) : null;

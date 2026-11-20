@@ -67,6 +67,11 @@ function require_permission(string $permission): void
     }
 }
 
+function can_share_booking_links(): bool
+{
+    return can_use('bookings.create') || can_use('bookings.update');
+}
+
 function account_login(string $email, string $password): bool
 {
     $root = $email === strtolower((string)config('admin_email'));
@@ -198,6 +203,7 @@ function account_permission_groups(): array
             'bookings.overview' => 'Xem tổng quan và thống kê',
             'bookings.view' => 'Xem danh sách đặt phòng',
             'bookings.identity' => 'Xem ảnh CCCD của khách',
+            'bookings.identity.download' => 'Tải ảnh CCCD của khách',
             'bookings.create' => 'Tạo đơn đặt phòng',
             'bookings.update' => 'Nhận phòng, kết thúc sớm và hủy đơn',
             'bookings.payment' => 'Xác nhận thu tiền',
@@ -244,6 +250,9 @@ function expanded_account_permissions(array $permissions): array
     $expanded = array_merge($expanded, array_intersect($permissions, array_keys(account_permission_labels())));
     if (in_array('products.create', $expanded, true) || in_array('products.edit', $expanded, true)) {
         $expanded[] = 'products.view';
+    }
+    if (in_array('bookings.identity.download', $expanded, true)) {
+        $expanded[] = 'bookings.identity';
     }
     return array_values(array_unique($expanded));
 }

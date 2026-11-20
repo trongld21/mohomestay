@@ -6,12 +6,13 @@ const start = source.indexOf('    function renderBookingRow(');
 const end = source.indexOf('    async function bookingAction(', start);
 assert.ok(start >= 0 && end > start, 'Locate the actual booking row renderer');
 const context = vm.createContext({
-    LANG_HOME: { abilities: ['bookings.payment'], isSuperAdmin: false },
+    LANG_HOME: { abilities: ['bookings.payment', 'bookings.update'], isSuperAdmin: false },
     bookingSuccessLink: () => '', esc: String, icon: () => '', bookingDate: String, cash: String,
     statusNames: { EXPIRED: 'Hết hạn giữ chỗ' },
     MoBookingFilters: require('../public/assets/admin-booking-filters.js'),
 });
-vm.runInContext(source.slice(start, end), context);
+const abilitiesStart = source.indexOf('    function canShowBookingActions(');
+vm.runInContext(source.slice(abilitiesStart, source.indexOf('    function bookingSuccessLink(', abilitiesStart)) + source.slice(start, end), context);
 const booking = { id: 'test', status: 'EXPIRED', payment_status: 'PENDING', booking_source: 'WEBSITE' };
 for (const isSuperAdmin of [false, true]) {
     context.LANG_HOME.isSuperAdmin = isSuperAdmin;
@@ -26,6 +27,10 @@ assert.ok(completed.includes('Trả thực tế') && completed.includes('Dọn �
 
 const extension = context.renderBookingRow({ ...booking, continued_from_booking_id: 'parent', guest_note: 'Ở tiếp đơn MO-GOC' });
 assert.match(extension, /data-continuation-label[^>]*>Ở tiếp đơn MO-GOC</, 'The linked booking is visible on the row');
+context.LANG_HOME = { abilities: ['bookings.view', 'bookings.identity'], isSuperAdmin: false };
+const readOnly = context.renderBookingRow({ ...booking, status: 'CONFIRMED', identity_image_count: 2 });
+assert.match(readOnly, /data-view-identity/);
+assert.doesNotMatch(readOnly, /booking-actions-cell|data-booking-action=|data-booking-payment=|data-copy-booking-link=/);
 
 const eventStart = source.indexOf('    window.addEventListener("mo:booking-created",');
 const eventEnd = source.indexOf('    document.addEventListener(', eventStart);
