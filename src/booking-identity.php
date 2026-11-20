@@ -153,10 +153,28 @@ function write_booking_identity_image(PDO $pdo, PDOStatement $statement, string 
 
 function read_booking_identity_as_text(PDO $pdo, string $bookingId, string $side): string|false
 {
-    $query = $pdo->prepare('SELECT TO_BASE64(encrypted_image) FROM booking_identity_images WHERE booking_id=? AND side=?');
-    $query->execute([$bookingId, $side]);
-    $encoded = $query->fetchColumn();
-    return is_string($encoded) ? base64_decode($encoded, true) : false;
+    $lengthQuery = $pdo->prepare('SELECT OCTET_LENGTH(encrypted_image) FROM booking_identity_images WHERE booking_id=? AND side=?');
+    $lengthQuery->execute([$bookingId, $side]);
+    $length = $lengthQuery->fetchColumn();
+    $lengthQuery->closeCursor();
+    if ($length === false || (int)$length < 29 || (int)$length > 4 * 1024 * 1024) return false;
+
+    // Hosting truncates individual results at 1 MiB. Each encoded chunk stays below 256 KiB.
+    $chunkSize = 196608;
+    $query = $pdo->prepare('SELECT TO_BASE64(SUBSTRING(encrypted_image,?,196608)) FROM booking_identity_images WHERE booking_id=? AND side=?');
+    $bytes = '';
+    for ($offset = 1; $offset <= (int)$length; $offset += $chunkSize) {
+        $query->bindValue(1, $offset, PDO::PARAM_INT);
+        $query->bindValue(2, $bookingId);
+        $query->bindValue(3, $side);
+        $query->execute();
+        $encoded = $query->fetchColumn();
+        $query->closeCursor();
+        $chunk = is_string($encoded) ? base64_decode($encoded, true) : false;
+        if ($chunk === false || strlen($chunk) !== min($chunkSize, (int)$length - $offset + 1)) return false;
+        $bytes .= $chunk;
+    }
+    return $bytes;
 }
 
 function decrypt_stored_booking_identity(PDO $pdo, string $bookingId, string $side, string $stored): string

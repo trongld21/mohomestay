@@ -85,6 +85,35 @@ putenv('BOOKING_IDENTITY_APP_KEY=' . str_repeat('8', 64));
     }
     $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
     $pdo->exec('CREATE TABLE booking_identity_images(booking_id TEXT, side TEXT, mime_type TEXT, encrypted_image BLOB, PRIMARY KEY(booking_id,side))');
+    $pdo->sqliteCreateFunction('OCTET_LENGTH', static fn(string $value): int => strlen($value));
+    $pdo->sqliteCreateFunction('TO_BASE64', static fn(string $value): string =>
+        substr(chunk_split(base64_encode($value), 76, "\n"), 0, 1048576));
+    foreach ([196608 - 28, 1786075 - 28, 3 * 1024 * 1024] as $size) {
+        $fixture = random_bytes($size);
+        $encryptedFixture = encrypt_booking_identity($fixture, 'buffer:front');
+        $insertFixture = $pdo->prepare('INSERT INTO booking_identity_images VALUES(?,?,?,?)');
+        $insertFixture->bindValue(1, 'buffer');
+        $insertFixture->bindValue(2, 'front');
+        $insertFixture->bindValue(3, 'image/jpeg');
+        $insertFixture->bindValue(4, $encryptedFixture, PDO::PARAM_LOB);
+        $insertFixture->execute();
+        if ($size > 1048576) {
+            $truncated = $pdo->query("SELECT TO_BASE64(encrypted_image) FROM booking_identity_images WHERE booking_id='buffer'")->fetchColumn();
+            identity_expect(strlen(base64_decode($truncated, true)) < strlen($encryptedFixture), 'Reproduce the previous full-result truncation');
+        }
+        $readFixture = read_booking_identity_as_text($pdo, 'buffer', 'front');
+        identity_expect($readFixture === $encryptedFixture, 'Chunked reads survive the hosting 1 MiB result limit');
+        identity_expect(decrypt_booking_identity($readFixture, 'buffer:front') === $fixture, 'Large images retain authenticated encryption');
+        $pdo->exec("UPDATE booking_identity_images SET encrypted_image=substr(encrypted_image,1,100) WHERE booking_id='buffer'");
+        try {
+            decrypt_booking_identity(read_booking_identity_as_text($pdo, 'buffer', 'front'), 'buffer:front');
+            throw new LogicException('Truncated stored ciphertext was accepted');
+        } catch (BookingIdentityReadException) {
+            // A complete transport read still has to pass AES-GCM authentication.
+        }
+        $pdo->exec("DELETE FROM booking_identity_images WHERE booking_id='buffer'");
+    }
+    identity_expect(read_booking_identity_as_text($pdo, 'missing', 'front') === false, 'Missing chunked image fails closed');
     $pdo->exec("CREATE TRIGGER damage_identity AFTER INSERT ON booking_identity_images WHEN NEW.side = 'back' BEGIN
         UPDATE booking_identity_images SET encrypted_image = zeroblob(length(NEW.encrypted_image)) WHERE booking_id = NEW.booking_id AND side = NEW.side;
     END");
