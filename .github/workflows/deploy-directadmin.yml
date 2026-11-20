@@ -49,6 +49,7 @@ jobs:
         run: |
           php tools/people-counter-migration-test.php
           php tools/booking-access-migration-test.php
+          php tools/staff-booking-migration-test.php
       - name: Run unit tests
         run: |
           php tools/test.php

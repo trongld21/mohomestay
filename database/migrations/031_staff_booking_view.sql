@@ -1,7 +1,8 @@
 -- Apply the agreed booking access to the existing staff account only.
 START TRANSACTION;
 
-SET @staff_email = 'nhansu@mohomestay.vn';
+-- Match the collation of accounts.email independently of the PDO connection default.
+SET @staff_email = _utf8mb4'nhansu@mohomestay.vn' COLLATE utf8mb4_unicode_ci;
 
 -- Preserve the non-checkout grants carried by the old availability group.
 UPDATE accounts
