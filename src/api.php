@@ -125,7 +125,10 @@ function handle_api(string $path, string $method): never
             $overview['paid'] += retail_revenue(db());
             json_response(['overview' => $overview]);
         }
-        if ($method === 'GET' && preg_match('#^/api/admin/bookings/([a-f0-9]{32})/identity/(front|back)$#', $path, $matches)) admin_booking_identity_image($matches[1], $matches[2]);
+        if (preg_match('#^/api/admin/bookings/([a-f0-9]{32})/identity/(front|back)$#D', $path, $matches)) {
+            if ($method === 'GET') admin_booking_identity_image($matches[1], $matches[2]);
+            if ($method === 'POST') admin_replace_booking_identity_image($matches[1], $matches[2]);
+        }
         if (preg_match('#^/api/admin/bookings/([a-f0-9]{32})/continuation$#', $path, $matches)) {
             require_permission('bookings.create');
             header('Cache-Control: private, no-store');

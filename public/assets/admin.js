@@ -456,6 +456,13 @@
                     </div>
                     <p data-identity-status role="status" class="mt-2 text-sm">Đang tải ảnh…</p>
                     <button type="button" data-identity-retry class="${secondaryButtonClass} mt-2" aria-label="Tải lại ảnh CCCD ${label.toLowerCase()}" hidden>Tải lại ảnh</button>
+                    <form data-identity-replacement class="mt-3 rounded-lg border border-stone-200 p-3" hidden>
+                        <label class="block text-sm font-medium" for="identity-replacement-${side}">Chọn ảnh CCCD ${label.toLowerCase()} thay thế</label>
+                        <input id="identity-replacement-${side}" name="identity_image" type="file" accept="image/jpeg,image/png,image/webp" required
+                            class="mt-2 block w-full min-w-0 text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-stone-100 file:px-3 file:py-2 enabled:file:cursor-pointer enabled:hover:file:bg-stone-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">
+                        <p class="mt-2 text-sm text-stone-700">JPG, PNG hoặc WebP, tối đa 3 MiB.</p>
+                        <button type="submit" class="${secondaryButtonClass} mt-2">Lưu ảnh thay thế</button>
+                    </form>
                 </section>`).join('')}
         </div>`;
         viewer.setAttribute('aria-labelledby', 'identity-viewer-title');
@@ -487,6 +494,7 @@
             const image = one('img', section);
             const download = one('[data-identity-download]', section);
             const retry = one('[data-identity-retry]', section);
+            const replacement = one('[data-identity-replacement]', section);
             const showError = message => {
                 status.textContent = message;
                 status.classList.add('text-red-800');
@@ -501,6 +509,13 @@
                 try {
                     const response = await fetchIdentityImage(id, side, controller.signal);
                     if (!response.ok) {
+                        if (response.status === 409) {
+                            const problem = await response.json().catch(() => null);
+                            if (!viewer.open) return;
+                            replacement.hidden = problem?.code !== 'identity_unreadable';
+                            showError(problem?.error || errors[409]);
+                            return;
+                        }
                         throw new Error(errors[response.status] || `Máy chủ không tải được ảnh CCCD (HTTP ${response.status}).`);
                     }
                     const blob = await response.blob();
@@ -569,8 +584,37 @@
             }
             function queueImage() {
                 retry.hidden = true;
+                replacement.hidden = true;
                 imageQueue = imageQueue.then(loadImage);
             }
+            replacement.onsubmit = async event => {
+                event.preventDefault();
+                const submit = one('[type="submit"]', replacement);
+                if (submit.disabled) return;
+                const payload = new FormData(replacement);
+                submit.disabled = true;
+                status.classList.remove('text-red-800');
+                status.textContent = 'Đang lưu ảnh thay thế…';
+                try {
+                    const response = await fetch(`/api/admin/bookings/${encodeURIComponent(id)}/identity/${side}`, {
+                        method: 'POST', body: payload, cache: 'no-store', redirect: 'error',
+                        headers: { 'X-CSRF-Token': LANG_HOME.csrf }, signal: controller.signal,
+                    });
+                    if (!viewer.open) return;
+                    if (!response.ok && response.status !== 409) {
+                        const problem = await response.json().catch(() => null);
+                        throw new Error(problem?.error || 'Chưa lưu được ảnh CCCD. Vui lòng thử lại.');
+                    }
+                    replacement.reset();
+                    queueImage();
+                } catch (error) {
+                    if (viewer.open && !controller.signal.aborted) {
+                        showError(error instanceof TypeError ? 'Chưa kết nối được máy chủ để lưu ảnh.' : error.message);
+                    }
+                } finally {
+                    submit.disabled = false;
+                }
+            };
             retry.onclick = queueImage;
             queueImage();
         });

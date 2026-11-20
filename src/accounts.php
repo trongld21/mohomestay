@@ -292,12 +292,16 @@ function admin_api_permission(string $path, string $method, array $body = []): s
         'booking-overview' => 'bookings.overview',
         'booking-rooms' => 'bookings.create',
         'promotions' => $method === 'GET' ? 'rooms.view' : 'rooms.edit',
-        'bookings' => str_ends_with($path, '/continuation') ? 'bookings.create' : match ($method) {
-            'GET' => str_contains($path, '/identity/') ? 'bookings.identity' : 'bookings.view',
-            'POST' => str_ends_with($path, '/stay') ? 'accounts'
-                : (str_ends_with($path, '/payment') ? 'bookings.payment' : 'bookings.create'),
-            'PATCH' => ($body['status'] ?? '') === 'CHECKED_OUT' ? 'availability.checkout' : 'bookings.update',
-            default => 'accounts',
+        'bookings' => match (true) {
+            str_ends_with($path, '/continuation') => 'bookings.create',
+            in_array($method, ['GET', 'POST'], true) && preg_match('#^/api/admin/bookings/[a-f0-9]{32}/identity/(front|back)$#D', $path) === 1 => 'bookings.identity',
+            default => match ($method) {
+                'GET' => 'bookings.view',
+                'POST' => str_ends_with($path, '/stay') ? 'accounts'
+                    : (str_ends_with($path, '/payment') ? 'bookings.payment' : 'bookings.create'),
+                'PATCH' => ($body['status'] ?? '') === 'CHECKED_OUT' ? 'availability.checkout' : 'bookings.update',
+                default => 'accounts',
+            },
         },
         'rooms' => match (true) {
             $method === 'GET' => 'rooms.view',
