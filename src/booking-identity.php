@@ -62,7 +62,8 @@ function validate_booking_identity_file(array $file): array
     $mime = (new finfo(FILEINFO_MIME_TYPE))->file($path);
     $dimensions = @getimagesize($path);
     if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true) || !$dimensions
-        || $dimensions[0] < 200 || $dimensions[1] < 120 || $dimensions[0] > 8000 || $dimensions[1] > 8000
+        || min($dimensions[0], $dimensions[1]) < 120 || max($dimensions[0], $dimensions[1]) < 200
+        || max($dimensions[0], $dimensions[1]) > 8000
         || $dimensions[0] * $dimensions[1] > 24000000) {
         throw new BookingException('CCCD cần là ảnh JPG, PNG hoặc WebP rõ nét, tối thiểu 200 × 120 px, tối đa 24 megapixel.', 422);
     }
@@ -116,9 +117,47 @@ function write_booking_identity_image(PDO $pdo, PDOStatement $statement, string 
 
     $read = $pdo->prepare('SELECT encrypted_image FROM booking_identity_images WHERE booking_id=? AND side=?');
     $read->execute([$bookingId, $side]);
-    if ($read->fetchColumn() !== $encrypted) {
-        error_log(sprintf('Booking identity write verification failed booking=%s side=%s', $bookingId, $side));
-        throw new BookingException('Chưa xác nhận được ảnh CCCD đã lưu. Vui lòng thử lại.', 503);
+    $stored = $read->fetchColumn();
+    $read->closeCursor();
+    if ($stored === $encrypted) return;
+
+    if ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql') {
+        // Check the stored bytes without relying on the driver's BLOB result transport.
+        $verified = read_booking_identity_as_text($pdo, $bookingId, $side);
+        if ($verified === $encrypted) return;
+        if ($verified !== false) {
+            // Retry the write using ASCII parameters while still inside the same transaction.
+            $retry = $pdo->prepare('UPDATE booking_identity_images SET mime_type=?, encrypted_image=FROM_BASE64(?) WHERE booking_id=? AND side=?');
+            $retry->execute([$image['mime'], base64_encode($encrypted), $bookingId, $side]);
+            if (read_booking_identity_as_text($pdo, $bookingId, $side) === $encrypted) return;
+        }
+    }
+
+    error_log(sprintf('Booking identity write verification failed booking=%s side=%s', $bookingId, $side));
+    throw new BookingException('Chưa xác nhận được ảnh CCCD đã lưu. Vui lòng thử lại.', 503);
+}
+
+function read_booking_identity_as_text(PDO $pdo, string $bookingId, string $side): string|false
+{
+    $query = $pdo->prepare('SELECT TO_BASE64(encrypted_image) FROM booking_identity_images WHERE booking_id=? AND side=?');
+    $query->execute([$bookingId, $side]);
+    $encoded = $query->fetchColumn();
+    return is_string($encoded) ? base64_decode($encoded, true) : false;
+}
+
+function decrypt_stored_booking_identity(PDO $pdo, string $bookingId, string $side, string $stored): string
+{
+    $context = $bookingId . ':' . $side;
+    try {
+        return decrypt_booking_identity($stored, $context);
+    } catch (BookingIdentityReadException $error) {
+        if ($error->getMessage() !== 'missing_key' && $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql') {
+            $verified = read_booking_identity_as_text($pdo, $bookingId, $side);
+            if ($verified !== false && $verified !== $stored) {
+                return decrypt_booking_identity($verified, $context);
+            }
+        }
+        throw $error;
     }
 }
 
@@ -134,7 +173,7 @@ function replace_unreadable_booking_identity(PDO $pdo, string $bookingId, string
 
         $unreadable = false;
         try {
-            decrypt_booking_identity($stored, $bookingId . ':' . $side);
+            decrypt_stored_booking_identity($pdo, $bookingId, $side, $stored);
         } catch (BookingIdentityReadException $error) {
             if ($error->getMessage() === 'missing_key') {
                 throw new BookingException('Máy chủ chưa có khóa đọc ảnh CCCD hợp lệ.', 503);
@@ -162,7 +201,7 @@ function admin_replace_booking_identity_image(string $bookingId, string $side): 
     $image = validate_booking_identity_file($_FILES['identity_image'] ?? []);
     replace_unreadable_booking_identity(db(), $bookingId, $side, $image);
     error_log(sprintf('Booking identity replaced booking=%s side=%s actor=%s', $bookingId, $side, $account['id']));
-    json_response(['ok' => true]);
+    json_response(['ok' => true, 'mimeType' => $image['mime']]);
 }
 
 function admin_booking_identity_image(string $bookingId, string $side): never
@@ -172,12 +211,14 @@ function admin_booking_identity_image(string $bookingId, string $side): never
     header('Cache-Control: private, no-store, max-age=0');
     header('Pragma: no-cache');
     if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
-    $find = db()->prepare('SELECT mime_type,encrypted_image FROM booking_identity_images WHERE booking_id=? AND side=?');
+    $pdo = db();
+    $find = $pdo->prepare('SELECT mime_type,encrypted_image FROM booking_identity_images WHERE booking_id=? AND side=?');
     $find->execute([$bookingId, $side]);
     $row = $find->fetch();
+    $find->closeCursor();
     if (!$row) throw new BookingException('Đơn chưa có ảnh CCCD này.', 404);
     try {
-        $bytes = decrypt_booking_identity($row['encrypted_image'], $bookingId . ':' . $side);
+        $bytes = decrypt_stored_booking_identity($pdo, $bookingId, $side, $row['encrypted_image']);
     } catch (BookingIdentityReadException $error) {
         error_log(sprintf('Booking identity read failed booking=%s side=%s reason=%s', $bookingId, $side, $error->getMessage()));
         if ($error->getMessage() === 'missing_key') {

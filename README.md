@@ -492,7 +492,8 @@ trước khi thay và từ chối ghi đè nếu ảnh đã đọc được. Quy
 
 Chấp nhận JPEG, PNG, WebP tối đa 3 MiB mỗi mặt, tối đa 24 megapixel và 8000 px
 mỗi cạnh; HEIC/PDF/SVG không được nhận. Hosting cần upload_max_filesize ít
-nhất 3M, post_max_size ít nhất 8M; max_allowed_packet MySQL đủ cho một ảnh.
+nhất 3M và post_max_size ít nhất 8M. Đặt `max_allowed_packet` của MySQL ít nhất
+8 MiB để đường truyền dự phòng dạng văn bản cũng xử lý được ảnh dung lượng tối đa.
 Ảnh được giữ cùng lịch sử đơn cho đến khi xóa đơn; hiện chưa tự xóa theo hạn.
 Kiểm thử: `php tools/booking-identity-test.php` dùng ảnh giả và SQLite, không
 đưa giấy tờ thật vào kiểm thử hoặc nguồn Git.

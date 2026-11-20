@@ -408,7 +408,7 @@
         }
     }
 
-    function exportRotatedIdentityImage(image, turns, type) {
+    function exportRotatedIdentityImage(image, turns, type, quality = 0.95) {
         const canvas = document.createElement('canvas');
         const { naturalWidth: width, naturalHeight: height } = image;
         const sideways = turns % 2 === 1;
@@ -418,7 +418,7 @@
         context.translate(canvas.width / 2, canvas.height / 2);
         context.rotate(turns * Math.PI / 2);
         context.drawImage(image, -width / 2, -height / 2);
-        return new Promise(resolve => canvas.toBlob(resolve, type, 0.95));
+        return new Promise(resolve => canvas.toBlob(resolve, type, quality));
     }
 
     function openIdentityViewer(trigger) {
@@ -461,7 +461,16 @@
                         <input id="identity-replacement-${side}" name="identity_image" type="file" accept="image/jpeg,image/png,image/webp" required
                             class="mt-2 block w-full min-w-0 text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-stone-100 file:px-3 file:py-2 enabled:file:cursor-pointer enabled:hover:file:bg-stone-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">
                         <p class="mt-2 text-sm text-stone-700">JPG, PNG hoặc WebP, tối đa 3 MiB.</p>
-                        <button type="submit" class="${secondaryButtonClass} mt-2">Lưu ảnh thay thế</button>
+                        <div data-identity-replacement-preview hidden>
+                            <div class="relative mx-auto mt-3 aspect-square w-full max-w-[42dvh] overflow-hidden rounded-lg border border-stone-200 bg-stone-50">
+                                <img class="absolute inset-0 size-full object-contain" alt="Xem trước CCCD ${label.toLowerCase()} thay thế">
+                            </div>
+                            <div class="mt-2 flex flex-wrap gap-2" role="group" aria-label="Xoay ảnh CCCD ${label.toLowerCase()} thay thế">
+                                <button type="button" data-identity-replacement-rotate="-1" class="${secondaryButtonClass}">Xoay trái</button>
+                                <button type="button" data-identity-replacement-rotate="1" class="${secondaryButtonClass}">Xoay phải</button>
+                            </div>
+                        </div>
+                        <button type="submit" class="${secondaryButtonClass} mt-2" disabled>Lưu ảnh thay thế</button>
                     </form>
                 </section>`).join('')}
         </div>`;
@@ -491,15 +500,82 @@
         all('[data-identity-side]', viewer).forEach(section => {
             const { identitySide: side } = section.dataset;
             const status = one('[data-identity-status]', section);
-            const image = one('img', section);
+            const image = one('[data-identity-content] img', section);
             const download = one('[data-identity-download]', section);
             const retry = one('[data-identity-retry]', section);
             const replacement = one('[data-identity-replacement]', section);
+            const input = one('[type="file"]', replacement);
+            const submit = one('[type="submit"]', replacement);
+            const preview = one('[data-identity-replacement-preview]', replacement);
+            const previewImage = one('img', preview);
+            const previewButtons = all('[data-identity-replacement-rotate]', preview);
+            const maxImageBytes = 3 * 1024 * 1024;
+            let previewUrl;
+            let previewTurns = 0;
             const showError = message => {
                 status.textContent = message;
                 status.classList.add('text-red-800');
                 status.hidden = false;
             };
+
+            async function showImage(blob) {
+                if (!viewer.open) return;
+
+                const originalUrl = URL.createObjectURL(blob);
+                objectUrls.add(originalUrl);
+                image.src = originalUrl;
+                try {
+                    await image.decode();
+                } catch {
+                    URL.revokeObjectURL(originalUrl);
+                    objectUrls.delete(originalUrl);
+                    image.removeAttribute('src');
+                    throw new Error('Trình duyệt không đọc được ảnh CCCD.');
+                }
+                if (!viewer.open) return;
+
+                let turns = 0;
+                let rotatedUrl;
+                all('[data-identity-rotate]', section).forEach(button => {
+                    button.onclick = () => {
+                        if (turns) image.classList.remove(rotations[turns]);
+                        turns = (turns + Number(button.dataset.identityRotate) + 4) % 4;
+                        if (turns) image.classList.add(rotations[turns]);
+                    };
+                });
+                if (download) download.onclick = async () => {
+                    download.disabled = true;
+                    status.hidden = true;
+                    try {
+                        let file = blob;
+                        let url = originalUrl;
+                        if (turns) {
+                            file = await exportRotatedIdentityImage(image, turns, blob.type);
+                            if (!viewer.open) return;
+                            if (!file) throw new Error('Image export failed');
+                            if (rotatedUrl) {
+                                URL.revokeObjectURL(rotatedUrl);
+                                objectUrls.delete(rotatedUrl);
+                            }
+                            rotatedUrl = URL.createObjectURL(file);
+                            objectUrls.add(rotatedUrl);
+                            url = rotatedUrl;
+                        }
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `CCCD-${code}-${side === 'front' ? 'mat-truoc' : 'mat-sau'}.${extensions[file.type]}`;
+                        viewer.append(link);
+                        link.click();
+                        link.remove();
+                    } catch {
+                        showError('Không tải được ảnh. Vui lòng thử lại.');
+                    } finally {
+                        download.disabled = false;
+                    }
+                };
+                one('[data-identity-content]', section).hidden = false;
+                status.hidden = true;
+            }
 
             async function loadImage() {
                 if (!viewer.open || controller.signal.aborted) return;
@@ -522,59 +598,7 @@
                     if (!Object.hasOwn(extensions, blob.type) || !blob.size) {
                         throw new Error('Máy chủ trả về dữ liệu ảnh CCCD không hợp lệ.');
                     }
-                    if (!viewer.open) return;
-
-                    const originalUrl = URL.createObjectURL(blob);
-                    objectUrls.add(originalUrl);
-                    image.src = originalUrl;
-                    try {
-                        await image.decode();
-                    } catch {
-                        throw new Error('Trình duyệt không đọc được ảnh CCCD.');
-                    }
-                    if (!viewer.open) return;
-
-                    let turns = 0;
-                    let rotatedUrl;
-                    all('[data-identity-rotate]', section).forEach(button => {
-                        button.onclick = () => {
-                            if (turns) image.classList.remove(rotations[turns]);
-                            turns = (turns + Number(button.dataset.identityRotate) + 4) % 4;
-                            if (turns) image.classList.add(rotations[turns]);
-                        };
-                    });
-                    if (download) download.onclick = async () => {
-                        download.disabled = true;
-                        status.hidden = true;
-                        try {
-                            let file = blob;
-                            let url = originalUrl;
-                            if (turns) {
-                                file = await exportRotatedIdentityImage(image, turns, blob.type);
-                                if (!viewer.open) return;
-                                if (!file) throw new Error('Image export failed');
-                                if (rotatedUrl) {
-                                    URL.revokeObjectURL(rotatedUrl);
-                                    objectUrls.delete(rotatedUrl);
-                                }
-                                rotatedUrl = URL.createObjectURL(file);
-                                objectUrls.add(rotatedUrl);
-                                url = rotatedUrl;
-                            }
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = `CCCD-${code}-${side === 'front' ? 'mat-truoc' : 'mat-sau'}.${extensions[file.type]}`;
-                            viewer.append(link);
-                            link.click();
-                            link.remove();
-                        } catch {
-                            showError('Không tải được ảnh. Vui lòng thử lại.');
-                        } finally {
-                            download.disabled = false;
-                        }
-                    };
-                    one('[data-identity-content]', section).hidden = false;
-                    status.hidden = true;
+                    await showImage(blob);
                 } catch (error) {
                     if (!viewer.open || controller.signal.aborted) return;
                     const temporary = error instanceof TypeError || error.retryable === true;
@@ -587,32 +611,115 @@
                 replacement.hidden = true;
                 imageQueue = imageQueue.then(loadImage);
             }
+            function clearPreview() {
+                if (previewUrl) {
+                    URL.revokeObjectURL(previewUrl);
+                    objectUrls.delete(previewUrl);
+                }
+                previewUrl = undefined;
+                previewTurns = 0;
+                previewImage.removeAttribute('src');
+                previewImage.classList.remove(...rotations.slice(1));
+                preview.hidden = true;
+                submit.disabled = true;
+            }
+
+            input.onchange = async () => {
+                clearPreview();
+                const file = input.files[0];
+                if (!file) return;
+                if (file.size > maxImageBytes || (file.type && !Object.hasOwn(extensions, file.type))) {
+                    showError('Chọn ảnh JPG, PNG hoặc WebP tối đa 3 MiB.');
+                    return;
+                }
+                const url = URL.createObjectURL(file);
+                previewUrl = url;
+                objectUrls.add(url);
+                previewImage.src = url;
+                try {
+                    await previewImage.decode();
+                    if (!viewer.open || previewUrl !== url) return;
+                    const { naturalWidth: width, naturalHeight: height } = previewImage;
+                    if (Math.min(width, height) < 120 || Math.max(width, height) < 200
+                        || Math.max(width, height) > 8000 || width * height > 24000000) {
+                        throw new Error('Ảnh cần tối thiểu 200 × 120 px, tối đa 24 megapixel và 8000 px mỗi cạnh.');
+                    }
+                    status.hidden = true;
+                    preview.hidden = false;
+                    submit.disabled = false;
+                } catch (error) {
+                    if (viewer.open && previewUrl === url) {
+                        clearPreview();
+                        showError(error instanceof DOMException ? 'Không đọc được tệp ảnh đã chọn.' : error.message);
+                    }
+                }
+            };
+            previewButtons.forEach(button => {
+                button.onclick = () => {
+                    if (previewTurns) previewImage.classList.remove(rotations[previewTurns]);
+                    previewTurns = (previewTurns + Number(button.dataset.identityReplacementRotate) + 4) % 4;
+                    if (previewTurns) previewImage.classList.add(rotations[previewTurns]);
+                };
+            });
             replacement.onsubmit = async event => {
                 event.preventDefault();
-                const submit = one('[type="submit"]', replacement);
                 if (submit.disabled) return;
                 const payload = new FormData(replacement);
+                let file = input.files[0];
                 submit.disabled = true;
+                input.disabled = true;
+                previewButtons.forEach(button => { button.disabled = true; });
                 status.classList.remove('text-red-800');
                 status.textContent = 'Đang lưu ảnh thay thế…';
+                status.hidden = false;
                 try {
+                    if (previewTurns) {
+                        const type = file.type || 'image/jpeg';
+                        let rotated = await exportRotatedIdentityImage(previewImage, previewTurns, type);
+                        if (rotated?.size > maxImageBytes) {
+                            const compressedType = rotated.type === 'image/png' ? 'image/webp' : type;
+                            rotated = await exportRotatedIdentityImage(previewImage, previewTurns, compressedType, 0.8);
+                        }
+                        if (!viewer.open) return;
+                        if (!rotated?.size || rotated.size > maxImageBytes || !Object.hasOwn(extensions, rotated.type)) {
+                            showError('Chưa tạo được ảnh xoay trong giới hạn 3 MiB. Vui lòng chọn tệp nhỏ hơn.');
+                            return;
+                        }
+                        file = rotated;
+                        payload.set('identity_image', file, `cccd-${side}.${extensions[file.type]}`);
+                    }
                     const response = await fetch(`/api/admin/bookings/${encodeURIComponent(id)}/identity/${side}`, {
                         method: 'POST', body: payload, cache: 'no-store', redirect: 'error',
                         headers: { 'X-CSRF-Token': LANG_HOME.csrf }, signal: controller.signal,
                     });
                     if (!viewer.open) return;
-                    if (!response.ok && response.status !== 409) {
-                        const problem = await response.json().catch(() => null);
-                        throw new Error(problem?.error || 'Chưa lưu được ảnh CCCD. Vui lòng thử lại.');
+                    if (response.status === 409) {
+                        replacement.reset();
+                        clearPreview();
+                        queueImage();
+                        return;
                     }
+                    const result = await response.json().catch(() => null);
+                    if (!response.ok || result?.ok !== true || !Object.hasOwn(extensions, result.mimeType)) {
+                        throw new Error(result?.error || 'Chưa xác nhận được ảnh CCCD đã lưu. Vui lòng thử lại.');
+                    }
+                    if (!viewer.open) return;
                     replacement.reset();
-                    queueImage();
+                    clearPreview();
+                    replacement.hidden = true;
+                    try {
+                        await showImage(file.slice(0, file.size, result.mimeType));
+                    } catch {
+                        queueImage();
+                    }
                 } catch (error) {
                     if (viewer.open && !controller.signal.aborted) {
                         showError(error instanceof TypeError ? 'Chưa kết nối được máy chủ để lưu ảnh.' : error.message);
                     }
                 } finally {
-                    submit.disabled = false;
+                    submit.disabled = preview.hidden;
+                    input.disabled = false;
+                    previewButtons.forEach(button => { button.disabled = false; });
                 }
             };
             retry.onclick = queueImage;

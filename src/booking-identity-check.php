@@ -17,10 +17,12 @@ function check_saved_booking_identity(PDO $pdo, string $bookingCode): array
     $results = ['front' => 'not_uploaded', 'back' => 'not_uploaded'];
     $images = $pdo->prepare('SELECT side, encrypted_image FROM booking_identity_images WHERE booking_id=?');
     $images->execute([$bookingId]);
-    foreach ($images as $row) {
+    $rows = $images->fetchAll(PDO::FETCH_ASSOC);
+    $images->closeCursor();
+    foreach ($rows as $row) {
         $side = $row['side'];
         try {
-            decrypt_booking_identity($row['encrypted_image'], $bookingId . ':' . $side);
+            decrypt_stored_booking_identity($pdo, $bookingId, $side, $row['encrypted_image']);
             $results[$side] = 'readable';
         } catch (BookingIdentityReadException $error) {
             $results[$side] = $error->getMessage();

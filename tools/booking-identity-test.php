@@ -20,6 +20,17 @@ try {
     file_put_contents($path, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACX0lEQVR4nO3TQQ0AIBDAMMC/xfOCBz5kSatgn+2ZWUDT+R0AvDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIFhdV1yTAQnz76DwQAAAABJRU5ErkJggg=='));
     $upload = ['tmp_name' => $path, 'error' => UPLOAD_ERR_OK, 'size' => filesize($path), 'name' => 'untrusted.php'];
     $images = read_booking_identity_uploads(['identity_front' => $upload, 'identity_back' => $upload]);
+    $pngChunk = static fn(string $type, string $data): string =>
+        pack('N', strlen($data)) . $type . $data . pack('N', crc32($type . $data));
+    $portrait = "\x89PNG\r\n\x1a\n"
+        . $pngChunk('IHDR', pack('NNCCCCC', 120, 200, 8, 2, 0, 0, 0))
+        . $pngChunk('IDAT', gzcompress(str_repeat("\0", (1 + 120 * 3) * 200)))
+        . $pngChunk('IEND', '');
+    file_put_contents($path, $portrait);
+    clearstatcache(true, $path);
+    identity_expect(validate_booking_identity_file($upload)['bytes'] === $portrait, 'Accept a 200 by 120 upload rotated into portrait');
+    file_put_contents($path, $images['front']['bytes']);
+    clearstatcache(true, $path);
     identity_expect(read_booking_identity_uploads([], false) === [], 'Admin may omit both sides');
     identity_expect(array_keys(read_booking_identity_uploads(['identity_front' => $upload], false)) === ['front'], 'Admin may upload one side');
     identity_reject(fn() => read_booking_identity_uploads(['identity_back' => array_replace($upload, ['error' => UPLOAD_ERR_INI_SIZE])], false), 'Optional upload still rejects upload errors');
