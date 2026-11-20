@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+final class BookingIdentityReadException extends RuntimeException {}
+
 function booking_identity_key(?string $secret = null): string
 {
     $secret ??= (string)config('app_key', '');
@@ -20,19 +22,17 @@ function encrypt_booking_identity(string $bytes, string $context): string
 
 function decrypt_booking_identity(string $encrypted, string $context): string
 {
-    if (strlen($encrypted) < 29) throw new RuntimeException('Dữ liệu ảnh CCCD không hợp lệ.');
+    if (strlen($encrypted) < 29) throw new BookingIdentityReadException('invalid_payload');
     $cipher = substr($encrypted, 28);
     $iv = substr($encrypted, 0, 12);
     $tag = substr($encrypted, 12, 16);
-    $plain = openssl_decrypt($cipher, 'aes-256-gcm', booking_identity_key(), OPENSSL_RAW_DATA, $iv, $tag, $context);
-    if ($plain === false) {
-        $legacy = (string)env_value('BOOKING_IDENTITY_LEGACY_APP_KEY', '');
-        if (strlen($legacy) >= 16) {
-            $plain = openssl_decrypt($cipher, 'aes-256-gcm', booking_identity_key($legacy), OPENSSL_RAW_DATA, $iv, $tag, $context);
-        }
+    $keys = [(string)config('app_key', ''), (string)env_value('BOOKING_IDENTITY_LEGACY_APP_KEY', '')];
+    foreach ($keys as $key) {
+        if (strlen($key) < 16) continue;
+        $plain = openssl_decrypt($cipher, 'aes-256-gcm', booking_identity_key($key), OPENSSL_RAW_DATA, $iv, $tag, $context);
+        if ($plain !== false) return $plain;
     }
-    if ($plain === false) throw new RuntimeException('Không giải mã được ảnh CCCD.');
-    return $plain;
+    throw new BookingIdentityReadException(strlen($keys[0]) < 16 && strlen($keys[1]) < 16 ? 'missing_key' : 'authentication_failed');
 }
 
 function validate_booking_identity_file(array $file): array
@@ -96,14 +96,20 @@ function admin_booking_identity_image(string $bookingId, string $side): never
 {
     require_admin();
     require_permission('bookings.identity');
+    header('Cache-Control: private, no-store, max-age=0');
+    header('Pragma: no-cache');
+    if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
     $find = db()->prepare('SELECT mime_type,encrypted_image FROM booking_identity_images WHERE booking_id=? AND side=?');
     $find->execute([$bookingId, $side]);
     $row = $find->fetch();
     if (!$row) throw new BookingException('Đơn chưa có ảnh CCCD này.', 404);
-    $bytes = decrypt_booking_identity($row['encrypted_image'], $bookingId . ':' . $side);
+    try {
+        $bytes = decrypt_booking_identity($row['encrypted_image'], $bookingId . ':' . $side);
+    } catch (BookingIdentityReadException $error) {
+        error_log(sprintf('Booking identity read failed booking=%s side=%s reason=%s', $bookingId, $side, $error->getMessage()));
+        throw new BookingException('Không đọc được ảnh CCCD đã lưu. Liên hệ quản trị hệ thống để kiểm tra ảnh và khóa mã hóa.', 409);
+    }
     header('Content-Type: ' . $row['mime_type']);
-    header('Cache-Control: private, no-store, max-age=0');
-    header('Pragma: no-cache');
     header('X-Content-Type-Options: nosniff');
     header('Cross-Origin-Resource-Policy: same-origin');
     header("Content-Security-Policy: default-src 'none'; sandbox");

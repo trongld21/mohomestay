@@ -31,9 +31,20 @@ try {
     putenv('BOOKING_IDENTITY_LEGACY_APP_KEY=' . $originalKey);
     try {
         identity_expect(decrypt_booking_identity($encrypted, 'booking:front') === $images['front']['bytes'], 'Read existing images after key rotation');
+        putenv('APP_KEY=short');
+        identity_expect(decrypt_booking_identity($encrypted, 'booking:front') === $images['front']['bytes'], 'The legacy key can recover an image when the current key is unusable');
+        identity_reject(fn() => encrypt_booking_identity($images['front']['bytes'], 'booking:front'), 'New images still require a valid current key');
+        putenv('APP_KEY=rotated-identity-test-key-for-synthetic-fixtures-only');
         $newImage = encrypt_booking_identity($images['front']['bytes'], 'booking:front');
         putenv('BOOKING_IDENTITY_LEGACY_APP_KEY');
         identity_expect(decrypt_booking_identity($newImage, 'booking:front') === $images['front']['bytes'], 'New images use the current key');
+        putenv('APP_KEY=short');
+        try {
+            decrypt_booking_identity($encrypted, 'booking:front');
+            throw new LogicException('Missing keys should fail closed');
+        } catch (BookingIdentityReadException $error) {
+            identity_expect($error->getMessage() === 'missing_key', 'Missing keys are distinguishable in server logs');
+        }
     } finally {
         putenv('APP_KEY=' . $originalKey);
         putenv('BOOKING_IDENTITY_LEGACY_APP_KEY');
@@ -42,8 +53,8 @@ try {
         try {
             decrypt_booking_identity($data, $i === 0 ? 'booking:front' : 'other-booking:front');
             throw new LogicException('Tampering or cross-booking substitution accepted');
-        } catch (RuntimeException $error) {
-            if ($error instanceof LogicException) throw $error;
+        } catch (BookingIdentityReadException $error) {
+            identity_expect($error->getMessage() === 'authentication_failed', 'Authentication failures are distinguishable from transient service errors');
         }
     }
     $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);

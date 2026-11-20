@@ -41,3 +41,42 @@ vm.runInNewContext(source.slice(eventStart, eventEnd), {
 listener({ detail: { bookingCode: 'MO-GOI-MOI' } });
 assert.deepEqual(staleFilters, { query: 'MO-GOI-MOI', status: 'all', room: 'all', from: '', to: '', showFinished: true });
 assert.equal(reloaded, true, 'Reload after selecting the new booking');
+
+async function verifyIdentityRetries() {
+    const first = source.indexOf('    async function fetchIdentityImage(');
+    const last = source.indexOf('    function exportRotatedIdentityImage(', first);
+    let results;
+    let attempts;
+    const browser = vm.createContext({
+        setTimeout: (callback) => callback(),
+        TypeError,
+        fetch: async () => {
+            attempts++;
+            const status = results.shift();
+            if (!status) throw new TypeError('Network unavailable');
+            return new Response(null, { status });
+        },
+    });
+    vm.runInContext(source.slice(first, last), browser);
+    const controller = new AbortController();
+    const request = () => browser.fetchIdentityImage('booking', 'back', controller.signal);
+    results = [503, 0, 200];
+    attempts = 0;
+    assert.equal((await request()).status, 200, 'Temporary service and network errors recover');
+    assert.equal(attempts, 3);
+    results = [409, 200];
+    attempts = 0;
+    assert.equal((await request()).status, 409, 'A saved-image error is reported immediately');
+    assert.equal(attempts, 1);
+    results = [503, 503, 503, 200];
+    attempts = 0;
+    await assert.rejects(request(), error => error.retryable === true);
+    assert.equal(attempts, 3, 'Repeated outages stop after three attempts');
+    controller.abort();
+    await assert.rejects(request(), { name: 'AbortError' });
+    assert.equal(attempts, 3, 'A closed viewer never sends another request');
+}
+verifyIdentityRetries().then(() => console.log('Identity image retries and permanent errors: OK')).catch(error => {
+    console.error(error);
+    process.exitCode = 1;
+});

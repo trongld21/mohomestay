@@ -379,6 +379,27 @@
             <td class="booking-actions-cell"><div class="admin-actions">${actions || '<span class="booking-ended">—</span>'}</div></td>
         </tr>`;
     }
+    async function fetchIdentityImage(id, side, signal) {
+        const url = `/api/admin/bookings/${encodeURIComponent(id)}/identity/${side}`;
+        const options = { cache: 'no-store', redirect: 'error', signal };
+        for (const delay of [0, 400, 900]) {
+            if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+            signal.throwIfAborted();
+            try {
+                const response = await fetch(url, options);
+                if (![502, 503, 504].includes(response.status)) return response;
+                await response.body?.cancel();
+                const error = new Error('Temporary identity service failure');
+                error.retryable = true;
+                throw error;
+            } catch (error) {
+                if (signal.aborted || delay === 900 || (!(error instanceof TypeError) && !error.retryable)) {
+                    throw error;
+                }
+            }
+        }
+    }
+
     function exportRotatedIdentityImage(image, turns, type) {
         const canvas = document.createElement('canvas');
         const { naturalWidth: width, naturalHeight: height } = image;
@@ -423,6 +444,7 @@
                         </div>
                     </div>
                     <p data-identity-status role="status" class="mt-2 text-sm">Đang tải ảnh…</p>
+                    <button type="button" data-identity-retry class="${secondaryButtonClass} mt-2" aria-label="Tải lại ảnh CCCD ${label.toLowerCase()}" hidden>Tải lại ảnh</button>
                 </section>`).join('')}
         </div>`;
         viewer.setAttribute('aria-labelledby', 'identity-viewer-title');
@@ -444,89 +466,102 @@
             401: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
             403: 'Tài khoản chưa được cấp quyền xem ảnh CCCD.',
             404: 'Đơn này chưa có ảnh CCCD cho mặt này.',
+            409: 'Không đọc được ảnh CCCD đã lưu. Liên hệ quản trị hệ thống để kiểm tra ảnh và khóa mã hóa.',
         };
         const rotations = ['', 'rotate-90', 'rotate-180', '-rotate-90'];
-        all('[data-identity-side]', viewer).forEach(async section => {
+        let imageQueue = Promise.resolve();
+        all('[data-identity-side]', viewer).forEach(section => {
             const { identitySide: side } = section.dataset;
             const status = one('[data-identity-status]', section);
             const image = one('img', section);
             const download = one('[data-identity-download]', section);
+            const retry = one('[data-identity-retry]', section);
             const showError = message => {
                 status.textContent = message;
                 status.classList.add('text-red-800');
                 status.hidden = false;
             };
 
-            try {
-                const response = await fetch(`/api/admin/bookings/${encodeURIComponent(id)}/identity/${side}`, {
-                    cache: 'no-store',
-                    redirect: 'error',
-                    signal: controller.signal,
-                });
-                if (!response.ok) {
-                    throw new Error(errors[response.status] || `Máy chủ không tải được ảnh CCCD (HTTP ${response.status}).`);
-                }
-                const blob = await response.blob();
-                if (!Object.hasOwn(extensions, blob.type) || !blob.size) {
-                    throw new Error('Máy chủ trả về dữ liệu ảnh CCCD không hợp lệ.');
-                }
-                if (!viewer.open) return;
-
-                const originalUrl = URL.createObjectURL(blob);
-                objectUrls.add(originalUrl);
-                image.src = originalUrl;
-                try {
-                    await image.decode();
-                } catch {
-                    throw new Error('Trình duyệt không đọc được ảnh CCCD.');
-                }
-                if (!viewer.open) return;
-
-                let turns = 0;
-                let rotatedUrl;
-                all('[data-identity-rotate]', section).forEach(button => {
-                    button.onclick = () => {
-                        if (turns) image.classList.remove(rotations[turns]);
-                        turns = (turns + Number(button.dataset.identityRotate) + 4) % 4;
-                        if (turns) image.classList.add(rotations[turns]);
-                    };
-                });
-                download.onclick = async () => {
-                    download.disabled = true;
-                    status.hidden = true;
-                    try {
-                        let file = blob;
-                        let url = originalUrl;
-                        if (turns) {
-                            file = await exportRotatedIdentityImage(image, turns, blob.type);
-                            if (!viewer.open) return;
-                            if (!file) throw new Error('Image export failed');
-                            if (rotatedUrl) {
-                                URL.revokeObjectURL(rotatedUrl);
-                                objectUrls.delete(rotatedUrl);
-                            }
-                            rotatedUrl = URL.createObjectURL(file);
-                            objectUrls.add(rotatedUrl);
-                            url = rotatedUrl;
-                        }
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = `CCCD-${code}-${side === 'front' ? 'mat-truoc' : 'mat-sau'}.${extensions[file.type]}`;
-                        viewer.append(link);
-                        link.click();
-                        link.remove();
-                    } catch {
-                        showError('Không tải được ảnh. Vui lòng thử lại.');
-                    } finally {
-                        download.disabled = false;
-                    }
-                };
-                one('[data-identity-content]', section).hidden = false;
-                status.hidden = true;
-            } catch (error) {
+            async function loadImage() {
                 if (!viewer.open || controller.signal.aborted) return;
-                showError(error instanceof TypeError ? 'Không kết nối được máy chủ để tải ảnh CCCD.' : error.message);
+                status.classList.remove('text-red-800');
+                status.textContent = 'Đang tải ảnh…';
+                status.hidden = false;
+                try {
+                    const response = await fetchIdentityImage(id, side, controller.signal);
+                    if (!response.ok) {
+                        throw new Error(errors[response.status] || `Máy chủ không tải được ảnh CCCD (HTTP ${response.status}).`);
+                    }
+                    const blob = await response.blob();
+                    if (!Object.hasOwn(extensions, blob.type) || !blob.size) {
+                        throw new Error('Máy chủ trả về dữ liệu ảnh CCCD không hợp lệ.');
+                    }
+                    if (!viewer.open) return;
+
+                    const originalUrl = URL.createObjectURL(blob);
+                    objectUrls.add(originalUrl);
+                    image.src = originalUrl;
+                    try {
+                        await image.decode();
+                    } catch {
+                        throw new Error('Trình duyệt không đọc được ảnh CCCD.');
+                    }
+                    if (!viewer.open) return;
+
+                    let turns = 0;
+                    let rotatedUrl;
+                    all('[data-identity-rotate]', section).forEach(button => {
+                        button.onclick = () => {
+                            if (turns) image.classList.remove(rotations[turns]);
+                            turns = (turns + Number(button.dataset.identityRotate) + 4) % 4;
+                            if (turns) image.classList.add(rotations[turns]);
+                        };
+                    });
+                    download.onclick = async () => {
+                        download.disabled = true;
+                        status.hidden = true;
+                        try {
+                            let file = blob;
+                            let url = originalUrl;
+                            if (turns) {
+                                file = await exportRotatedIdentityImage(image, turns, blob.type);
+                                if (!viewer.open) return;
+                                if (!file) throw new Error('Image export failed');
+                                if (rotatedUrl) {
+                                    URL.revokeObjectURL(rotatedUrl);
+                                    objectUrls.delete(rotatedUrl);
+                                }
+                                rotatedUrl = URL.createObjectURL(file);
+                                objectUrls.add(rotatedUrl);
+                                url = rotatedUrl;
+                            }
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `CCCD-${code}-${side === 'front' ? 'mat-truoc' : 'mat-sau'}.${extensions[file.type]}`;
+                            viewer.append(link);
+                            link.click();
+                            link.remove();
+                        } catch {
+                            showError('Không tải được ảnh. Vui lòng thử lại.');
+                        } finally {
+                            download.disabled = false;
+                        }
+                    };
+                    one('[data-identity-content]', section).hidden = false;
+                    status.hidden = true;
+                } catch (error) {
+                    if (!viewer.open || controller.signal.aborted) return;
+                    const temporary = error instanceof TypeError || error.retryable === true;
+                    showError(temporary ? 'Máy chủ tạm thời chưa tải được ảnh CCCD. Vui lòng thử lại.' : error.message);
+                    retry.hidden = !temporary;
+                }
             }
+            function queueImage() {
+                retry.hidden = true;
+                imageQueue = imageQueue.then(loadImage);
+            }
+            retry.onclick = queueImage;
+            queueImage();
         });
     }
 
