@@ -122,6 +122,10 @@ function write_booking_identity_image(PDO $pdo, PDOStatement $statement, string 
     if ($stored === $encrypted) return;
 
     if ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql') {
+        $integrity = $pdo->prepare('SELECT OCTET_LENGTH(encrypted_image) AS bytes, SHA2(encrypted_image,256) AS digest FROM booking_identity_images WHERE booking_id=? AND side=?');
+        $integrity->execute([$bookingId, $side]);
+        $actual = $integrity->fetch();
+        $integrity->closeCursor();
         // Check the stored bytes without relying on the driver's BLOB result transport.
         $verified = read_booking_identity_as_text($pdo, $bookingId, $side);
         if ($verified === $encrypted) return;
@@ -131,6 +135,16 @@ function write_booking_identity_image(PDO $pdo, PDOStatement $statement, string 
             $retry->execute([$image['mime'], base64_encode($encrypted), $bookingId, $side]);
             if (read_booking_identity_as_text($pdo, $bookingId, $side) === $encrypted) return;
         }
+        error_log(sprintf(
+            'Booking identity storage mismatch booking=%s side=%s expected_bytes=%d stored_bytes=%s digest_matches=%s binary_read_bytes=%s text_read_bytes=%s',
+            $bookingId,
+            $side,
+            strlen($encrypted),
+            $actual ? (string)$actual['bytes'] : 'missing',
+            $actual && hash_equals(hash('sha256', $encrypted), (string)$actual['digest']) ? 'yes' : 'no',
+            is_string($stored) ? (string)strlen($stored) : get_debug_type($stored),
+            is_string($verified) ? (string)strlen($verified) : 'unavailable'
+        ));
     }
 
     error_log(sprintf('Booking identity write verification failed booking=%s side=%s', $bookingId, $side));
