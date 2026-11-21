@@ -521,7 +521,7 @@ Nhân viên không được gọi API này dù đã có quyền cập nhật đ�
 Mặc định chọn **Chỉ đổi phòng, giữ nguyên giờ nhận/trả và mã cổng đã cấp**.
 Máy chủ lấy giờ đang lưu của đơn, không dùng giờ gửi từ biểu mẫu trong chế độ này;
 mã cổng chung TTLock vẫn gắn với cùng đơn và giữ nguyên sau khi chuyển phòng.
-Bỏ chọn để sửa lịch; giờ mới chỉ nhận phút 00/30 và giây 00, và vẫn kiểm tra thời hạn mã đã cấp.
+Bỏ chọn để sửa lịch. Giờ mới chỉ nhận phút 00/30 và giây 00.
 
 Thao tác dùng chung kiểm tra tồn phòng với ma trận **Tìm phòng trống**, gồm lịch
 khách, 30 phút dọn phòng, khóa phòng và giữ báo giá. Sau khi lưu, ma trận giải phóng
@@ -530,8 +530,12 @@ phòng cũ và tính lại lịch cùng thời gian dọn ở phòng mới. Lý 
 bằng `php tools/migrate.php` trước khi dùng tính năng.
 
 Đơn đã xác nhận trả/phát sinh phụ thu hoặc đang khóa khẩn cấp phải xử lý nghiệp vụ
-đó trước. Nếu cần đổi thời hạn của đơn đã cấp/đang đối soát mã TTLock, hệ thống
-yêu cầu xử lý mã cửa trước; không tự sửa thời hạn mã đã cấp.
+đó trước. Khi đổi sang khung hiệu lực khác, superadmin thu hồi mã cũ còn hiệu lực
+trong ứng dụng TTLock và xác nhận ngay trong hộp thoại. Với lần cấp đang đối soát,
+kiểm tra các mã mang mã đơn trước khi xác nhận. Khóa không có gateway cần thu hồi
+tại chỗ qua Bluetooth. Mã đã hết hạn có thể được thay tự động. Sau khi lưu lịch mới,
+cron cấp mã theo lịch mới và gửi lại email xác nhận nếu còn thời hạn sử dụng.
+Chạy migration `032_booking_access_revision` trước khi dùng luồng thay mã.
 
 ## Lịch theo giờ, giữ căn và trả phòng
 

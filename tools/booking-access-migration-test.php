@@ -42,6 +42,17 @@ try {
     }
     $index = $pdo->query("SHOW INDEX FROM booking_access_codes WHERE Key_name='booking_access_pin_lookup'")->fetch();
     if (!$index || (int)$index['Non_unique'] !== 1) throw new RuntimeException('PIN lookup index must allow repeats.');
+    $revisionSql = (string)file_get_contents($migrations . '032_booking_access_revision.sql');
+    $pdo->exec($revisionSql);
+    $pdo->exec($revisionSql);
+    $after = $pdo->query('SELECT * FROM booking_access_codes ORDER BY booking_id')->fetchAll();
+    foreach ($after as $key => $row) {
+        $revision = $row['revision'];
+        unset($row['revision']);
+        if ((int)$revision !== 0 || $row !== $before[$key]) {
+            throw new RuntimeException('Existing passcodes must retain their legacy name and stored data.');
+        }
+    }
     try {
         $insert->execute([str_repeat('a', 32), '1234567', 13, 'READY']);
         throw new RuntimeException('A booking must still have at most one access record.');

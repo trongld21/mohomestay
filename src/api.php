@@ -163,8 +163,12 @@ function handle_api(string $path, string $method): never
         if ($path === '/api/admin/bookings' && $method === 'GET') admin_bookings_api();
         if ($method === 'POST' && preg_match('#^/api/admin/bookings/([a-f0-9]{32})/stay$#', $path, $matches)) {
             require_csrf();
-            correct_booking_stay(db(), $matches[1], json_body());
-            json_response(['ok' => true]);
+            try {
+                $replacementQueued = correct_booking_stay(db(), $matches[1], json_body());
+            } catch (BookingStayAccessException $error) {
+                json_response(['error' => $error->getMessage(), 'revokeAccess' => $error->accessToken], $error->httpStatus);
+            }
+            json_response(['ok' => true, 'replacementQueued' => $replacementQueued]);
         }
         if ($path === '/api/admin/bookings' && $method === 'POST') {
             require_admin();

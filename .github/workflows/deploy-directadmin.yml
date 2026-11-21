@@ -57,6 +57,7 @@ jobs:
           php tools/directadmin-deploy-test.php
           php tools/ttlock-test.php
           php tools/booking-access-test.php
+          php tools/booking-stay-test.php
           php tools/booking-identity-test.php
           php tools/manual-access-test.php
           php tools/room-test.php

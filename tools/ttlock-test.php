@@ -83,6 +83,17 @@ $recovered = new TTLockClient($options, static function(string $url,array $param
     throw new LogicException('Recovery must not generate again');
 });
 tt_expect($recovered->ensureGeneratedPasscode($generatedRow,false) === ['code'=>'0563456','remote_id'=>10236], 'Recover generated code by booking identity after timeout');
+$replacement = new TTLockClient($options, static function (string $url, array $params) use ($payload): array {
+    if (str_ends_with($url, '/oauth2/token')) return ['access_token' => 'token'];
+    if (str_ends_with($url, '/listKeyboardPwd')) {
+        return ['list' => [array_replace($payload, ['keyboardPwdName' => 'MO-A0E6E83D76', 'keyboardPwdId' => 10236])]];
+    }
+    tt_expect(str_ends_with($url, '/keyboardPwd/get') && $params['keyboardPwdName'] === 'MO-A0E6E83D76-R1',
+        'Replacement ignores previous TTLock entries and has its own name');
+    return ['keyboardPwd' => '0876543', 'keyboardPwdId' => 10237];
+});
+tt_expect($replacement->ensureGeneratedPasscode($generatedRow + ['revision' => 1]) === ['code' => '0876543', 'remote_id' => 10237],
+    'A previous TTLock entry must not block issuance for the new stay');
 foreach ([[], ['keyboardPwd'=>'123','keyboardPwdId'=>12], ['keyboardPwd'=>'0563456','keyboardPwdId'=>0]] as $invalidResult) {
     $badGenerated = new TTLockClient($options, static function(string $url,array $params) use ($invalidResult): array {
         if (str_ends_with($url,'/oauth2/token')) return ['access_token'=>'token'];

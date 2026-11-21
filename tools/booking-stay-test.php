@@ -35,16 +35,17 @@ function reject_stay(callable $action, int $status): void
 
 $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
 $pdo->exec("CREATE TABLE rooms (id TEXT PRIMARY KEY,status TEXT,is_active INTEGER,max_guests INTEGER);
-CREATE TABLE bookings (id TEXT PRIMARY KEY,room_id TEXT,check_in TEXT,check_out TEXT,status TEXT,hold_expires_at TEXT,number_of_guests INTEGER,total_price INTEGER,payment_status TEXT,booking_code TEXT,created_at TEXT,continued_from_booking_id TEXT,payment_method TEXT);
+CREATE TABLE bookings (id TEXT PRIMARY KEY,room_id TEXT,check_in TEXT,check_out TEXT,status TEXT,hold_expires_at TEXT,number_of_guests INTEGER,total_price INTEGER,payment_status TEXT,booking_code TEXT,created_at TEXT,continued_from_booking_id TEXT,payment_method TEXT,confirmation_email_status TEXT DEFAULT 'SENT',confirmation_email_attempts INTEGER DEFAULT 1,confirmation_email_sent_at TEXT,confirmation_email_error TEXT);
 CREATE TABLE booking_checkout_charges (booking_id TEXT PRIMARY KEY,actual_checkout_at TEXT);
 CREATE TABLE room_emergency_locks (id TEXT,booking_id TEXT,room_id TEXT,starts_at TEXT,ended_at TEXT);
 CREATE TABLE room_quote_holds (id TEXT,room_id TEXT,starts_at TEXT,ends_at TEXT,released_at TEXT,expires_at TEXT);
 CREATE TABLE room_availability (id TEXT,room_id TEXT,date TEXT,available INTEGER);
-CREATE TABLE booking_access_codes (booking_id TEXT PRIMARY KEY,starts_at TEXT,ends_at TEXT,sync_status TEXT,remote_id INTEGER,attempts INTEGER,code_mode TEXT);
+CREATE TABLE booking_access_codes (booking_id TEXT PRIMARY KEY,starts_at TEXT,ends_at TEXT,sync_status TEXT,remote_id INTEGER,attempts INTEGER,code_mode TEXT,code TEXT,sync_error TEXT,last_attempt_at TEXT,revision INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE booking_stay_changes (id TEXT PRIMARY KEY,booking_id TEXT,actor_id TEXT,old_room_id TEXT,new_room_id TEXT,old_check_in TEXT,old_check_out TEXT,new_check_in TEXT,new_check_out TEXT,reason TEXT);
 INSERT INTO rooms VALUES ('mo','ACTIVE',1,2),('black','ACTIVE',1,2),('hidden','HIDDEN',0,2);");
 $id = str_repeat('a', 32);
-$pdo->prepare("INSERT INTO bookings VALUES (?,'mo','2026-10-23 15:00:00','2026-10-24 03:00:00','CONFIRMED',NULL,2,330000,'PAID','MO-TEST','2026-10-20 01:00:00',NULL,'bank_transfer')")->execute([$id]);
+$bookingColumns = 'id,room_id,check_in,check_out,status,hold_expires_at,number_of_guests,total_price,payment_status,booking_code,created_at,continued_from_booking_id,payment_method';
+$pdo->prepare("INSERT INTO bookings ($bookingColumns) VALUES (?,'mo','2026-10-23 15:00:00','2026-10-24 03:00:00','CONFIRMED',NULL,2,330000,'PAID','MO-TEST','2026-10-20 01:00:00',NULL,'bank_transfer')")->execute([$id]);
 $input = [
     'roomId' => 'black', 'checkIn' => '2026-10-23T22:00', 'checkOut' => '2026-10-24T10:00',
     'expectedRoomId' => 'mo', 'expectedCheckIn' => '2026-10-23 15:00:00', 'expectedCheckOut' => '2026-10-24 03:00:00',
@@ -77,15 +78,11 @@ $pdo->prepare("INSERT INTO room_quote_holds VALUES ('hold','black','2026-10-23 1
     ->execute([gmdate('Y-m-d H:i:s', time() + 3600)]);
 reject_stay(fn() => correct_booking_stay($pdo, $id, $input), 409);
 $pdo->exec('DELETE FROM room_quote_holds');
-$pdo->prepare("INSERT INTO bookings VALUES (?,'black','2026-10-24 03:29:00','2026-10-24 07:00:00','CONFIRMED',NULL,1,1,'PAID','MO-OTHER','2026-10-20 00:00:00',NULL,'bank_transfer')")->execute([str_repeat('b', 32)]);
+$pdo->prepare("INSERT INTO bookings ($bookingColumns) VALUES (?,'black','2026-10-24 03:29:00','2026-10-24 07:00:00','CONFIRMED',NULL,1,1,'PAID','MO-OTHER','2026-10-20 00:00:00',NULL,'bank_transfer')")->execute([str_repeat('b', 32)]);
 reject_stay(fn() => correct_booking_stay($pdo, $id, $input), 409);
 expect_stay($pdo->query('SELECT COUNT(*) FROM booking_stay_changes')->fetchColumn() === 0, 'Rejected edit must not be audited as successful');
 $pdo->exec("DELETE FROM bookings WHERE booking_code='MO-OTHER'");
-$pdo->prepare("INSERT INTO booking_access_codes VALUES (?,?,?,'READY',123,1,'GENERATED')")->execute([$id, '2026-10-23 15:00:00', '2026-10-24 03:00:00']);
-$changedTime = array_replace($input, ['checkOut' => '2026-10-24T11:00']);
-reject_stay(fn() => correct_booking_stay($pdo, $id, $changedTime), 409);
-$pdo->exec('DELETE FROM booking_access_codes');
-$pdo->prepare("INSERT INTO booking_access_codes VALUES (?,?,?,'PENDING',NULL,0,'GENERATED')")
+$pdo->prepare("INSERT INTO booking_access_codes (booking_id,starts_at,ends_at,sync_status,remote_id,attempts,code_mode) VALUES (?,?,?,'PENDING',NULL,0,'GENERATED')")
     ->execute([$id, '2026-10-23 15:00:00', '2026-10-24 04:00:00']);
 $input['checkOut'] = '2026-10-24T11:00';
 correct_booking_stay($pdo, $id, $input);
@@ -131,3 +128,27 @@ expect_stay($moved['room_id'] === 'black' && $moved['check_in'] === $move['expec
 expect_stay($pdo->query('SELECT * FROM booking_access_codes')->fetch() === $accessBeforeMove, 'Issued gate credential must remain unchanged when moving rooms.');
 reject_stay(fn() => correct_booking_stay($pdo, $id, $move), 409);
 echo "Issued-code room-only transfer, preserved dates and stale edits: OK\n";
+
+$pdo->exec("UPDATE bookings SET check_in='2099-11-23 14:00:00',check_out='2099-11-24 02:00:00'");
+$pdo->exec("UPDATE booking_access_codes SET starts_at='2099-11-23 14:00:00',ends_at='2099-11-24 03:00:00',code='01234567'");
+$reschedule = [
+    'roomId' => 'black', 'checkIn' => '2099-11-22T21:00', 'checkOut' => '2099-11-23T09:00',
+    'expectedRoomId' => 'black', 'expectedCheckIn' => '2099-11-23 14:00:00', 'expectedCheckOut' => '2099-11-24 02:00:00',
+    'reason' => 'Khách chuyển lịch sớm một ngày',
+];
+try {
+    correct_booking_stay($pdo, $id, $reschedule);
+    throw new RuntimeException('Expected physical revocation confirmation');
+} catch (BookingStayAccessException $error) {
+    $reschedule['revokedAccess'] = $error->accessToken;
+}
+$pdo->exec('UPDATE booking_access_codes SET attempts=2');
+reject_stay(fn() => correct_booking_stay($pdo, $id, $reschedule), 409);
+$pdo->exec('UPDATE booking_access_codes SET attempts=1');
+correct_booking_stay($pdo, $id, $reschedule);
+$access = $pdo->query('SELECT * FROM booking_access_codes')->fetch();
+expect_stay($access['sync_status'] === 'PENDING' && $access['remote_id'] === null && $access['code'] === null
+    && (int)$access['attempts'] === 0 && (int)$access['revision'] === 1, 'Confirmed revocation must queue a separate issuance');
+expect_stay($access['starts_at'] === '2099-11-22 14:00:00' && $access['ends_at'] === '2099-11-23 03:00:00', 'Replacement follows the new schedule');
+expect_stay($pdo->query('SELECT confirmation_email_status FROM bookings')->fetchColumn() === 'PENDING', 'Updated stay awaits its replacement confirmation');
+echo "Issued code reschedule, stale revocation and replacement issuance: OK\n";
