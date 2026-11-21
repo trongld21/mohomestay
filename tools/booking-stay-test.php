@@ -41,7 +41,7 @@ CREATE TABLE room_emergency_locks (id TEXT,booking_id TEXT,room_id TEXT,starts_a
 CREATE TABLE room_quote_holds (id TEXT,room_id TEXT,starts_at TEXT,ends_at TEXT,released_at TEXT,expires_at TEXT);
 CREATE TABLE room_availability (id TEXT,room_id TEXT,date TEXT,available INTEGER);
 CREATE TABLE booking_access_codes (booking_id TEXT PRIMARY KEY,starts_at TEXT,ends_at TEXT,sync_status TEXT,remote_id INTEGER,attempts INTEGER,code_mode TEXT,code TEXT,sync_error TEXT,last_attempt_at TEXT,revision INTEGER NOT NULL DEFAULT 0);
-CREATE TABLE booking_stay_changes (id TEXT PRIMARY KEY,booking_id TEXT,actor_id TEXT,old_room_id TEXT,new_room_id TEXT,old_check_in TEXT,old_check_out TEXT,new_check_in TEXT,new_check_out TEXT,reason TEXT);
+CREATE TABLE booking_stay_changes (id TEXT PRIMARY KEY,booking_id TEXT,actor_id TEXT,old_room_id TEXT,new_room_id TEXT,old_check_in TEXT,old_check_out TEXT,new_check_in TEXT,new_check_out TEXT,reason TEXT,retained_access_ends_at TEXT);
 INSERT INTO rooms VALUES ('mo','ACTIVE',1,2),('black','ACTIVE',1,2),('hidden','HIDDEN',0,2);");
 $id = str_repeat('a', 32);
 $bookingColumns = 'id,room_id,check_in,check_out,status,hold_expires_at,number_of_guests,total_price,payment_status,booking_code,created_at,continued_from_booking_id,payment_method';
@@ -152,3 +152,21 @@ expect_stay($access['sync_status'] === 'PENDING' && $access['remote_id'] === nul
 expect_stay($access['starts_at'] === '2099-11-22 14:00:00' && $access['ends_at'] === '2099-11-23 03:00:00', 'Replacement follows the new schedule');
 expect_stay($pdo->query('SELECT confirmation_email_status FROM bookings')->fetchColumn() === 'PENDING', 'Updated stay awaits its replacement confirmation');
 echo "Issued code reschedule, stale revocation and replacement issuance: OK\n";
+
+$pdo->exec("UPDATE booking_access_codes SET sync_status='READY',remote_id=456,attempts=1,code='01234568'");
+$nextStay = array_replace($reschedule, [
+    'expectedCheckIn' => '2099-11-22 14:00:00', 'expectedCheckOut' => '2099-11-23 02:00:00',
+    'checkIn' => '2099-11-21T21:00', 'checkOut' => '2099-11-22T09:00', 'revokedAccess' => null,
+]);
+try {
+    correct_booking_stay($pdo, $id, $nextStay);
+    throw new RuntimeException('Expected an explicit choice for old PIN');
+} catch (BookingStayAccessException $error) {
+    expect_stay($error->mayRetainUntil === '2099-11-23 03:00:00', 'Prompt shows actual old expiry');
+    $nextStay['retainAccess'] = $error->accessToken;
+}
+reject_stay(fn() => correct_booking_stay($pdo, $id, array_replace($nextStay, ['retainAccess' => 'stale'])), 409);
+$result = correct_booking_stay($pdo, $id, $nextStay);
+expect_stay($result === ['replacementQueued' => true, 'retainedAccessEndsAt' => '2099-11-23 03:00:00'], 'Explicit retention queues the new code');
+expect_stay($pdo->query('SELECT retained_access_ends_at FROM booking_stay_changes WHERE retained_access_ends_at IS NOT NULL')->fetchColumn() === '2099-11-23 03:00:00', 'Audit stores existing access expiry');
+expect_stay($pdo->query('SELECT code FROM booking_access_codes')->fetchColumn() === null, 'Only the new credential can be shared by the application');

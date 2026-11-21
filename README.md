@@ -533,9 +533,12 @@ bằng `php tools/migrate.php` trước khi dùng tính năng.
 đó trước. Khi đổi sang khung hiệu lực khác, superadmin thu hồi mã cũ còn hiệu lực
 trong ứng dụng TTLock và xác nhận ngay trong hộp thoại. Với lần cấp đang đối soát,
 kiểm tra các mã mang mã đơn trước khi xác nhận. Khóa không có gateway cần thu hồi
-tại chỗ qua Bluetooth. Mã đã hết hạn có thể được thay tự động. Sau khi lưu lịch mới,
-cron cấp mã theo lịch mới và gửi lại email xác nhận nếu còn thời hạn sử dụng.
-Chạy migration `032_booking_access_revision` trước khi dùng luồng thay mã.
+tại chỗ qua Bluetooth. Với mã TTLock tự sinh, superadmin cũng có thể chọn cấp mã
+mới và để mã cũ tự hết hạn. Hộp thoại hiển thị thời điểm hết hạn theo giờ Việt Nam
+và lịch sử đổi lịch ghi lại lựa chọn này. Mã đã hết hạn có thể được thay tự động.
+Sau khi lưu lịch mới, cron cấp mã theo lịch mới và gửi lại email xác nhận nếu còn
+thời hạn sử dụng. Luồng thay mã dùng migrations `032_booking_access_revision`
+và `033_booking_stay_retained_access`.
 
 ## Lịch theo giờ, giữ căn và trả phòng
 
