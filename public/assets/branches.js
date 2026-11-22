@@ -35,6 +35,20 @@
         if (link && !link.hasAttribute("data-branch-switch")) {
             link.setAttribute("href", branchUrl(link.getAttribute("href")));
         }
+        document.querySelectorAll("[data-branch-switcher][open]").forEach((switcher) => {
+            if (!switcher.contains(event.target)) {
+                switcher.open = false;
+            }
+        });
+    }, true);
+    document.addEventListener("keydown", (event) => {
+        const switcher = document.querySelector("[data-branch-switcher][open]");
+        if (event.key === "Escape" && switcher) {
+            switcher.open = false;
+            switcher.querySelector("summary").focus();
+            event.preventDefault();
+            event.stopPropagation();
+        }
     }, true);
     document.addEventListener("submit", (event) => {
         const form = event.target;

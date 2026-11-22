@@ -107,6 +107,11 @@ try {
         branch_expect((int)$two->query('SELECT COUNT(*) FROM `' . $table . '`')->fetchColumn() === 0, 'Branch 2 inherited data: ' . $table);
     }
     branch_expect(run_migrations() === [], 'Migrations must be idempotent');
+    branch_expect(!isset(branch_tables()['branches']), 'Branch profiles must remain shared');
+    $one->exec("UPDATE branches SET name='Branch Two Custom',address='Fixture address',version=version+1 WHERE id=2");
+    $one->exec((string)file_get_contents(APP_ROOT . '/database/migrations/034_branch_profiles.sql'));
+    run_migrations();
+    branch_expect($two->query('SELECT name FROM branches WHERE id=2')->fetchColumn() === 'Branch Two Custom', 'Shared branch profile must survive migration reruns');
     $one->exec('UPDATE accounts SET branch_id=2');
     $one->exec("DELETE FROM schema_migrations WHERE version='031_account_branches'");
     $two->exec("DELETE FROM schema_migrations WHERE version='031_account_branches'");

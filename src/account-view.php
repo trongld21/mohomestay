@@ -37,7 +37,7 @@ function render_accounts(bool $permissionsOnly, string $error): void
             <?php foreach ($accounts as $account): ?>
                 <section class="min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
                     <h2 class="break-words text-xl font-semibold"><?= e($account['name']) ?></h2>
-                    <p class="mt-2 break-words text-sm text-stone-600"><?= e($account['email']) ?> · Chi nhánh <?= (int)$account['branch_id'] ?> · <?= $account['is_active'] ? 'Đang hoạt động' : 'Đã khóa' ?></p>
+                    <p class="mt-2 break-words text-sm text-stone-600"><?= e($account['email']) ?> · <?= e(branch_label((int)$account['branch_id'])) ?> · <?= $account['is_active'] ? 'Đang hoạt động' : 'Đã khóa' ?></p>
                     <?php render_account_form($account, $field, $button) ?>
                 </section>
             <?php endforeach ?>
@@ -66,7 +66,7 @@ function render_account_form(array $account, string $field, string $button): voi
             <label for="branch-<?= e($suffix) ?>">Chi nhánh được quản lý</label>
             <select id="branch-<?= e($suffix) ?>" class="<?= $field ?>" name="branch_id" required aria-describedby="branch-help-<?= e($suffix) ?>">
                 <?php foreach ([1, 2] as $branch): ?>
-                    <option value="<?= $branch ?>" <?= (int)($account['branch_id'] ?? 1) === $branch ? 'selected' : '' ?>>Chi nhánh <?= $branch ?></option>
+                    <option value="<?= $branch ?>" <?= (int)($account['branch_id'] ?? 1) === $branch ? 'selected' : '' ?>><?= e(branch_label($branch)) ?></option>
                 <?php endforeach ?>
             </select>
             <p id="branch-help-<?= e($suffix) ?>" class="mt-2 text-sm text-stone-600">Chỉ được quản lý chi nhánh này. Khi đổi chi nhánh, nhân viên cần đăng nhập lại.</p>

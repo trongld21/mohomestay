@@ -3,6 +3,33 @@
 require_once __DIR__ . '/admin-icons.php';
 require_once __DIR__ . '/branches.php';
 
+function render_admin_branch_switcher(array $account): void
+{
+    $ids = $account['root'] ? [1, 2] : [(int)$account['branch_id']];
+    ?>
+    <details class="branch-switcher" data-branch-switcher>
+        <summary class="branch-switcher-trigger" aria-label="Chọn chi nhánh · <?= e(branch_label()) ?>">
+            <span class="branch-switcher-icon"><?= admin_icon('home') ?></span>
+            <span class="min-w-0 flex-1"><strong class="block text-sm font-semibold">Mơ Home</strong><span class="mt-1 block break-words text-xs text-[#79543e]"><?= e(branch_label()) ?></span></span>
+            <svg class="branch-switcher-chevron" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m6 9 6 6 6-6"/></svg>
+        </summary>
+        <nav class="branch-switcher-menu" aria-label="Chọn chi nhánh">
+            <p class="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-[#82705e]">Chọn không gian quản lý</p>
+            <?php foreach ($ids as $id): ?>
+                <a class="branch-switcher-option" data-branch-switch href="<?= e(branch_url('/admin', $id)) ?>" <?= branch_id() === $id ? 'aria-current="true"' : '' ?>>
+                    <span class="branch-switcher-code">CN<?= str_pad((string)$id, 2, '0', STR_PAD_LEFT) ?></span>
+                    <span class="min-w-0 flex-1 break-words"><?= e(branch_label($id)) ?></span>
+                    <?php if (branch_id() === $id): ?><?= admin_icon('check') ?><?php endif ?>
+                </a>
+            <?php endforeach ?>
+            <?php if ($account['root']): ?>
+                <a class="branch-switcher-manage" href="/admin/branches"><?= admin_icon('home') ?><span>Quản lý chi nhánh</span></a>
+            <?php endif ?>
+        </nav>
+    </details>
+    <?php
+}
+
 function render_admin_navigation(string $path): void
 {
     $account = current_account();
@@ -16,11 +43,7 @@ function render_admin_navigation(string $path): void
                 <?= admin_icon('x') ?>
             </button>
         </div>
-        <div class="admin-property">
-            <span class="admin-property-icon"><?= admin_icon('home') ?></span>
-            <div><strong>Mơ Home</strong><small><?= e(branch_label()) ?></small></div>
-        </div>
-        <div class="px-3 pb-3"><?php render_branch_selector(true); ?></div>
+        <?php render_admin_branch_switcher($account); ?>
         <p class="admin-nav-label">QUẢN LÝ KHÔNG GIAN</p>
         <nav class="admin-navigation" aria-label="Khu vực quản lý">
             <?php if (can_use('bookings.overview')): ?>
@@ -108,6 +131,9 @@ function render_admin_navigation(string $path): void
                 </details>
             <?php endif ?>
             <?php if (can_use('accounts')): ?>
+                <a class="<?= $link ?>" href="/admin/branches" <?= $path === '/admin/branches' ? 'aria-current="page"' : '' ?>>
+                    <?= admin_icon('home') ?><span>Quản lý chi nhánh</span>
+                </a>
                 <details class="admin-nav-group" <?= in_array($path, ['/admin/accounts', '/admin/permissions'], true) ? 'open' : '' ?>>
                     <summary class="<?= $link ?> cursor-pointer">
                         <?= admin_icon('user') ?>
@@ -164,6 +190,7 @@ function render_admin_topbar(): void
         '/admin/inventory' => 'Nhập kho & tồn kho',
         '/admin/accounts' => 'Quản lý tài khoản',
         '/admin/permissions' => 'Phân quyền tài khoản',
+        '/admin/branches' => 'Quản lý chi nhánh',
         default => 'Không gian quản lý',
     };
     ?>
@@ -171,7 +198,7 @@ function render_admin_topbar(): void
         <button class="icon-button admin-menu-toggle" type="button" data-admin-menu-toggle aria-controls="admin-sidebar" aria-expanded="false" aria-label="Mở menu quản trị">
             <svg class="admin-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
-        <div>Mơ Home <span aria-hidden="true">/</span> <span class="font-semibold text-[#79543e]"><?= e(branch_label()) ?></span> <span aria-hidden="true">/</span> <strong data-admin-crumb><?= e($title) ?></strong></div>
+        <div>Mơ Home <span aria-hidden="true">/</span> <span class="min-w-0 break-words font-semibold text-[#79543e]"><?= e(branch_label()) ?></span> <span aria-hidden="true">/</span> <strong data-admin-crumb><?= e($title) ?></strong></div>
         <span class="admin-timezone">Giờ Việt Nam · UTC+7</span>
     </header>
     <?php

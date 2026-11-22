@@ -70,11 +70,12 @@ async function api(page, url, body, method = body ? "POST" : "GET") {
                 await page.locator("[data-admin-menu-toggle]").click();
             }
             const adminSelector = page.getByRole("navigation", { name: "Chọn chi nhánh" });
+            await page.locator("[data-branch-switcher] > summary").click();
             await adminSelector.waitFor({ state: "visible" });
             assert.ok(await adminSelector.isVisible());
-            assert.equal(await adminSelector.locator('[aria-current="true"]').textContent(), "Chi nhánh 2");
+            assert.equal(await adminSelector.locator('[aria-current="true"] .flex-1').innerText(), "Chi nhánh 2");
             await page.screenshot({ path: path.join(artifacts, `admin-${width}.png`), fullPage: true });
-            await adminSelector.getByRole("link", { name: "Chi nhánh 1", exact: true }).click();
+            await adminSelector.getByRole("link", { name: /Chi nhánh 1/ }).click();
             await page.waitForURL(base + "/admin");
             assert.deepEqual(errors, [], `JS errors at ${width}px`);
             await context.close();

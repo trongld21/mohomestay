@@ -7,6 +7,87 @@
 @source "../*.php";
 @source "../../public/assets/*.js";
 
+.branch-switcher {
+    @apply relative mx-3 mb-5;
+}
+.branch-switcher-trigger {
+    @apply flex min-h-16 cursor-pointer list-none items-center gap-3 rounded-xl border border-[#e5d7c6] bg-white p-3 text-[#49382c];
+}
+.branch-switcher-trigger::-webkit-details-marker {
+    @apply hidden;
+}
+.branch-switcher-trigger:hover {
+    @apply border-[#cdb498] bg-[#fffaf2];
+}
+.branch-switcher-trigger:focus-visible {
+    @apply outline-2 outline-offset-2 outline-[#79543e];
+}
+.branch-switcher-icon {
+    @apply flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#f5eee5] text-[#79543e];
+}
+.branch-switcher-chevron {
+    @apply size-4 shrink-0 text-[#79543e];
+}
+.branch-switcher[open] .branch-switcher-chevron {
+    @apply rotate-180;
+}
+.branch-switcher-menu {
+    @apply absolute inset-x-0 top-full z-40 mt-2 grid gap-1 rounded-xl border border-[#e5d7c6] bg-[#fffdf9] p-2 shadow-lg;
+}
+.branch-switcher-menu .branch-switcher-option,
+.branch-switcher-menu .branch-switcher-manage {
+    @apply flex min-h-11 items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-[#49382c];
+}
+.branch-switcher-menu .branch-switcher-option:hover,
+.branch-switcher-menu .branch-switcher-manage:hover {
+    @apply bg-[#f1e6d8];
+}
+.branch-switcher-menu .branch-switcher-option[aria-current="true"] {
+    @apply bg-[#79543e] text-white;
+}
+.branch-switcher-menu a:focus-visible {
+    @apply outline-2 outline-offset-2 outline-[#79543e];
+}
+.branch-switcher-code {
+    @apply shrink-0 text-[10px] font-semibold tracking-wider opacity-80;
+}
+.branch-switcher-menu .branch-switcher-manage {
+    @apply mt-1 border-t border-[#e5d7c6] pt-3 text-[#79543e];
+}
+.branch-management h1 {
+    @apply mt-3 text-2xl font-semibold sm:text-3xl;
+}
+.branch-management h2 {
+    @apply text-xl font-semibold;
+}
+.branch-management .branch-profile-card {
+    @apply min-w-0 rounded-2xl border border-[#e5d7c6] bg-white p-5 text-[#49382c];
+}
+.branch-management .branch-profile-card:hover {
+    @apply border-[#b8936d] bg-[#fffaf2];
+}
+.branch-management .branch-profile-card[aria-current="true"] {
+    @apply border-[#79543e] bg-[#fffaf2] ring-1 ring-[#79543e];
+}
+.branch-profile-card:focus-visible {
+    @apply outline-2 outline-offset-2 outline-[#79543e];
+}
+.branch-profile-field {
+    @apply w-full min-w-0 min-h-11 rounded-lg border border-[#d9cabb] bg-[#fffdf9] px-3 py-3 text-base font-normal text-[#49382c];
+}
+.branch-profile-field:focus-visible {
+    @apply outline-2 outline-offset-2 outline-[#79543e];
+}
+.branch-profile-save {
+    @apply min-h-11 cursor-pointer rounded-lg border border-transparent bg-[#79543e] px-5 py-3 text-sm font-semibold text-white;
+}
+.branch-profile-save:enabled:hover {
+    @apply bg-[#65432e];
+}
+.branch-profile-save:focus-visible {
+    @apply outline-2 outline-offset-2 outline-[#79543e];
+}
+
 .branch-selector {
     @apply flex flex-wrap items-center gap-2 rounded-xl border border-[#e3d5c5] bg-[#fffaf2] p-3 text-sm text-[#49382c];
 }

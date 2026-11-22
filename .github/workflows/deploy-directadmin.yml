@@ -74,6 +74,7 @@ jobs:
           php tools/ui-test.php
           php tools/check.php
           php tools/account-test.php
+          php tools/branch-profile-test.php
           php tools/people-counter-test.php
           php tools/people-counter-preview-test.php
           php tools/people-counter-deploy-test.php

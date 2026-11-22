@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/branch-profiles.php';
+
 // Branch selection belongs to the URL, never to a mutable session/cookie. Two
 // open tabs can therefore work on different branches without moving a write.
 function branch_id(): int
@@ -33,14 +35,14 @@ function branch_url(string $url, ?int $branch = null): string
     return ($branch === 2 ? '/chi-nhanh/2' : '') . $url;
 }
 
-function branch_label(): string
+function branch_label(?int $id = null): string
 {
-    return 'Chi nhánh ' . branch_id();
+    return (string)branch_profile($id)['name'];
 }
 
 // The existing tables remain untouched as branch 1. Branch 2 has its own
 // physical tables, foreign keys and migration ledger in the same hosting DB.
-// Login accounts alone are shared. Derive the registry from the deployed schema
+// Login accounts and branch profiles are shared. Derive the registry from the schema
 // files so a newly introduced module cannot silently share its business tables.
 function branch_identifiers(): array
 {
@@ -54,7 +56,7 @@ function branch_identifiers(): array
         preg_match_all('/\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?([a-z_][a-z0-9_]*)/i', $sql, $tables);
         preg_match_all('/\bCONSTRAINT\s+`?([a-z_][a-z0-9_]*)/i', $sql, $constraints);
         foreach (array_merge($tables[1], $constraints[1]) as $name) {
-            if ($name !== 'accounts') {
+            if (!in_array($name, ['accounts', 'branches'], true)) {
                 $identifiers[strtolower($name)] = 'b2_' . strtolower($name);
             }
         }
@@ -68,7 +70,7 @@ function branch_tables(): array
     foreach (glob(__DIR__ . '/../database/migrations/*.sql') ?: [] as $file) {
         preg_match_all('/\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?([a-z_][a-z0-9_]*)/i', (string)file_get_contents($file), $matches);
         foreach ($matches[1] as $name) {
-            if ($name !== 'accounts') {
+            if (!in_array($name, ['accounts', 'branches'], true)) {
                 $tables[$name] = 'b2_' . $name;
             }
         }
@@ -189,7 +191,7 @@ function render_branch_selector(bool $admin = false): void
         <?php foreach ($branches as $branch): ?>
             <a data-branch-switch href="<?= e(branch_url($destination, $branch)) ?>"
                 class="branch-link"
-                <?= branch_id() === $branch ? 'aria-current="true"' : '' ?>>Chi nhánh <?= $branch ?></a>
+                <?= branch_id() === $branch ? 'aria-current="true"' : '' ?>><?= e(branch_label($branch)) ?></a>
         <?php endforeach ?>
     </nav>
     <?php

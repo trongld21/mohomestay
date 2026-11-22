@@ -84,7 +84,7 @@ function render_page(string $title, callable $content, array $options = []): nev
         '/admin', '/admin/overview', '/admin/availability', '/admin/door-codes', '/admin/accounts',
         '/admin/permissions', '/admin/no-access', '/admin/sales', '/admin/sales/history',
         '/admin/products', '/admin/expenses', '/admin/inventory', '/admin/people-counter', '/admin/promotions',
-        '/admin/personnel', '/admin/payroll', '/admin/timesheet',
+        '/admin/personnel', '/admin/payroll', '/admin/timesheet', '/admin/branches',
     ], true);
     if ($adminLayout) {
         require_once APP_ROOT . '/src/admin-layout.php';
@@ -235,6 +235,9 @@ function render_header(): void
 }
 function render_footer(): void
 {
+    $profile = branch_profile();
+    $phone = $profile['phone'] ?: '0357907153';
+    $phoneUri = preg_replace('/[^+0-9]/', '', $phone);
     ?>
     <footer id="lien-he" class="site-footer">
         <div class="container footer-top grid-cols-2! gap-8! lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]!
@@ -243,7 +246,7 @@ function render_footer(): void
             [&_a:focus-visible]:outline-2! [&_a:focus-visible]:outline-offset-2! [&_a:focus-visible]:outline-[#f4dfc9]!">
             <div>
                 <?php logo(); ?>
-                <p>Một chốn riêng. Một nhịp chậm.<br>Một chút bình yên dành cho bạn.</p>
+                <p><?= $profile['description'] !== '' ? nl2br(e($profile['description'])) : 'Một chốn riêng. Một nhịp chậm.<br>Một chút bình yên dành cho bạn.' ?></p>
             </div>
             <nav class="grid content-start gap-1" aria-label="Khám phá Mơ">
                 <h2>KHÁM PHÁ MƠ</h2>
@@ -259,14 +262,12 @@ function render_footer(): void
             </nav>
             <section id="lien-he-footer" class="grid content-start gap-1 max-[760px]:col-span-2" aria-labelledby="footer-contact-title">
                 <h2 id="footer-contact-title">MÌNH KẾT NỐI NHÉ</h2>
-                <a href="tel:0357907153">☎ 0357 907 153</a>
+                <a href="tel:<?= e($phoneUri) ?>"><?= e($phone) ?></a>
                 <p class="m-0! py-1.5 text-sm!">
-                    <?php if (branch_id() === 2): ?>
-                        Chi nhánh 2 · Địa chỉ sẽ được cập nhật
-                    <?php else: ?>
-                        82 đường B18, KDC 91B<br>Ninh Kiều, Cần Thơ
-                    <?php endif ?>
+                    <?= nl2br(e($profile['address'] ?: branch_label() . ' · Địa chỉ sẽ được cập nhật')) ?>
                 </p>
+                <?php if ($profile['email'] !== ''): ?><a class="break-all" href="mailto:<?= e($profile['email']) ?>"><?= e($profile['email']) ?></a><?php endif ?>
+                <?php if ($profile['map_url'] !== ''): ?><a href="<?= e($profile['map_url']) ?>" target="_blank" rel="noopener noreferrer">Xem bản đồ ↗</a><?php endif ?>
                 <a href="https://zalo.me/0357907153" target="_blank" rel="noreferrer">Trò chuyện qua Zalo ↗</a>
             </section>
         </div>

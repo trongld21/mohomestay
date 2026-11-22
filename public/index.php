@@ -69,6 +69,50 @@ if ($path === '/auth/login' && $method === 'POST') {
 
 require APP_ROOT . '/src/views.php';
 
+if ($path === '/admin/branches') {
+    if (!is_admin()) redirect('/auth/login');
+    require_permission('accounts');
+    header('Cache-Control: no-store');
+    require APP_ROOT . '/src/branch-view.php';
+    require_once APP_ROOT . '/src/admin-icons.php';
+    $branchError = '';
+    $selectedId = (int)($_POST['id'] ?? $_GET['edit'] ?? 1);
+    if (!in_array($selectedId, [1, 2], true)) {
+        $selectedId = 1;
+    }
+    if ($method === 'POST') {
+        require_csrf((string)($_POST['csrf'] ?? ''));
+        try {
+            save_branch_profile($_POST);
+            redirect('/admin/branches?edit=' . $selectedId . '&saved=1');
+        } catch (BookingException $error) {
+            http_response_code($error->httpStatus);
+            $branchError = $error->getMessage();
+        } catch (Throwable $error) {
+            http_response_code(503);
+            error_log('Branch profile save failed: ' . get_class($error));
+            $branchError = 'Chưa lưu được thông tin chi nhánh. Vui lòng thử lại.';
+        }
+    }
+    $profiles = [];
+    $formValues = [];
+    try {
+        $profiles = load_branch_profiles(db(1));
+        $formValues = $profiles[$selectedId];
+        if ($method === 'POST' && $branchError !== '') {
+            foreach (['name', 'address', 'phone', 'email', 'map_url', 'description', 'version'] as $field) {
+                if (isset($_POST[$field]) && is_string($_POST[$field])) {
+                    $formValues[$field] = $_POST[$field];
+                }
+            }
+        }
+    } catch (Throwable $error) {
+        http_response_code(503);
+        $branchError = 'Chưa tải được danh sách chi nhánh. Cần hoàn tất cập nhật cơ sở dữ liệu.';
+    }
+    render_page('Quản lý chi nhánh', fn() => render_branch_management($profiles, $selectedId, $formValues, $branchError), ['robots' => false]);
+}
+
 if (in_array($path, ['/admin/accounts', '/admin/permissions'], true)) {
     if (!is_admin()) redirect('/auth/login');
     require_permission('accounts');

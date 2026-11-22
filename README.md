@@ -7,6 +7,17 @@ Chi nhánh 2 dùng `/chi-nhanh/2/admin`, `/chi-nhanh/2/rooms`, `/chi-nhanh/2/boo
 Chọn chi nhánh trong menu quản trị hoặc thanh chọn trên trang khách. Mỗi tab gắn với
 chi nhánh trong URL; chuyển tab không đổi nơi ghi dữ liệu của tab khác.
 
+Trong quản trị, bấm thẻ **Mơ Home** có biểu tượng ngôi nhà để mở danh sách chi nhánh;
+phím Escape hoặc bấm bên ngoài sẽ đóng danh sách. Nhân viên chỉ thấy chi nhánh được gán.
+Super Admin mở **Quản lý chi nhánh** (`/admin/branches`) để sửa tên, địa chỉ, điện thoại,
+email, liên kết bản đồ và giới thiệu. Tên mới hiển thị trong menu và phần gán tài khoản;
+thông tin liên hệ hiển thị ở chân trang website của chi nhánh tương ứng.
+Migration `034_branch_profiles.sql` tạo bảng thông tin `branches` dùng chung, không tạo
+`b2_branches`; chạy lại migration không ghi đè thông tin đã sửa. Mã 1/2, URL, phân quyền
+và dữ liệu nghiệp vụ của mỗi chi nhánh được giữ nguyên khi đổi tên.
+Kiểm tra bằng `php tools/branch-profile-test.php` và `node tools/branch-profile-browser-test.cjs`
+(dùng fixture local mới theo hướng dẫn dưới đây).
+
 Chạy `php tools/migrate.php` trước khi sử dụng. Migration giữ nguyên dữ liệu cũ và tạo
 **các bảng rỗng** có tiền tố `b2_` trong cùng database cho chi nhánh 2: phòng/gói giá,
 đặt phòng, thanh toán, bill bán hàng, kho, phiếu chi, ưu đãi, mã cửa, nhân sự và lương.
@@ -20,7 +31,7 @@ nhân viên cần đăng nhập lại. Việc xem các trang công khai vẫn ho
 Báo cáo và CSV chỉ lấy dữ liệu của chi nhánh đang mở, không cộng chung hai chi nhánh.
 
 `BranchPDO` trong `src/branches.php` định tuyến các định danh bảng trong SQL sang
-namespace `b2_`; tham số, giá trị chuỗi, alias kết quả và bảng `accounts` giữ nguyên.
+namespace `b2_`; tham số, giá trị chuỗi, alias kết quả và bảng dùng chung `accounts`, `branches` giữ nguyên.
 Danh sách bảng lấy từ các migration đã triển khai. Mỗi chi nhánh có ledger migration riêng;
 lần khởi tạo đầu tiên sao chép schema hiện tại cùng foreign key, không chạy lại seed lịch sử.
 Các migration tiếp theo chạy cho cả hai chi nhánh. Runtime truy cập dữ liệu nghiệp vụ

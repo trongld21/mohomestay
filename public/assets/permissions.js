@@ -58,7 +58,7 @@
         fields.forEach((field) => { field.checked = account.grants.includes(field.value); });
         find("[data-selected-name]").textContent = account.name;
         find("[data-selected-email]").textContent = account.email;
-        find("[data-selected-branch]").textContent = `Chi nhánh ${account.branchId}`;
+        find("[data-selected-branch]").textContent = account.branchName || `Chi nhánh ${account.branchId}`;
         find("[data-selected-status]").textContent = account.active ? "Đang hoạt động" : "Đã khóa đăng nhập";
         accountLinks.forEach((link) => {
             if (link.dataset.selectAccount === account.id) link.setAttribute("aria-current", "true");

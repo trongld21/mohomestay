@@ -303,7 +303,7 @@ try {
     ob_start();
     render_admin_navigation('/admin');
     $navigation = ob_get_clean();
-    account_check(!str_contains($navigation, 'href="/admin"') && substr_count($navigation, 'data-branch-switch') === 1, 'Staff selector must only offer assigned branch');
+    account_check(!str_contains($navigation, 'href="/admin"') && preg_match_all('/\bdata-branch-switch(?=\s|=|>)/', $navigation) === 1, 'Staff selector must only offer assigned branch');
     unset($_SESSION['account_id'], $_SESSION['account_version']);
     account_check(account_branch_allowed(null, 1) && account_branch_allowed(null, 2), 'Super Admin must access both branches');
     save_account(['id' => $staffTwo['id'], 'name' => 'Staff 2', 'email' => 'staff2@example.test', 'is_active' => 'on', 'branch_id' => 1], false);

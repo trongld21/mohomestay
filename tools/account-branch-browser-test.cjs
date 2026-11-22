@@ -72,9 +72,10 @@ async function assertStaffScope(browser, branch, width) {
         await page.locator("[data-admin-menu-toggle]").click();
     }
     const selector = page.getByRole("navigation", { name: "Chọn chi nhánh" });
+    await page.locator("[data-branch-switcher] > summary").click();
     await selector.waitFor({ state: "visible" });
     assert.equal(await selector.getByRole("link").count(), 1);
-    assert.equal(await selector.getByRole("link").innerText(), `Chi nhánh ${branch}`);
+    assert.equal(await selector.locator("[data-branch-switch] .flex-1").innerText(), `Chi nhánh ${branch}`);
     await page.screenshot({ path: path.join(artifacts, `staff${branch}-${width}.png`), fullPage: true });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
 
@@ -139,7 +140,8 @@ async function assertStaffScope(browser, branch, width) {
         await activeStaff.context.close();
         await root.setViewportSize({ width: 1440, height: 1000 });
         await root.goto(base + "/chi-nhanh/2/admin");
-        assert.equal(await root.getByRole("navigation", { name: "Chọn chi nhánh" }).getByRole("link").count(), 2);
+        await root.locator("[data-branch-switcher] > summary").click();
+        assert.equal(await root.getByRole("navigation", { name: "Chọn chi nhánh" }).locator("[data-branch-switch]").count(), 2);
         assert.equal((await rootContext.request.get(base + "/api/admin/rooms")).status(), 200);
         assert.equal((await rootContext.request.get(base + "/chi-nhanh/2/api/admin/rooms")).status(), 200);
         await root.goto(base + "/admin/accounts");
