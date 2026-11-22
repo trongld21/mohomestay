@@ -209,7 +209,7 @@
         one('[data-filter-count]').textContent = `${filtered.length} / ${bookings.length} đơn`;
         const view = bookingPagination.slice(filtered);
         one("[data-booking-results]").innerHTML = filtered.length
-            ? `<div class="admin-table-scroll" tabindex="0" role="region" aria-label="Danh sách đặt phòng"><table class="admin-booking-table booking-work-table"><thead><tr><th scope="col">Ảnh phòng</th><th scope="col">Mã / Khách hàng</th><th scope="col">Phòng / Thời gian</th><th scope="col">Thanh toán</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th></tr></thead><tbody>${view.items
+            ? `<div class="admin-table-scroll" tabindex="0" role="region" aria-label="Danh sách đặt phòng"><table class="admin-booking-table booking-work-table"><thead><tr><th scope="col">Ảnh phòng</th><th scope="col">Mã / Khách hàng</th><th scope="col">Phòng / Thời gian</th><th scope="col">Thanh toán</th><th scope="col">Trạng thái</th>${canShowBookingActions() ? '<th scope="col">Thao tác</th>' : ''}</tr></thead><tbody>${view.items
                   .map(
                       (booking) => renderBookingRow(booking),
                   )
@@ -290,7 +290,13 @@
         dialog.addEventListener('close', () => open.focus());
         updateLabel();
     }
+    function canShowBookingActions() {
+        const abilities = LANG_HOME.abilities;
+        return LANG_HOME.isSuperAdmin === true || ['bookings.create', 'bookings.update', 'availability.checkout'].some(permission => abilities.includes(permission));
+    }
+
     function bookingSuccessLink(booking) {
+        if (!LANG_HOME.abilities.some(permission => permission === 'bookings.create' || permission === 'bookings.update')) return '';
         if (!["CONFIRMED", "CHECKED_IN", "CHECKED_OUT"].includes(booking.status)
             || !/^(?:MO|LANG)-[A-F0-9]{10}$/.test(booking.booking_code || "")
             || !/^[a-f0-9]{64}$/.test(booking.access_token || "")) return "";
@@ -313,14 +319,22 @@
         const action = (status, label, symbol, danger = false) => `
             <button type="button" ${danger ? 'class="booking-cancel"' : ""} data-booking-action="${status}" data-id="${esc(booking.id)}" aria-label="${label} đơn ${esc(booking.booking_code)}">${icon(symbol)} ${label}</button>`;
         let actions = "";
-        if (["PENDING", "EXPIRED"].includes(booking.status)) actions = action("CANCELLED", "Hủy đơn", "x", true);
-        if (booking.status === "CONFIRMED") actions = action("CHECKED_IN", "Nhận sớm", "key") + action("CANCELLED", "Hủy", "x", true);
+        if (LANG_HOME.abilities.includes('bookings.update')) {
+            if (["PENDING", "EXPIRED"].includes(booking.status)) actions = action("CANCELLED", "Hủy đơn", "x", true);
+            if (booking.status === "CONFIRMED") actions = action("CHECKED_IN", "Nhận sớm", "key") + action("CANCELLED", "Hủy", "x", true);
+        }
         if (booking.status === "CHECKED_IN" && LANG_HOME.abilities.includes("availability.checkout")) {
             actions = `<a class="timeline-button" href="/admin/availability#booking-${encodeURIComponent(booking.id)}">Trả phòng & phụ thu</a>`;
         }
         if (LANG_HOME.abilities.includes("bookings.create") && ["CONFIRMED", "CHECKED_IN"].includes(booking.status)
             && !Number(booking.is_test) && !booking.continued_to_booking_id) {
             actions += `<button type="button" class="timeline-button" data-booking-continuation="${esc(booking.id)}">Ở tiếp / thêm gói</button>`;
+        }
+        if (LANG_HOME.abilities.includes("bookings.create") && booking.continued_from_booking_id
+            && booking.status === "PENDING" && booking.payment_method === "payos") {
+            actions += `<button type="button" data-booking-continuation="${esc(booking.continued_from_booking_id)}"
+                data-continuation-payment-code="${esc(booking.booking_code)}"
+                class="min-h-11 rounded-lg border border-amber-200 px-3 py-2 text-sm font-semibold text-amber-950 enabled:hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Lấy link QR</button>`;
         }
         if (LANG_HOME.manualDateOverride === true && ["PENDING", "CONFIRMED", "CHECKED_IN"].includes(booking.status)
             && !booking.continued_from_booking_id && !booking.continued_to_booking_id) {
@@ -342,6 +356,7 @@
             <td class="booking-photo-cell"><img class="booking-room-photo" src="${esc(booking.room_image || '/images/white-illustration.jpg')}" alt="Phòng ${esc(booking.room_name)}" width="104" height="78" loading="lazy"></td>
             <td class="booking-guest-cell"><div class="booking-cell">
                 <strong class="booking-code">${esc(booking.booking_code)}</strong>
+                ${booking.continued_from_booking_id ? `<span data-continuation-label class="text-xs font-medium text-amber-900">${esc(booking.guest_note || 'Gói ở tiếp')}</span>` : ''}
                 ${Number(booking.is_test) ? '<span class="booking-source">ĐƠN THỬ · Không có giao dịch thật</span>' : ""}
                 <span class="booking-meta booking-guest">${icon("user")} ${esc(booking.guest_name)}</span>
                 <div class="booking-contact-row">
@@ -349,7 +364,7 @@
                     <span class="booking-source">${icon(booking.booking_source === "PHONE" ? "phone" : "message-circle")} ${source}</span>
                 </div>
                 ${identity}
-                ${booking.guest_note ? `<details class="booking-note"><summary>Ghi chú khách</summary><p>${esc(booking.guest_note)}</p></details>` : ""}
+                ${booking.guest_note && !booking.continued_from_booking_id ? `<details class="booking-note"><summary>Ghi chú khách</summary><p>${esc(booking.guest_note)}</p></details>` : ""}
             </div></td>
             <td class="booking-stay-cell"><div class="booking-cell">
                 <div class="booking-room-row">
@@ -369,9 +384,350 @@
                 ${booking.failure_reason ? `<span class="admin-reconcile">${esc(booking.failure_reason)}</span>` : ""}
             </div></td>
             <td class="booking-status-cell"><div class="booking-cell"><span class="admin-booking-status booking-status-label" data-status="${esc(booking.status)}"><span class="booking-status-dot" aria-hidden="true"></span>${esc(booking.isOverdue ? "Quá giờ · Chưa trả phòng" : statusNames[booking.status] || booking.status)}</span>${MoBookingFilters.needsAttention(booking) ? '<strong class="text-sm text-red-800">Cần đối soát thanh toán</strong>' : ''}<span class="booking-meta">${icon(booking.statusSource === "MANUAL" ? "user" : "clock")}${booking.statusSource === "MANUAL" ? "Admin cập nhật" : "Tự động theo giờ"}</span></div></td>
-            <td class="booking-actions-cell"><div class="admin-actions">${actions || '<span class="booking-ended">—</span>'}</div></td>
+            ${canShowBookingActions() ? `<td class="booking-actions-cell"><div class="admin-actions">${actions || '<span class="booking-ended">—</span>'}</div></td>` : ''}
         </tr>`;
     }
+    async function fetchIdentityImage(id, side, signal) {
+        const url = `/api/admin/bookings/${encodeURIComponent(id)}/identity/${side}`;
+        const options = { cache: 'no-store', redirect: 'error', signal };
+        for (const delay of [0, 400, 900]) {
+            if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+            signal.throwIfAborted();
+            try {
+                const response = await fetch(url, options);
+                if (![502, 503, 504].includes(response.status)) return response;
+                await response.body?.cancel();
+                const error = new Error('Temporary identity service failure');
+                error.retryable = true;
+                throw error;
+            } catch (error) {
+                if (signal.aborted || delay === 900 || (!(error instanceof TypeError) && !error.retryable)) {
+                    throw error;
+                }
+            }
+        }
+    }
+
+    function exportRotatedIdentityImage(image, turns, type, quality = 0.95) {
+        const canvas = document.createElement('canvas');
+        const { naturalWidth: width, naturalHeight: height } = image;
+        const sideways = turns % 2 === 1;
+        canvas.width = sideways ? height : width;
+        canvas.height = sideways ? width : height;
+        const context = canvas.getContext('2d');
+        context.translate(canvas.width / 2, canvas.height / 2);
+        context.rotate(turns * Math.PI / 2);
+        context.drawImage(image, -width / 2, -height / 2);
+        return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+    }
+
+    function openIdentityViewer(trigger) {
+        const id = trigger.dataset.viewIdentity;
+        const code = (bookings.find(booking => booking.id === id)?.booking_code || id).replace(/[^a-z0-9_-]/gi, '-');
+        const previous = one('[data-identity-viewer]');
+        if (previous?.open) previous.close();
+        else previous?.remove();
+
+        const viewer = document.createElement('dialog');
+        const buttonClass = 'min-h-11 rounded-lg border px-3 py-2 text-sm font-medium enabled:cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800 disabled:cursor-wait disabled:opacity-50';
+        const secondaryButtonClass = `${buttonClass} border-stone-300 enabled:hover:bg-stone-100`;
+        const downloadButton = LANG_HOME.abilities.includes('bookings.identity.download')
+            ? `<button type="button" data-identity-download class="${buttonClass} border-amber-800 bg-amber-800 text-white enabled:hover:bg-amber-900">Tải ảnh</button>`
+            : '';
+        viewer.dataset.identityViewer = '';
+        viewer.className = 'm-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-4xl overflow-auto rounded-2xl border border-stone-200 bg-white p-5 text-stone-800 shadow-xl backdrop:bg-black/40';
+        viewer.innerHTML = `<div class="flex items-center justify-between gap-4">
+            <h2 class="text-lg font-semibold" id="identity-viewer-title">CCCD của người thuê</h2>
+            <button type="button" data-identity-close class="${secondaryButtonClass}">Đóng</button>
+        </div>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+            ${[['front', 'Mặt trước'], ['back', 'Mặt sau']].map(([side, label]) => `
+                <section data-identity-side="${side}" class="min-w-0" aria-labelledby="identity-title-${side}">
+                    <h3 id="identity-title-${side}" class="mb-2 font-medium">${label}</h3>
+                    <div data-identity-content hidden>
+                        <div class="relative mx-auto aspect-square w-full max-w-[60dvh] overflow-hidden rounded-lg border border-stone-200 bg-stone-50">
+                            <img class="absolute inset-0 size-full object-contain" alt="CCCD ${label.toLowerCase()}">
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button type="button" data-identity-rotate="-1" class="${secondaryButtonClass}">Xoay trái</button>
+                            <button type="button" data-identity-rotate="1" class="${secondaryButtonClass}">Xoay phải</button>
+                            ${downloadButton}
+                        </div>
+                    </div>
+                    <p data-identity-status role="status" class="mt-2 text-sm">Đang tải ảnh…</p>
+                    <button type="button" data-identity-retry class="${secondaryButtonClass} mt-2" aria-label="Tải lại ảnh CCCD ${label.toLowerCase()}" hidden>Tải lại ảnh</button>
+                    <form data-identity-replacement class="mt-3 rounded-lg border border-stone-200 p-3" hidden>
+                        <label class="block text-sm font-medium" for="identity-replacement-${side}">Chọn ảnh CCCD ${label.toLowerCase()} thay thế</label>
+                        <input id="identity-replacement-${side}" name="identity_image" type="file" accept="image/jpeg,image/png,image/webp" required
+                            class="mt-2 block w-full min-w-0 text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-stone-100 file:px-3 file:py-2 enabled:file:cursor-pointer enabled:hover:file:bg-stone-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">
+                        <p class="mt-2 text-sm text-stone-700">JPG, PNG hoặc WebP, tối đa 3 MiB.</p>
+                        <div data-identity-replacement-preview hidden>
+                            <div class="relative mx-auto mt-3 aspect-square w-full max-w-[42dvh] overflow-hidden rounded-lg border border-stone-200 bg-stone-50">
+                                <img class="absolute inset-0 size-full object-contain" alt="Xem trước CCCD ${label.toLowerCase()} thay thế">
+                            </div>
+                            <div class="mt-2 flex flex-wrap gap-2" role="group" aria-label="Xoay ảnh CCCD ${label.toLowerCase()} thay thế">
+                                <button type="button" data-identity-replacement-rotate="-1" class="${secondaryButtonClass}">Xoay trái</button>
+                                <button type="button" data-identity-replacement-rotate="1" class="${secondaryButtonClass}">Xoay phải</button>
+                            </div>
+                        </div>
+                        <button type="submit" class="${secondaryButtonClass} mt-2" disabled>Lưu ảnh thay thế</button>
+                    </form>
+                </section>`).join('')}
+        </div>`;
+        viewer.setAttribute('aria-labelledby', 'identity-viewer-title');
+
+        const controller = new AbortController();
+        const objectUrls = new Set();
+        document.body.append(viewer);
+        one('[data-identity-close]', viewer).onclick = () => viewer.close();
+        viewer.addEventListener('close', () => {
+            controller.abort();
+            objectUrls.forEach(url => URL.revokeObjectURL(url));
+            viewer.remove();
+            if (trigger.isConnected) trigger.focus();
+        }, { once: true });
+        viewer.showModal();
+
+        const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+        const errors = {
+            401: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+            403: 'Tài khoản chưa được cấp quyền xem ảnh CCCD.',
+            404: 'Đơn này chưa có ảnh CCCD cho mặt này.',
+            409: 'Không đọc được ảnh CCCD đã lưu. Liên hệ quản trị hệ thống để kiểm tra ảnh và khóa mã hóa.',
+        };
+        const rotations = ['', 'rotate-90', 'rotate-180', '-rotate-90'];
+        let imageQueue = Promise.resolve();
+        all('[data-identity-side]', viewer).forEach(section => {
+            const { identitySide: side } = section.dataset;
+            const status = one('[data-identity-status]', section);
+            const image = one('[data-identity-content] img', section);
+            const download = one('[data-identity-download]', section);
+            const retry = one('[data-identity-retry]', section);
+            const replacement = one('[data-identity-replacement]', section);
+            const input = one('[type="file"]', replacement);
+            const submit = one('[type="submit"]', replacement);
+            const preview = one('[data-identity-replacement-preview]', replacement);
+            const previewImage = one('img', preview);
+            const previewButtons = all('[data-identity-replacement-rotate]', preview);
+            const maxImageBytes = 3 * 1024 * 1024;
+            let previewUrl;
+            let previewTurns = 0;
+            const showError = message => {
+                status.textContent = message;
+                status.classList.add('text-red-800');
+                status.hidden = false;
+            };
+
+            async function showImage(blob) {
+                if (!viewer.open) return;
+
+                const originalUrl = URL.createObjectURL(blob);
+                objectUrls.add(originalUrl);
+                image.src = originalUrl;
+                try {
+                    await image.decode();
+                } catch {
+                    URL.revokeObjectURL(originalUrl);
+                    objectUrls.delete(originalUrl);
+                    image.removeAttribute('src');
+                    throw new Error('Trình duyệt không đọc được ảnh CCCD.');
+                }
+                if (!viewer.open) return;
+
+                let turns = 0;
+                let rotatedUrl;
+                all('[data-identity-rotate]', section).forEach(button => {
+                    button.onclick = () => {
+                        if (turns) image.classList.remove(rotations[turns]);
+                        turns = (turns + Number(button.dataset.identityRotate) + 4) % 4;
+                        if (turns) image.classList.add(rotations[turns]);
+                    };
+                });
+                if (download) download.onclick = async () => {
+                    download.disabled = true;
+                    status.hidden = true;
+                    try {
+                        let file = blob;
+                        let url = originalUrl;
+                        if (turns) {
+                            file = await exportRotatedIdentityImage(image, turns, blob.type);
+                            if (!viewer.open) return;
+                            if (!file) throw new Error('Image export failed');
+                            if (rotatedUrl) {
+                                URL.revokeObjectURL(rotatedUrl);
+                                objectUrls.delete(rotatedUrl);
+                            }
+                            rotatedUrl = URL.createObjectURL(file);
+                            objectUrls.add(rotatedUrl);
+                            url = rotatedUrl;
+                        }
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `CCCD-${code}-${side === 'front' ? 'mat-truoc' : 'mat-sau'}.${extensions[file.type]}`;
+                        viewer.append(link);
+                        link.click();
+                        link.remove();
+                    } catch {
+                        showError('Không tải được ảnh. Vui lòng thử lại.');
+                    } finally {
+                        download.disabled = false;
+                    }
+                };
+                one('[data-identity-content]', section).hidden = false;
+                status.hidden = true;
+            }
+
+            async function loadImage() {
+                if (!viewer.open || controller.signal.aborted) return;
+                status.classList.remove('text-red-800');
+                status.textContent = 'Đang tải ảnh…';
+                status.hidden = false;
+                try {
+                    const response = await fetchIdentityImage(id, side, controller.signal);
+                    if (!response.ok) {
+                        if (response.status === 409) {
+                            const problem = await response.json().catch(() => null);
+                            if (!viewer.open) return;
+                            replacement.hidden = problem?.code !== 'identity_unreadable';
+                            showError(problem?.error || errors[409]);
+                            return;
+                        }
+                        throw new Error(errors[response.status] || `Máy chủ không tải được ảnh CCCD (HTTP ${response.status}).`);
+                    }
+                    const blob = await response.blob();
+                    if (!Object.hasOwn(extensions, blob.type) || !blob.size) {
+                        throw new Error('Máy chủ trả về dữ liệu ảnh CCCD không hợp lệ.');
+                    }
+                    await showImage(blob);
+                } catch (error) {
+                    if (!viewer.open || controller.signal.aborted) return;
+                    const temporary = error instanceof TypeError || error.retryable === true;
+                    showError(temporary ? 'Máy chủ tạm thời chưa tải được ảnh CCCD. Vui lòng thử lại.' : error.message);
+                    retry.hidden = !temporary;
+                }
+            }
+            function queueImage() {
+                retry.hidden = true;
+                replacement.hidden = true;
+                imageQueue = imageQueue.then(loadImage);
+            }
+            function clearPreview() {
+                if (previewUrl) {
+                    URL.revokeObjectURL(previewUrl);
+                    objectUrls.delete(previewUrl);
+                }
+                previewUrl = undefined;
+                previewTurns = 0;
+                previewImage.removeAttribute('src');
+                previewImage.classList.remove(...rotations.slice(1));
+                preview.hidden = true;
+                submit.disabled = true;
+            }
+
+            input.onchange = async () => {
+                clearPreview();
+                const file = input.files[0];
+                if (!file) return;
+                if (file.size > maxImageBytes || (file.type && !Object.hasOwn(extensions, file.type))) {
+                    showError('Chọn ảnh JPG, PNG hoặc WebP tối đa 3 MiB.');
+                    return;
+                }
+                const url = URL.createObjectURL(file);
+                previewUrl = url;
+                objectUrls.add(url);
+                previewImage.src = url;
+                try {
+                    await previewImage.decode();
+                    if (!viewer.open || previewUrl !== url) return;
+                    const { naturalWidth: width, naturalHeight: height } = previewImage;
+                    if (Math.min(width, height) < 120 || Math.max(width, height) < 200
+                        || Math.max(width, height) > 8000 || width * height > 24000000) {
+                        throw new Error('Ảnh cần tối thiểu 200 × 120 px, tối đa 24 megapixel và 8000 px mỗi cạnh.');
+                    }
+                    status.hidden = true;
+                    preview.hidden = false;
+                    submit.disabled = false;
+                } catch (error) {
+                    if (viewer.open && previewUrl === url) {
+                        clearPreview();
+                        showError(error instanceof DOMException ? 'Không đọc được tệp ảnh đã chọn.' : error.message);
+                    }
+                }
+            };
+            previewButtons.forEach(button => {
+                button.onclick = () => {
+                    if (previewTurns) previewImage.classList.remove(rotations[previewTurns]);
+                    previewTurns = (previewTurns + Number(button.dataset.identityReplacementRotate) + 4) % 4;
+                    if (previewTurns) previewImage.classList.add(rotations[previewTurns]);
+                };
+            });
+            replacement.onsubmit = async event => {
+                event.preventDefault();
+                if (submit.disabled) return;
+                const payload = new FormData(replacement);
+                let file = input.files[0];
+                submit.disabled = true;
+                input.disabled = true;
+                previewButtons.forEach(button => { button.disabled = true; });
+                status.classList.remove('text-red-800');
+                status.textContent = 'Đang lưu ảnh thay thế…';
+                status.hidden = false;
+                try {
+                    if (previewTurns) {
+                        const type = file.type || 'image/jpeg';
+                        let rotated = await exportRotatedIdentityImage(previewImage, previewTurns, type);
+                        if (rotated?.size > maxImageBytes) {
+                            const compressedType = rotated.type === 'image/png' ? 'image/webp' : type;
+                            rotated = await exportRotatedIdentityImage(previewImage, previewTurns, compressedType, 0.8);
+                        }
+                        if (!viewer.open) return;
+                        if (!rotated?.size || rotated.size > maxImageBytes || !Object.hasOwn(extensions, rotated.type)) {
+                            showError('Chưa tạo được ảnh xoay trong giới hạn 3 MiB. Vui lòng chọn tệp nhỏ hơn.');
+                            return;
+                        }
+                        file = rotated;
+                        payload.set('identity_image', file, `cccd-${side}.${extensions[file.type]}`);
+                    }
+                    const response = await fetch(`/api/admin/bookings/${encodeURIComponent(id)}/identity/${side}`, {
+                        method: 'POST', body: payload, cache: 'no-store', redirect: 'error',
+                        headers: { 'X-CSRF-Token': LANG_HOME.csrf }, signal: controller.signal,
+                    });
+                    if (!viewer.open) return;
+                    if (response.status === 409) {
+                        replacement.reset();
+                        clearPreview();
+                        queueImage();
+                        return;
+                    }
+                    const result = await response.json().catch(() => null);
+                    if (!response.ok || result?.ok !== true || !Object.hasOwn(extensions, result.mimeType)) {
+                        throw new Error(result?.error || 'Chưa xác nhận được ảnh CCCD đã lưu. Vui lòng thử lại.');
+                    }
+                    if (!viewer.open) return;
+                    replacement.reset();
+                    clearPreview();
+                    replacement.hidden = true;
+                    try {
+                        await showImage(file.slice(0, file.size, result.mimeType));
+                    } catch {
+                        queueImage();
+                    }
+                } catch (error) {
+                    if (viewer.open && !controller.signal.aborted) {
+                        showError(error instanceof TypeError ? 'Chưa kết nối được máy chủ để lưu ảnh.' : error.message);
+                    }
+                } finally {
+                    submit.disabled = preview.hidden;
+                    input.disabled = false;
+                    previewButtons.forEach(button => { button.disabled = false; });
+                }
+            };
+            retry.onclick = queueImage;
+            queueImage();
+        });
+    }
+
+
     async function bookingAction(event) {
         const copyLinkButton = event.target.closest("[data-copy-booking-link]");
         if (copyLinkButton) {
@@ -411,26 +767,7 @@
         }
         const identityButton = event.target.closest('[data-view-identity]');
         if (identityButton) {
-            const id = identityButton.dataset.viewIdentity;
-            let viewer = document.querySelector('[data-identity-viewer]');
-            if (viewer) viewer.remove();
-            viewer = document.createElement('dialog');
-            viewer.dataset.identityViewer = '';
-            viewer.className = 'm-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-4xl overflow-auto rounded-2xl border border-stone-200 bg-white p-5 text-stone-800 shadow-xl backdrop:bg-black/40';
-            viewer.innerHTML = `<div class="flex items-center justify-between gap-4"><h2 class="text-lg font-semibold" id="identity-viewer-title">CCCD của người thuê</h2><button type="button" data-identity-close class="min-h-11 rounded-lg border border-stone-300 px-4 py-2 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Đóng</button></div><div class="mt-4 grid gap-4 sm:grid-cols-2">${[['front', 'Mặt trước'], ['back', 'Mặt sau']].map(([side, label]) => `<section><h3 class="mb-2 font-medium">${label}</h3><img class="max-h-[60dvh] w-full rounded-lg border border-stone-200 object-contain" src="${window.moBranchUrl(`/api/admin/bookings/${encodeURIComponent(id)}/identity/${side}`)}" alt="CCCD ${label.toLowerCase()}"><p data-identity-load-error class="mt-2 text-sm text-red-800" hidden>Không tải được ảnh. Kiểm tra phiên đăng nhập và quyền xem CCCD.</p></section>`).join('')}</div>`;
-            viewer.setAttribute('aria-labelledby', 'identity-viewer-title');
-            viewer.querySelectorAll('img').forEach(image => image.addEventListener('error', () => {
-                image.hidden = true;
-                image.nextElementSibling.hidden = false;
-            }));
-            document.body.append(viewer);
-            viewer.querySelector('[data-identity-close]').onclick = () => viewer.close();
-            viewer.addEventListener('close', () => {
-                viewer.querySelectorAll('img').forEach(image => image.removeAttribute('src'));
-                viewer.remove();
-                if (identityButton.isConnected) identityButton.focus();
-            }, {once: true});
-            viewer.showModal();
+            openIdentityViewer(identityButton);
             return;
         }
         const paymentButton = event.target.closest("[data-booking-payment]");
@@ -605,10 +942,16 @@
             || bookingPanel.contains(active) || bookingPanel.getAttribute("aria-busy") === "true") return;
         loadBookings();
     }, 30000);
-    window.addEventListener("mo:booking-created", () => {
-        bookingFilters.query = "";
+    window.addEventListener("mo:booking-created", (event) => {
+        const bookingCode = event.detail?.bookingCode;
+        bookingFilters.query = bookingCode || "";
         bookingFilters.status = "all";
         bookingFilters.room = "all";
+        if (bookingCode) {
+            bookingFilters.from = "";
+            bookingFilters.to = "";
+            bookingFilters.showFinished = true;
+        }
         bookingPagination.reset();
         loadBookings();
     });

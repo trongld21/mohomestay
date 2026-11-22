@@ -25,7 +25,8 @@ $pdo = new PDO('sqlite::memory:', null, null, [
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ]);
 $pdo->exec("CREATE TABLE rooms (id TEXT PRIMARY KEY,is_active INTEGER,status TEXT,name TEXT);
-CREATE TABLE bookings (id TEXT PRIMARY KEY,room_id TEXT,booking_code TEXT,status TEXT,check_in TEXT,check_out TEXT,hold_expires_at TEXT,is_test INTEGER DEFAULT 0);
+CREATE TABLE bookings (id TEXT PRIMARY KEY,room_id TEXT,booking_code TEXT,status TEXT,check_in TEXT,check_out TEXT,hold_expires_at TEXT,is_test INTEGER DEFAULT 0,continued_from_booking_id TEXT,payment_method TEXT);
+CREATE TABLE payments (booking_id TEXT PRIMARY KEY,checkout_url TEXT);
 CREATE TABLE room_availability (id TEXT,room_id TEXT,date TEXT,available INTEGER);
 CREATE TABLE room_emergency_locks (id TEXT PRIMARY KEY,booking_id TEXT UNIQUE,room_id TEXT,starts_at TEXT,ended_at TEXT,locked_by TEXT,ended_by TEXT);
 CREATE TABLE booking_checkout_charges (booking_id TEXT PRIMARY KEY,actual_checkout_at TEXT,confirmed_by TEXT,late_seconds INTEGER,billable_hours INTEGER,amount INTEGER,order_code INTEGER UNIQUE,payment_status TEXT,qr_code TEXT,checkout_url TEXT,payment_link_id TEXT,transaction_reference TEXT UNIQUE,paid_at TEXT,cancelled_at TEXT,cancelled_by TEXT);

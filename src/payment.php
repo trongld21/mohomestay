@@ -42,6 +42,20 @@ function remember_payment_return(array $booking): void
     ];
 }
 
+function remember_shared_checkout_return(array $booking, string $token): void
+{
+    if (($booking['payment_method'] ?? '') !== 'payos'
+        || !preg_match('/^[a-f0-9]{64}$/D', $token)
+        || !hash_equals((string)$booking['access_token'], $token)) {
+        return;
+    }
+    remember_payment_return([
+        'orderCode' => $booking['order_code'],
+        'bookingCode' => $booking['booking_code'],
+        'accessToken' => $token,
+    ]);
+}
+
 function payment_return_credentials(array $query): array
 {
     $orderCode = preg_replace('/\D/', '', (string)($query['orderCode'] ?? ''));

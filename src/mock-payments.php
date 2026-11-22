@@ -77,6 +77,7 @@ function apply_payment_callback(PDO $pdo, array $data, bool $test = false): ?arr
             $status = $valid ? 'CONFIRMED' : 'CANCELLED';
             $reason = $valid ? null : 'Đã nhận tiền nhưng đơn đã hủy, quá giờ trả hoặc phòng đang bận/khóa. Cần đối soát thủ công.';
             $pdo->prepare("UPDATE bookings SET payment_status='PAID',status=?,transaction_id=? WHERE id=?")->execute([$status, $data['reference'], $booking['id']]);
+            if ($valid) link_confirmed_booking_continuation($pdo, $booking);
             $payment = $pdo->prepare('SELECT id FROM payments WHERE booking_id=?');
             $payment->execute([$booking['id']]);
             if ($payment->fetchColumn()) {

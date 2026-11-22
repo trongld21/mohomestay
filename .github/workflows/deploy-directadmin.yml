@@ -50,6 +50,7 @@ jobs:
           php tools/people-counter-migration-test.php
           php tools/booking-access-migration-test.php
           BRANCH_TEST_PORT=3306 php tools/branch-test.php --mysql
+          php tools/staff-booking-migration-test.php
       - name: Run unit tests
         run: |
           php tools/test.php
@@ -58,6 +59,7 @@ jobs:
           php tools/ttlock-test.php
           php tools/ttlock-branch-test.php
           php tools/booking-access-test.php
+          php tools/booking-stay-test.php
           php tools/booking-identity-test.php
           php tools/manual-access-test.php
           php tools/room-test.php

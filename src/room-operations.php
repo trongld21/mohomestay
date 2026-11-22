@@ -159,6 +159,7 @@ function confirm_room_checkout(PDO $pdo, string $bookingId, string $actor, ?int 
         if ($effective['status'] !== 'CHECKED_IN') {
             throw new BookingException('Chỉ xác nhận trả phòng cho đơn đang lưu trú.', 409);
         }
+        assert_no_issued_continuation_checkout($pdo, $bookingId);
         $fee = late_checkout_fee($booking['check_out'], $now);
         if (!$collectSurcharge) {
             $fee['billableHours'] = 0;

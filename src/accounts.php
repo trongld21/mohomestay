@@ -99,6 +99,11 @@ function require_permission(string $permission): void
     }
 }
 
+function can_share_booking_links(): bool
+{
+    return can_use('bookings.create') || can_use('bookings.update');
+}
+
 function account_login(string $email, string $password): bool
 {
     $root = $email === strtolower((string)config('admin_email'));
@@ -244,6 +249,7 @@ function account_permission_groups(): array
             'bookings.overview' => 'Xem tổng quan và thống kê',
             'bookings.view' => 'Xem danh sách đặt phòng',
             'bookings.identity' => 'Xem ảnh CCCD của khách',
+            'bookings.identity.download' => 'Tải ảnh CCCD của khách',
             'bookings.create' => 'Tạo đơn đặt phòng',
             'bookings.update' => 'Nhận phòng, kết thúc sớm và hủy đơn',
             'bookings.payment' => 'Xác nhận thu tiền',
@@ -291,6 +297,9 @@ function expanded_account_permissions(array $permissions): array
     if (in_array('products.create', $expanded, true) || in_array('products.edit', $expanded, true)) {
         $expanded[] = 'products.view';
     }
+    if (in_array('bookings.identity.download', $expanded, true)) {
+        $expanded[] = 'bookings.identity';
+    }
     return array_values(array_unique($expanded));
 }
 
@@ -329,12 +338,16 @@ function admin_api_permission(string $path, string $method, array $body = []): s
         'booking-overview' => 'bookings.overview',
         'booking-rooms' => 'bookings.create',
         'promotions' => $method === 'GET' ? 'rooms.view' : 'rooms.edit',
-        'bookings' => str_ends_with($path, '/continuation') ? 'bookings.create' : match ($method) {
-            'GET' => str_contains($path, '/identity/') ? 'bookings.identity' : 'bookings.view',
-            'POST' => str_ends_with($path, '/stay') ? 'accounts'
-                : (str_ends_with($path, '/payment') ? 'bookings.payment' : 'bookings.create'),
-            'PATCH' => ($body['status'] ?? '') === 'CHECKED_OUT' ? 'availability.checkout' : 'bookings.update',
-            default => 'accounts',
+        'bookings' => match (true) {
+            str_ends_with($path, '/continuation') => 'bookings.create',
+            in_array($method, ['GET', 'POST'], true) && preg_match('#^/api/admin/bookings/[a-f0-9]{32}/identity/(front|back)$#D', $path) === 1 => 'bookings.identity',
+            default => match ($method) {
+                'GET' => 'bookings.view',
+                'POST' => str_ends_with($path, '/stay') ? 'accounts'
+                    : (str_ends_with($path, '/payment') ? 'bookings.payment' : 'bookings.create'),
+                'PATCH' => ($body['status'] ?? '') === 'CHECKED_OUT' ? 'availability.checkout' : 'bookings.update',
+                default => 'accounts',
+            },
         },
         'rooms' => match (true) {
             $method === 'GET' => 'rooms.view',

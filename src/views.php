@@ -1099,6 +1099,7 @@ function render_login(string $error): void
 function render_admin(): void
 {
     require_once APP_ROOT . '/src/manual-booking-view.php';
+    $canCreateBooking = can_use('bookings.create');
     ?>
     <div class="admin-shell">
         <section data-admin-panel="bookings">
@@ -1109,11 +1110,13 @@ function render_admin(): void
                 </div>
                 <div class="admin-heading-actions flex flex-wrap items-center gap-3">
                     <button type="button" class="button outline" data-refresh-bookings><?= admin_icon('refresh') ?> Làm mới</button>
-                    <button type="button" class="button" data-create-booking><?= admin_icon('plus') ?><span class="hidden sm:inline">Tạo đơn đặt phòng</span><span class="sm:hidden">Tạo đơn</span></button>
+                    <?php if ($canCreateBooking): ?>
+                        <button type="button" class="button" data-create-booking><?= admin_icon('plus') ?><span class="hidden sm:inline">Tạo đơn đặt phòng</span><span class="sm:hidden">Tạo đơn</span></button>
+                    <?php endif ?>
                 </div>
             </div>
             <div id="admin-bookings"><p class="notice">Đang tải danh sách đơn…</p></div>
-            <?php render_manual_booking_dialog() ?>
+            <?php if ($canCreateBooking) render_manual_booking_dialog(); ?>
         </section>
         <section data-admin-panel="rooms" hidden>
             <div class="admin-page-heading">

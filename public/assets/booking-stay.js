@@ -54,7 +54,7 @@
         const rooms = LANG_HOME.rooms.filter((room) => room.status === "ACTIVE" || room.id === booking.room_id);
         const dialog = document.createElement("dialog");
         dialog.dataset.bookingStayDialog = "";
-        dialog.className = "m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-xl overflow-auto rounded-2xl border border-[#e5dacb] bg-[#fffdfa] p-5 text-[#463a30] shadow-xl backdrop:bg-black/40 sm:p-6";
+        dialog.className = "m-auto box-border max-h-[90dvh] w-[calc(100%-2rem)] max-w-xl overflow-auto rounded-2xl border border-[#e5dacb] bg-[#fffdfa] p-5 text-[#463a30] shadow-xl backdrop:bg-black/40 sm:p-6";
         dialog.setAttribute("aria-labelledby", "booking-stay-title");
         dialog.innerHTML = `
             <form class="grid gap-4">
@@ -79,6 +79,21 @@
                     <p class="mt-1 leading-6" data-stay-error-message></p>
                     <p class="mt-2 text-xs leading-5" data-stay-error-hint></p>
                 </div>
+                <fieldset data-stay-revocation class="rounded-xl border border-[#cdbba8] bg-[#f6efe6] p-3" hidden>
+                    <legend class="px-1 text-sm font-semibold">Mã cổng cũ</legend>
+                    <div data-stay-retention hidden>
+                        <label class="mb-3 flex items-start gap-2 text-sm">
+                            <input name="accessAction" value="retain" type="radio" aria-describedby="stay-retention-note" class="mt-0.5 h-4 w-4 shrink-0 accent-[#79543e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e]">
+                            <span><strong class="block">Cấp mã mới, để mã cũ tự hết hạn</strong>
+                                <span id="stay-retention-note" class="mt-1 block">Mã cũ vẫn có thể mở cổng đến <strong data-stay-retention-end></strong>.</span>
+                            </span>
+                        </label>
+                    </div>
+                    <label class="flex items-start gap-2 text-sm">
+                        <input name="accessAction" value="revoked" type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-[#79543e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#79543e]">
+                        <span>Tôi đã thu hồi mã cũ tại khóa hoặc đã xác minh mã chưa từng được cấp.</span>
+                    </label>
+                </fieldset>
                 <div class="flex flex-wrap justify-end gap-3 border-t border-[#e5dacb] pt-4">
                     <button type="button" data-stay-cancel class="${buttonClass}">Hủy</button>
                     <button type="submit" class="${buttonClass} border-[#79543e] bg-[#79543e] text-white enabled:hover:bg-[#63412b]">Lưu thay đổi</button>
@@ -86,10 +101,17 @@
             </form>`;
         document.body.append(dialog);
         const form = dialog.querySelector("form");
+        const revocation = dialog.querySelector("[data-stay-revocation]");
+        const accessAction = form.elements.accessAction;
+        const retention = dialog.querySelector("[data-stay-retention]");
+        const retainOption = retention.querySelector("input");
+        let accessToken = "";
         form.elements.preserveTimes.addEventListener("change", () => {
             const schedule = dialog.querySelector("[data-stay-schedule]");
-            schedule.classList.toggle("hidden", form.elements.preserveTimes.checked);
-            schedule.classList.toggle("grid", !form.elements.preserveTimes.checked);
+            const preserveTimes = form.elements.preserveTimes.checked;
+            schedule.classList.toggle("hidden", preserveTimes);
+            schedule.classList.toggle("grid", !preserveTimes);
+            revocation.hidden = preserveTimes || !accessToken;
         });
         const error = dialog.querySelector("[data-stay-error]");
         const events = new AbortController();
@@ -142,10 +164,15 @@
                 expectedCheckIn: booking.check_in,
                 expectedCheckOut: booking.check_out,
             });
+            if (!payload.preserveTimes) {
+                if (accessAction.value === "revoked") payload.revokedAccess = accessToken;
+                if (accessAction.value === "retain" && !retainOption.disabled) payload.retainAccess = accessToken;
+            }
             saving = true;
             error.hidden = true;
             form.querySelectorAll("button").forEach((button) => { button.disabled = true; });
             let rejected = false;
+            let accessChoiceRequired = false;
             try {
                 const response = await fetch(`/api/admin/bookings/${encodeURIComponent(booking.id)}/stay`, {
                     method: "POST",
@@ -155,10 +182,29 @@
                 const data = await response.json();
                 if (!response.ok) {
                     rejected = response.status >= 400 && response.status < 500;
+                    if (typeof data.revokeAccess === "string") {
+                        for (const option of accessAction) option.checked = false;
+                        accessToken = data.revokeAccess;
+                        revocation.hidden = form.elements.preserveTimes.checked;
+                        accessChoiceRequired = Boolean(data.mayRetainUntil);
+                        retention.hidden = !accessChoiceRequired;
+                        retainOption.disabled = !accessChoiceRequired;
+                        if (accessChoiceRequired) {
+                            retention.querySelector("[data-stay-retention-end]").textContent = dateLabel(data.mayRetainUntil);
+                        }
+                    }
                     throw new Error(data.error || "Máy chủ chưa xử lý được yêu cầu. Vui lòng thử lại.");
                 }
                 dialog.close();
-                LangUI.toast({ type: "success", title: "Đã đổi phòng / sửa lịch", message: `${booking.booking_code} · Giữ nguyên giá và thanh toán.` });
+                let message = data.replacementQueued ? "Đang chờ cấp mã cổng theo lịch mới." : "Giữ nguyên giá và thanh toán.";
+                if (data.retainedAccessEndsAt) {
+                    message += ` Mã cũ có thể dùng đến ${dateLabel(data.retainedAccessEndsAt)}.`;
+                }
+                LangUI.toast({
+                    type: "success",
+                    title: "Đã đổi phòng / sửa lịch",
+                    message: `${booking.booking_code} · ${message}`,
+                });
                 document.dispatchEvent(new CustomEvent("mo:booking-stay-saved"));
             } catch (failure) {
                 const message = failure instanceof SyntaxError
@@ -166,7 +212,9 @@
                     : failure instanceof TypeError
                         ? "Mất kết nối với máy chủ. Vui lòng tải lại danh sách để kiểm tra đơn trước khi thử lại."
                         : failure.message || "Không kết nối được máy chủ. Vui lòng thử lại.";
-                error.querySelector("[data-stay-error-title]").textContent = rejected ? "Không thể lưu thay đổi" : "Chưa xác nhận được kết quả lưu";
+                error.querySelector("[data-stay-error-title]").textContent = accessChoiceRequired
+                    ? "Chọn cách xử lý mã cũ"
+                    : rejected ? "Không thể lưu thay đổi" : "Chưa xác nhận được kết quả lưu";
                 error.querySelector("[data-stay-error-message]").textContent = message;
                 error.querySelector("[data-stay-error-hint]").textContent = rejected
                     ? "Đơn chưa thay đổi. Thông tin bạn vừa nhập vẫn được giữ để điều chỉnh và thử lại."

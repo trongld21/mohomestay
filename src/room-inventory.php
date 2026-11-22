@@ -17,7 +17,7 @@ function room_occupied_until(array $booking, ?string $actualCheckout = null): st
  * Exact half-open interval check shared by all booking writers under the room row lock.
  * Both stays reserve cleaning after scheduled checkout, regardless of confirmation time.
  */
-function room_booking_conflict(PDO $pdo, string $roomId, string $start, string $end, ?string $exceptId = null, ?int $receiptAt = null): bool
+function room_booking_conflict(PDO $pdo, string $roomId, string $start, string $end, ?string $exceptId = null, ?int $receiptAt = null, ?string $continuationParentId = null): bool
 {
     $query = $pdo->prepare(
         'SELECT b.*,c.actual_checkout_at FROM bookings b '
@@ -33,7 +33,7 @@ function room_booking_conflict(PDO $pdo, string $roomId, string $start, string $
     $bookings = $query->fetchAll();
     foreach ($bookings as $booking) {
         $booking['continuation_active'] = booking_has_live_continuation($booking, $bookings);
-        if ($exceptId !== null && $booking['id'] === $exceptId) continue;
+        if ($booking['id'] === $exceptId || $booking['id'] === $continuationParentId) continue;
         $otherEnd = room_occupied_until($booking);
         if ($receiptAt !== null && $booking['status'] === 'CHECKED_OUT'
             && strtotime($otherEnd . ' UTC') <= $receiptAt) {
@@ -54,13 +54,13 @@ function room_quote_hold_conflict(PDO $pdo, string $roomId, string $start, strin
     return (bool)$query->fetchColumn();
 }
 
-function assert_room_inventory(PDO $pdo, string $roomId, string $start, string $end, ?string $exceptId = null, ?int $receiptAt = null): void
+function assert_room_inventory(PDO $pdo, string $roomId, string $start, string $end, ?string $exceptId = null, ?int $receiptAt = null, ?string $continuationParentId = null): void
 {
     assert_no_emergency_lock($pdo, $roomId, $start, $end);
     if (room_quote_hold_conflict($pdo, $roomId, $start, $end)) {
         throw new BookingException('Khung giờ này đang được nhân viên giữ chỗ. Vui lòng chọn giờ hoặc phòng khác.', 409);
     }
-    if (room_booking_conflict($pdo, $roomId, $start, $end, $exceptId, $receiptAt)) {
+    if (room_booking_conflict($pdo, $roomId, $start, $end, $exceptId, $receiptAt, $continuationParentId)) {
         throw new BookingException('Khung giờ trùng lịch đặt hoặc 30 phút dọn phòng. Vui lòng chọn giờ khác.', 409);
     }
 }

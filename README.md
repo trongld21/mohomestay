@@ -535,9 +535,22 @@ Khách xem trước và thay ảnh trước khi gửi; đơn thiếu ảnh bị 
 thước ảnh, không OCR hoặc xác minh giấy tờ là thật hay khớp người đặt.
 
 Chạy migration `010_booking_identity.sql`. Hai ảnh được mã hóa AES-256-GCM
-trong bảng riêng, gắn với đơn trong cùng transaction. Cần `APP_KEY` hiện có
-ít nhất 16 ký tự; sao lưu khóa cùng quy trình bảo mật riêng và giữ nguyên khóa
-để đọc lại dữ liệu đã mã hóa. Không đổi APP_KEY tùy tiện sau khi đã có ảnh.
+trong bảng riêng, gắn với đơn trong cùng transaction. Máy chủ đối chiếu lại
+dữ liệu mã hóa sau khi ghi từng mặt, trước khi chốt đơn và tạo thanh toán.
+Để ảnh mới độc lập với `APP_KEY`, đặt `BOOKING_IDENTITY_APP_KEY` trong `.env`
+riêng trên hosting bằng 64 ký tự hex tạo bởi `php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'`.
+Sao lưu khóa an toàn và dùng cùng một giá trị trên mọi tiến trình PHP của website.
+Khi chưa đặt khóa riêng, ảnh mới tiếp tục dùng `APP_KEY` ít nhất 16 ký tự.
+Nếu hosting đã đổi `APP_KEY`, cấu hình `BOOKING_IDENTITY_LEGACY_APP_KEY` trong
+`.env` riêng trên hosting bằng giá trị `APP_KEY` từ bản sao lưu tại thời điểm
+lưu ảnh cũ. Khi đọc, hệ thống thử khóa riêng, `APP_KEY` và khóa cũ theo thứ tự đó.
+Giữ các khóa đã dùng cho ảnh còn lưu khi cập nhật cấu hình. Trước khi đổi khóa
+riêng đã dùng, cần có phương án chuyển các ảnh sang khóa mới.
+Khi một đơn lỗi xem CCCD, chạy `php src/booking-identity-check.php MO-1234567890`
+qua PHP CLI trên hosting với mã đơn cần kiểm tra. Lệnh chỉ in trạng thái từng mặt.
+`missing_key` nghĩa là hosting thiếu khóa hợp lệ. `authentication_failed` nghĩa là
+khóa hiện tại và khóa cũ chưa xác thực được ảnh đã lưu. `invalid_payload` nghĩa là
+bản ghi không đủ dữ liệu mã hóa. Với hai lỗi sau, kiểm tra khóa hoặc ảnh từ bản sao lưu.
 Ảnh không nằm trong public/uploads, không trả trong API tra cứu khách và không
 gửi kèm email. Xóa đơn trong database sẽ xóa hai ảnh theo khóa ngoại.
 
@@ -545,10 +558,14 @@ Trong admin, nút Xem CCCD mở hai ảnh qua API yêu cầu phiên đăng nhậ
 `bookings.identity` (Xem ảnh CCCD của khách). Admin gốc có quyền; tài khoản chỉ
 được cấp bookings.view không tự có quyền xem ảnh. Nhóm quyền bookings đầy đủ
 bao gồm quyền xem CCCD. Phản hồi ảnh có no-store và nosniff.
+Khi một mặt đã lưu không đọc được, nhân viên có quyền xem CCCD có thể chọn
+ảnh thay thế cho đúng mặt đó trong hộp Xem CCCD. Máy chủ kiểm tra lại ảnh cũ
+trước khi thay và từ chối ghi đè nếu ảnh đã đọc được. Quyền tải ảnh độc lập.
 
 Chấp nhận JPEG, PNG, WebP tối đa 3 MiB mỗi mặt, tối đa 24 megapixel và 8000 px
 mỗi cạnh; HEIC/PDF/SVG không được nhận. Hosting cần upload_max_filesize ít
-nhất 3M, post_max_size ít nhất 8M; max_allowed_packet MySQL đủ cho một ảnh.
+nhất 3M và post_max_size ít nhất 8M. Đặt `max_allowed_packet` của MySQL ít nhất
+8 MiB để đường truyền dự phòng dạng văn bản cũng xử lý được ảnh dung lượng tối đa.
 Ảnh được giữ cùng lịch sử đơn cho đến khi xóa đơn; hiện chưa tự xóa theo hạn.
 Kiểm thử: `php tools/booking-identity-test.php` dùng ảnh giả và SQLite, không
 đưa giấy tờ thật vào kiểm thử hoặc nguồn Git.
@@ -576,7 +593,7 @@ Nhân viên không được gọi API này dù đã có quyền cập nhật đ�
 Mặc định chọn **Chỉ đổi phòng, giữ nguyên giờ nhận/trả và mã cổng đã cấp**.
 Máy chủ lấy giờ đang lưu của đơn, không dùng giờ gửi từ biểu mẫu trong chế độ này;
 mã cổng chung TTLock vẫn gắn với cùng đơn và giữ nguyên sau khi chuyển phòng.
-Bỏ chọn để sửa lịch; giờ mới chỉ nhận phút 00/30 và giây 00, và vẫn kiểm tra thời hạn mã đã cấp.
+Bỏ chọn để sửa lịch. Giờ mới chỉ nhận phút 00/30 và giây 00.
 
 Thao tác dùng chung kiểm tra tồn phòng với ma trận **Tìm phòng trống**, gồm lịch
 khách, 30 phút dọn phòng, khóa phòng và giữ báo giá. Sau khi lưu, ma trận giải phóng
@@ -585,8 +602,15 @@ phòng cũ và tính lại lịch cùng thời gian dọn ở phòng mới. Lý 
 bằng `php tools/migrate.php` trước khi dùng tính năng.
 
 Đơn đã xác nhận trả/phát sinh phụ thu hoặc đang khóa khẩn cấp phải xử lý nghiệp vụ
-đó trước. Nếu cần đổi thời hạn của đơn đã cấp/đang đối soát mã TTLock, hệ thống
-yêu cầu xử lý mã cửa trước; không tự sửa thời hạn mã đã cấp.
+đó trước. Khi đổi sang khung hiệu lực khác, superadmin thu hồi mã cũ còn hiệu lực
+trong ứng dụng TTLock và xác nhận ngay trong hộp thoại. Với lần cấp đang đối soát,
+kiểm tra các mã mang mã đơn trước khi xác nhận. Khóa không có gateway cần thu hồi
+tại chỗ qua Bluetooth. Với mã TTLock tự sinh, superadmin cũng có thể chọn cấp mã
+mới và để mã cũ tự hết hạn. Hộp thoại hiển thị thời điểm hết hạn theo giờ Việt Nam
+và lịch sử đổi lịch ghi lại lựa chọn này. Mã đã hết hạn có thể được thay tự động.
+Sau khi lưu lịch mới, cron cấp mã theo lịch mới và gửi lại email xác nhận nếu còn
+thời hạn sử dụng. Luồng thay mã dùng migrations `032_booking_access_revision`
+và `033_booking_stay_retained_access`.
 
 ## Lịch theo giờ, giữ căn và trả phòng
 

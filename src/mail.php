@@ -112,8 +112,16 @@ function dispatch_confirmation_email(string $bookingId, ?callable $transport = n
         if (!$access) return false;
     }
     $pdo = db();
-    $claim = $pdo->prepare("UPDATE bookings SET confirmation_email_status='SENDING',confirmation_email_attempts=confirmation_email_attempts+1,confirmation_email_error=NULL WHERE id=? AND status IN ('CONFIRMED','CHECKED_IN') AND payment_status='PAID' AND guest_email<>'' AND confirmation_email_status IN ('PENDING','FAILED') AND confirmation_email_attempts<3");
-    $claim->execute([$bookingId]);
+    $claimSql = "UPDATE bookings SET confirmation_email_status='SENDING',confirmation_email_attempts=confirmation_email_attempts+1,confirmation_email_error=NULL WHERE id=? AND status IN ('CONFIRMED','CHECKED_IN') AND payment_status='PAID' AND guest_email<>'' AND confirmation_email_status IN ('PENDING','FAILED') AND confirmation_email_attempts<3";
+    $claimParams = [$bookingId];
+    if ($access !== null) {
+        // Stay corrections can replace the PIN between access sync and the email claim.
+        $claimSql .= " AND EXISTS (SELECT 1 FROM booking_access_codes a WHERE a.booking_id=bookings.id"
+            . " AND a.sync_status='READY' AND a.remote_id=? AND a.starts_at=? AND a.ends_at=?)";
+        array_push($claimParams, $access['remote_id'], $access['starts_at'], $access['ends_at']);
+    }
+    $claim = $pdo->prepare($claimSql);
+    $claim->execute($claimParams);
     if ($claim->rowCount() !== 1) return false;
     $stmt = $pdo->prepare('SELECT b.*,r.name room_name FROM bookings b JOIN rooms r ON r.id=b.room_id WHERE b.id=? LIMIT 1');
     $stmt->execute([$bookingId]);$booking=$stmt->fetch();

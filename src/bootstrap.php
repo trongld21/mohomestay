@@ -60,6 +60,7 @@ function config(string $key, mixed $default = null): mixed
     ];
     $map = [
         'app_url'=>'APP_URL','app_key'=>'APP_KEY','setup_key'=>'DEPLOY_HOOK_KEY',
+        'booking_identity_key'=>'BOOKING_IDENTITY_APP_KEY',
         'timezone'=>'APP_TIMEZONE','overnight_check_in'=>'OVERNIGHT_CHECK_IN',
         'overnight_check_out'=>'OVERNIGHT_CHECK_OUT','booking_terms'=>'BOOKING_TERMS',
         'admin_email'=>'ADMIN_EMAIL','admin_password_hash'=>'ADMIN_PASSWORD_HASH',

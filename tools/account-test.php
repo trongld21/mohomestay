@@ -189,10 +189,13 @@ try {
     account_check($error->getMessage() === '403', 'Booking list must deny overview-only user');
 }
 unset($_SESSION['account_id'], $_SESSION['account_version']);
-save_account(['id' => $id, 'permissions' => ['bookings.view']], true);
+save_account(['id' => $id, 'permissions' => ['bookings.view', 'bookings.identity']], true);
 $_SESSION['account_id'] = $id;
 $_SESSION['account_version'] = 2;
 account_check(can_use('bookings.view') && !can_use('bookings.overview'), 'Booking list must not implicitly grant overview');
+account_check(can_use('bookings.identity') && !can_use('bookings.identity.download'), 'Viewing identity images alone must not expose download controls');
+account_check(!can_use('bookings.create') && !can_use('bookings.update') && !can_use('bookings.payment') && !can_share_booking_links(), 'Read-only booking access cannot create, update, collect or share');
+account_check(in_array('bookings.identity', expanded_account_permissions(['bookings.identity.download']), true), 'Granting download also grants image viewing');
 $now = strtotime('2026-10-23 12:00:00 UTC');
 $row = ['status' => 'CONFIRMED', 'payment_status' => 'PAID', 'total_price' => 287000, 'is_test' => 0, 'check_in' => '2026-10-23 11:00:00', 'check_out' => '2026-10-23 13:00:00'];
 $summary = booking_overview([$row, array_replace($row, ['is_test' => 1]), array_replace($row, ['status' => 'CANCELLED', 'total_price' => 100000])], $now);

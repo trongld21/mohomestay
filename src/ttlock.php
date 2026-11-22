@@ -147,7 +147,7 @@ final class TTLockClient
             }
             foreach ($data['list'] as $remote) {
                 if ((string)($remote['keyboardPwd'] ?? '') !== $row['code']) continue;
-                if (!in_array(($remote['keyboardPwdName'] ?? ''), [$this->passcodeName($row), 'MO-' . $row['booking_id']], true)
+                if (!$this->matchesPasscodeName($row, $remote)
                     || (int)($remote['startDate'] ?? 0) !== $this->milliseconds($row['starts_at'])
                     || (int)($remote['endDate'] ?? 0) !== $this->milliseconds($row['ends_at'])
                     || (int)($remote['keyboardPwdId'] ?? 0) <= 0
@@ -188,7 +188,7 @@ final class TTLockClient
             ]);
             if (!isset($data['list']) || !is_array($data['list'])) throw new TTLockException('Không đọc được danh sách mã TTLock.', true);
             foreach ($data['list'] as $remote) {
-                if (!in_array(($remote['keyboardPwdName'] ?? ''), [$this->passcodeName($row), 'MO-' . $row['booking_id']], true)) continue;
+                if (!$this->matchesPasscodeName($row, $remote)) continue;
                 if ((int)($remote['keyboardPwdType'] ?? 0) !== 3
                     || (int)($remote['startDate'] ?? 0) !== $this->milliseconds($row['starts_at'])
                     || (int)($remote['endDate'] ?? 0) !== $this->milliseconds($row['ends_at'])
@@ -238,7 +238,16 @@ final class TTLockClient
     private function passcodeName(array $row): string
     {
         $name = trim((string)($row['booking_code'] ?? ''));
-        return $name !== '' ? $name : 'MO-' . $row['booking_id'];
+        $name = $name !== '' ? $name : 'MO-' . $row['booking_id'];
+        $revision = (int)($row['revision'] ?? 0);
+        return $revision > 0 ? $name . '-R' . $revision : $name;
+    }
+
+    private function matchesPasscodeName(array $row, array $remote): bool
+    {
+        $name = $remote['keyboardPwdName'] ?? '';
+        return $name === $this->passcodeName($row)
+            || ((int)($row['revision'] ?? 0) === 0 && $name === 'MO-' . $row['booking_id']);
     }
 
     private function milliseconds(string $utc): int
