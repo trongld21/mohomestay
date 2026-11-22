@@ -1,4 +1,11 @@
 <?php
+
+// Unit tests must not depend on a developer's .env or production payOS keys.
+// Pin both environment sources before bootstrap loads any optional .env file.
+$testChecksumKey = 'mo-unit-test-checksum-key-not-for-production';
+putenv('MO_BRANCH=1');
+putenv('PAYOS_CHECKSUM_KEY=' . $testChecksumKey);
+$_ENV['PAYOS_CHECKSUM_KEY'] = $testChecksumKey;
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 $failures = [];
@@ -16,6 +23,11 @@ $expected = hash_hmac('sha256', 'a=1&b=2', (string)config('payos.checksum_key'))
 check(payos_signature(['b'=>2,'a'=>1]) === $expected, 'Chu ky payOS phai sap xep key');
 check(payos_verify(['a'=>1,'b'=>2], $expected), 'Xac minh chu ky payOS hop le');
 check(!payos_verify(['a'=>2,'b'=>2], $expected), 'Phai tu choi chu ky sai');
+check(!payos_verify(['a' => 1, 'b' => 2], 'invalid-signature'), 'Phai tu choi chu ky sai dinh dang');
+$_ENV['PAYOS_CHECKSUM_KEY'] = '';
+$emptyKeySignature = hash_hmac('sha256', 'a=1&b=2', '');
+check(!payos_verify(['a' => 1, 'b' => 2], $emptyKeySignature), 'Chua cau hinh checksum key phai tu choi webhook, ke ca chu ky tinh bang key rong');
+$_ENV['PAYOS_CHECKSUM_KEY'] = $testChecksumKey;
 
 $_SESSION = [];
 $returnBooking = ['bookingCode'=>'MO-ABCDEF1234','accessToken'=>str_repeat('a',64),'orderCode'=>123456789];
