@@ -31,7 +31,27 @@ cho các biến `PAYOS_*`, `TTLOCK_*`, `IMOU_*`, `PEOPLE_COUNTER_*`, `HOME_MAP_*
 `WIFI_*`, `CHECKIN_GUIDE_URL`, `HOUSE_RULES_URL`, `BOOKINGS_ENABLED`, `REVENUE_INTEGRATION_KEY`.
 Ví dụ `BRANCH2_TTLOCK_LOCK_ID`,
 `BRANCH2_PAYOS_CLIENT_ID`, `BRANCH2_BOOKINGS_ENABLED`. Không tự dùng khóa hoặc credentials
-thanh toán chi nhánh 1. Webhook payOS CN2: `/chi-nhanh/2/api/payments/webhook`;
+thanh toán chi nhánh 1. Với TTLock dùng cùng app/tài khoản nhưng khác căn, đặt
+`BRANCH2_TTLOCK_SHARED_ACCOUNT=true`: CN2 dùng chung `TTLOCK_BASE_URL`, `TTLOCK_CLIENT_ID`,
+`TTLOCK_CLIENT_SECRET`, `TTLOCK_USERNAME`, `TTLOCK_PASSWORD_MD5` của CN1. Không cần sao chép
+các thông tin đó sang biến CN2. Cờ bật, Lock ID và chế độ mã vẫn riêng cho từng chi nhánh:
+
+```ini
+BRANCH2_TTLOCK_SHARED_ACCOUNT=true
+BRANCH2_TTLOCK_LOCK_ID=<Lock ID thật của cổng Mơ 2>
+BRANCH2_TTLOCK_CODE_MODE=GENERATED
+BRANCH2_TTLOCK_ENABLED=false
+```
+
+Chỉ bật `BRANCH2_TTLOCK_ENABLED=true` sau khi kiểm tra đúng khóa cổng Mơ 2. Hệ thống từ chối
+CN2 cấu hình cùng Lock ID của CN1 và chặn các yêu cầu tạo/đối soát/xóa mã CN2 trỏ về khóa CN1,
+kể cả bản ghi cũ lưu sai khóa. Không ghi đè Lock ID đã lưu trên mã cũ khi đổi cấu hình.
+Nếu dùng tài khoản TTLock khác, đặt `BRANCH2_TTLOCK_SHARED_ACCOUNT=false` và khai báo đầy đủ
+`BRANCH2_TTLOCK_BASE_URL`, `BRANCH2_TTLOCK_CLIENT_ID`, `BRANCH2_TTLOCK_CLIENT_SECRET`,
+`BRANCH2_TTLOCK_USERNAME`, `BRANCH2_TTLOCK_PASSWORD_MD5`. Không thay đổi các biến TTLock của CN1.
+Kiểm thử offline bằng `php tools/ttlock-branch-test.php`; test không gửi yêu cầu tới khóa thật.
+
+Webhook payOS CN2: `/chi-nhanh/2/api/payments/webhook`;
 API doanh thu CN2: `/chi-nhanh/2/api/integration/revenue`. Các biến database, tài khoản
 Super Admin, khóa mã hóa và mail dùng chung. Không thêm secrets vào Git.
 

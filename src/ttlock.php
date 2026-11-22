@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/branches.php';
+
 class TTLockException extends RuntimeException
 {
     public function __construct(string $message, public readonly bool $uncertain = false)
@@ -44,11 +46,26 @@ function ttlock_options(): array
 
 function ttlock_configured(): bool
 {
+    return ttlock_configuration_error() === null;
+}
+
+function ttlock_primary_lock_id(): int
+{
+    $value = $_ENV['TTLOCK_LOCK_ID'] ?? getenv('TTLOCK_LOCK_ID');
+    return (int)($value === false ? 0 : $value);
+}
+
+function ttlock_configuration_error(): ?string
+{
     $o = ttlock_options();
-    return in_array($o['base_url'], ['https://api.sciener.com', 'https://euapi.ttlock.com', 'https://api.ttlock.com'], true)
+    if (branch_id() === 2 && ttlock_primary_lock_id() > 0 && (int)$o['lock_id'] === ttlock_primary_lock_id()) {
+        return 'Lock ID của chi nhánh 2 đang trùng chi nhánh 1. Chọn đúng khóa cổng của căn Mơ 2 trước khi tạo mã.';
+    }
+    $configured = in_array($o['base_url'], ['https://api.sciener.com', 'https://euapi.ttlock.com', 'https://api.ttlock.com'], true)
         && $o['client_id'] !== '' && $o['client_secret'] !== '' && $o['username'] !== ''
         && preg_match('/^[a-f0-9]{32}$/', $o['password_md5']) === 1
         && ctype_digit($o['lock_id']) && (int)$o['lock_id'] > 0;
+    return $configured ? null : 'TTLock chưa được cấu hình đủ app, tài khoản hoặc Lock ID của chi nhánh này.';
 }
 
 final class TTLockClient
@@ -87,6 +104,12 @@ final class TTLockClient
 
     private function request(string $path, array $params): array
     {
+        if (branch_id() === 2 && isset($params['lockId']) && ttlock_primary_lock_id() > 0
+            && (int)$params['lockId'] === ttlock_primary_lock_id()) {
+            // Also protect retries of an existing row whose stored lock_id was
+            // configured incorrectly. Never contact the branch-1 lock from CN2.
+            throw new TTLockException('Yêu cầu đang trỏ tới khóa của chi nhánh 1. Không tạo, đối soát hoặc xóa mã khóa Mơ 1 từ chi nhánh 2.');
+        }
         if ($path !== '/oauth2/token') {
             if ($this->token === null) {
                 $auth = $this->request('/oauth2/token', [

@@ -63,7 +63,9 @@ function admin_manual_access_api(?string $id = null): never
 {
     require_admin();
     require_csrf();
-    if (!config('ttlock.enabled') || !ttlock_configured()) throw new BookingException('TTLock chưa bật hoặc thiếu cấu hình.', 422);
+    if (!config('ttlock.enabled') || !ttlock_configured()) {
+        throw new BookingException(ttlock_configuration_error() ?? 'TTLock chưa bật cho chi nhánh này.', 422);
+    }
     $pdo = db();
     if ($id === null) {
         $row = validate_manual_access(json_body());

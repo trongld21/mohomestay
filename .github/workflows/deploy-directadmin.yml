@@ -56,6 +56,7 @@ jobs:
           php tools/deploy-agent-test.php
           php tools/directadmin-deploy-test.php
           php tools/ttlock-test.php
+          php tools/ttlock-branch-test.php
           php tools/booking-access-test.php
           php tools/booking-identity-test.php
           php tools/manual-access-test.php

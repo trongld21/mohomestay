@@ -142,7 +142,7 @@ function admin_booking_access_retry(string $bookingId, bool $regenerate = false)
     require_admin();
     require_csrf();
     if (!config('ttlock.enabled') || !ttlock_configured()) {
-        json_response(['error' => 'TTLock chưa được bật hoặc chưa cấu hình đủ.'], 422);
+        json_response(['error' => ttlock_configuration_error() ?? 'TTLock chưa được bật cho chi nhánh này.'], 422);
     }
     $access = retry_booking_access($bookingId, $regenerate);
     // A mail failure must reuse the same provisioned PIN.

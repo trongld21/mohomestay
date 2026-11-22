@@ -73,6 +73,13 @@ function config(string $key, mixed $default = null): mixed
     ];
     if ($key === 'ttlock.enabled') return filter_var(env_value('TTLOCK_ENABLED', 'false'), FILTER_VALIDATE_BOOL);
     if ($key === 'bookings_enabled') return filter_var(env_value('BOOKINGS_ENABLED','false'), FILTER_VALIDATE_BOOL);
+    if (branch_id() === 2 && filter_var(env_value('BRANCH2_TTLOCK_SHARED_ACCOUNT', 'false'), FILTER_VALIDATE_BOOL)
+        && in_array($key, ['ttlock.base_url', 'ttlock.client_id', 'ttlock.client_secret', 'ttlock.username', 'ttlock.password_md5'], true)) {
+        // Share the whole app/account identity only with this explicit opt-in.
+        // Enablement, physical lock ID and code mode always remain branch-local.
+        $value = $_ENV[$map[$key]] ?? getenv($map[$key]);
+        return $value === false ? $default : $value;
+    }
     return isset($map[$key]) ? env_value($map[$key], $default) : $default;
 }
 
