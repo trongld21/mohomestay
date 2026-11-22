@@ -88,7 +88,7 @@ function mo_revenue_api(string $method): never
         $to = $_GET['to'] ?? '';
         if (!is_string($from) || !is_string($to)) throw new InvalidArgumentException('Bộ lọc không hợp lệ.');
         mo_revenue_dates($from, $to);
-        json_response(mo_revenue_report(db(), $from, $to));
+        json_response(mo_revenue_report(db(), $from, $to) + ['branchId' => branch_id(), 'branchName' => branch_label()]);
     } catch (InvalidArgumentException $error) {
         json_response(['error' => $error->getMessage()], 422);
     } catch (Throwable $error) {

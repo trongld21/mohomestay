@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/branches.php';
+
 require_once __DIR__ . '/people-counter-preview.php';
 
 function people_counter_authorized(string $key, string $timestamp, string $signature, string $body, int $now): bool
@@ -186,7 +188,7 @@ function people_counter_api(string $method, bool $integration): never
         $preview = $integration ? people_counter_preview_validate($input['preview'] ?? null, time()) : null;
         $result = $integration ? people_counter_ingest(db(), $input, time()) : people_counter_report(db(), $_GET, time());
         if ($preview !== null) {
-            people_counter_preview_save(APP_ROOT . '/storage/people-counter', $input['cameraId'], $preview);
+            people_counter_preview_save(APP_ROOT . '/storage/people-counter' . (branch_id() === 2 ? '/branch2' : ''), $input['cameraId'], $preview);
         }
         json_response($result);
     } catch (BookingException $error) {

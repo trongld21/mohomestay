@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/admin-icons.php';
+require_once __DIR__ . '/branches.php';
 
 function render_admin_navigation(string $path): void
 {
@@ -17,8 +18,9 @@ function render_admin_navigation(string $path): void
         </div>
         <div class="admin-property">
             <span class="admin-property-icon"><?= admin_icon('home') ?></span>
-            <div><strong>Mơ Home</strong><small>Ninh Kiều, Cần Thơ</small></div>
+            <div><strong>Mơ Home</strong><small><?= e(branch_label()) ?></small></div>
         </div>
+        <div class="px-3 pb-3"><?php render_branch_selector(true); ?></div>
         <p class="admin-nav-label">QUẢN LÝ KHÔNG GIAN</p>
         <nav class="admin-navigation" aria-label="Khu vực quản lý">
             <?php if (can_use('bookings.overview')): ?>
@@ -146,7 +148,7 @@ function render_admin_navigation(string $path): void
 
 function render_admin_topbar(): void
 {
-    $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+    $path = branch_path();
     $title = match ($path) {
         '/admin/overview' => 'Tổng quan',
         '/admin/door-codes' => 'Mã mở cửa',
@@ -169,7 +171,7 @@ function render_admin_topbar(): void
         <button class="icon-button admin-menu-toggle" type="button" data-admin-menu-toggle aria-controls="admin-sidebar" aria-expanded="false" aria-label="Mở menu quản trị">
             <svg class="admin-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
-        <div>Mơ Home <span aria-hidden="true">/</span> <strong data-admin-crumb><?= e($title) ?></strong></div>
+        <div>Mơ Home <span aria-hidden="true">/</span> <span class="font-semibold text-[#79543e]"><?= e(branch_label()) ?></span> <span aria-hidden="true">/</span> <strong data-admin-crumb><?= e($title) ?></strong></div>
         <span class="admin-timezone">Giờ Việt Nam · UTC+7</span>
     </header>
     <?php

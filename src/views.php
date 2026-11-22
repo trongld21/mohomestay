@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/branches.php';
+
 function render_contact_widget(): void
 {
     // Only use explicitly configured Facebook destinations, never guessed accounts.
@@ -76,12 +78,12 @@ function render_google_analytics(string $path, string $host): void
 function render_page(string $title, callable $content, array $options = []): never
 {
     $fullTitle = e($title) . ' | Mơ Home';
-    $adminPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+    $adminPath = branch_path();
     $loginLayout = $adminPath === '/auth/login';
     $adminLayout = in_array($adminPath, [
         '/admin', '/admin/overview', '/admin/availability', '/admin/door-codes', '/admin/accounts',
         '/admin/permissions', '/admin/no-access', '/admin/sales', '/admin/sales/history',
-        '/admin/products', '/admin/inventory', '/admin/people-counter', '/admin/promotions',
+        '/admin/products', '/admin/expenses', '/admin/inventory', '/admin/people-counter', '/admin/promotions',
         '/admin/personnel', '/admin/payroll', '/admin/timesheet',
     ], true);
     if ($adminLayout) {
@@ -90,10 +92,11 @@ function render_page(string $title, callable $content, array $options = []): nev
     $robots = ($options['robots'] ?? true) ? 'index,follow' : 'noindex,nofollow';
     ?>
     <!doctype html>
-    <html lang="vi">
+    <html lang="vi" data-branch-prefix="<?= branch_id() === 2 ? '/chi-nhanh/2' : '' ?>">
 
     <head>
         <meta charset="utf-8">
+        <script src="<?= e(asset_url('/assets/branches.js')) ?>"></script>
         <?php render_google_analytics($adminPath, $_SERVER['HTTP_HOST'] ?? ''); ?>
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <title><?= $fullTitle ?></title>
@@ -125,11 +128,20 @@ function render_page(string $title, callable $content, array $options = []): nev
         <?php elseif ($loginLayout): ?>
             <main id="main"><?php $content(); ?></main>
         <?php else: ?>
-            <?php render_header(); ?><main id="main"><?php $content(); ?></main><?php render_footer(); ?>
+            <?php render_header(); ?>
+            <div class="mx-auto max-w-7xl px-4 py-4"><?php render_branch_selector(); ?></div>
+            <main id="main"><?php
+                if (branch_id() === 2 && in_array($adminPath, ['/', '/rooms', '/calendar', '/bookings'], true) && !rooms()) {
+                    render_branch_empty();
+                } else {
+                    $content();
+                }
+            ?></main>
+            <?php render_footer(); ?>
         <?php endif ?>
         <div class="ui-toast-region" data-toast-region aria-live="polite" aria-atomic="false"></div>
         <dialog class="ui-dialog-root" data-dialog-root aria-labelledby="ui-dialog-title"></dialog>
-        <?php $pagePath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+        <?php $pagePath = branch_path();
         if (!preg_match('#^/(admin|auth)(/|$)#', $pagePath)) render_contact_widget(); ?>
         <script>
             window.LANG_HOME = {
@@ -248,7 +260,13 @@ function render_footer(): void
             <section id="lien-he-footer" class="grid content-start gap-1 max-[760px]:col-span-2" aria-labelledby="footer-contact-title">
                 <h2 id="footer-contact-title">MÌNH KẾT NỐI NHÉ</h2>
                 <a href="tel:0357907153">☎ 0357 907 153</a>
-                <p class="m-0! py-1.5 text-sm!">82 đường B18, KDC 91B<br>Ninh Kiều, Cần Thơ</p>
+                <p class="m-0! py-1.5 text-sm!">
+                    <?php if (branch_id() === 2): ?>
+                        Chi nhánh 2 · Địa chỉ sẽ được cập nhật
+                    <?php else: ?>
+                        82 đường B18, KDC 91B<br>Ninh Kiều, Cần Thơ
+                    <?php endif ?>
+                </p>
                 <a href="https://zalo.me/0357907153" target="_blank" rel="noreferrer">Trò chuyện qua Zalo ↗</a>
             </section>
         </div>

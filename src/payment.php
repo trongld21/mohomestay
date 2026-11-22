@@ -1,5 +1,12 @@
 <?php
 
+require_once __DIR__ . '/branches.php';
+
+function payment_return_session_key(): string
+{
+    return branch_id() === 2 ? 'payment_returns_branch2' : 'payment_returns';
+}
+
 function payos_normalize(array $data): string
 {
     ksort($data);
@@ -12,17 +19,23 @@ function payos_normalize(array $data): string
     return implode('&', $pairs);
 }
 function payos_signature(array $data): string { return hash_hmac('sha256', payos_normalize($data), (string)config('payos.checksum_key')); }
-function payos_verify(array $data, string $signature): bool { return (bool)preg_match('/^[a-f0-9]{64}$/i', $signature) && hash_equals(payos_signature($data), strtolower($signature)); }
+function payos_verify(array $data, string $signature): bool
+{
+    return (string)config('payos.checksum_key', '') !== ''
+        && (bool)preg_match('/^[a-f0-9]{64}$/i', $signature)
+        && hash_equals(payos_signature($data), strtolower($signature));
+}
 
 function remember_payment_return(array $booking): void
 {
     if (session_status() === PHP_SESSION_NONE && PHP_SAPI !== 'cli') session_start();
-    $_SESSION['payment_returns'] ??= [];
+    $key = payment_return_session_key();
+    $_SESSION[$key] ??= [];
     $now = time();
-    foreach ($_SESSION['payment_returns'] as $orderCode => $entry) {
-        if (($entry['expires'] ?? 0) < $now) unset($_SESSION['payment_returns'][$orderCode]);
+    foreach ($_SESSION[$key] as $orderCode => $entry) {
+        if (($entry['expires'] ?? 0) < $now) unset($_SESSION[$key][$orderCode]);
     }
-    $_SESSION['payment_returns'][(string)$booking['orderCode']] = [
+    $_SESSION[$key][(string)$booking['orderCode']] = [
         'code'=>(string)$booking['bookingCode'],
         'token'=>(string)$booking['accessToken'],
         'expires'=>$now + 86400,
@@ -32,7 +45,7 @@ function remember_payment_return(array $booking): void
 function payment_return_credentials(array $query): array
 {
     $orderCode = preg_replace('/\D/', '', (string)($query['orderCode'] ?? ''));
-    $entry = $_SESSION['payment_returns'][$orderCode] ?? null;
+    $entry = $_SESSION[payment_return_session_key()][$orderCode] ?? null;
     if (!is_array($entry) || ($entry['expires'] ?? 0) < time()) return ['code'=>'','token'=>''];
     $code = strtoupper((string)($entry['code'] ?? ''));
     $token = (string)($entry['token'] ?? '');

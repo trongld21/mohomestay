@@ -78,7 +78,7 @@
         form.onsubmit = (event) => {
             event.preventDefault();
             if (submit.disabled) return;
-            location.href = `/calendar?room=${encodeURIComponent(roomSelect.value)}&package=${encodeURIComponent(packageSelect.value)}&date=${encodeURIComponent(form.elements.date.value)}`;
+            location.href = window.moBranchUrl(`/calendar?room=${encodeURIComponent(roomSelect.value)}&package=${encodeURIComponent(packageSelect.value)}&date=${encodeURIComponent(form.elements.date.value)}`);
         };
     }
 
@@ -494,12 +494,12 @@
                     body: testing ? JSON.stringify(data) : upload,
                 });
                 if (testing) {
-                    location.href = result.paymentUrl;
+                    location.href = window.moBranchUrl(result.paymentUrl);
                     return;
                 }
                 try {
                     sessionStorage.setItem(
-                        "mo-payment-" + result.orderCode,
+                        globalThis.moBranchStorageKey?.("mo-payment-" + result.orderCode) || "mo-payment-" + result.orderCode,
                         JSON.stringify({ code: result.bookingCode, token: result.token }),
                     );
                 } catch {}
@@ -509,7 +509,7 @@
                     message: "Đang chuyển đến trang thanh toán.",
                 });
                 location.href =
-                    "/payment?code=" + encodeURIComponent(result.bookingCode) + "#" + result.token;
+                    window.moBranchUrl("/payment?code=" + encodeURIComponent(result.bookingCode) + "#" + result.token);
             } catch (error) {
                 submitting = false;
                 await loadAvailability();

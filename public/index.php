@@ -3,9 +3,19 @@ $requestedPath = rawurldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_
 if (PHP_SAPI === 'cli-server' && is_file(__DIR__ . $requestedPath)) return false;
 require dirname(__DIR__) . '/src/bootstrap.php';
 
-$path = $requestedPath;
+$path = branch_path($requestedPath);
+ob_start('branch_html');
 $path = rtrim($path, '/') ?: '/';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
+// Enforce branch scope before rendering any management page, including routes
+// that only check is_admin(). Admin APIs also enforce this in require_admin().
+if (preg_match('#^/(?:admin|dev)(?:/|$)#', $path) && is_admin() && !account_branch_allowed()) {
+    if ($method === 'GET') {
+        redirect(account_admin_url(account_home()));
+    }
+    require_admin();
+}
 
 if ($path === '/__dev/version' && dev_reload_enabled() && $method === 'GET') {
     $hash = hash_init('sha256');
@@ -49,7 +59,7 @@ if ($path === '/auth/login' && $method === 'POST') {
     $password = (string)($_POST['password'] ?? '');
     try {
         if (account_login($email, $password)) {
-            redirect(account_home());
+            redirect(account_admin_url(account_home()));
         }
     } catch (Throwable $error) {
         error_log('Account login failed: ' . $error->getMessage());

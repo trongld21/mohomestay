@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/branches.php';
+
 function queue_staff_notification(PDO $pdo, array $booking, string $event, ?array $charge = null): void
 {
     if (!empty($booking['is_test'])) return;
@@ -15,6 +17,7 @@ function queue_staff_notification(PDO $pdo, array $booking, string $event, ?arra
     $roomQuery->execute([$booking['room_id']]);
     // Snapshot only the information needed to operate the stay; never include PINs, identity images or tokens.
     $payload = [
+        'branchName' => branch_label(),
         'code' => $booking['booking_code'],
         'room' => (string)($roomQuery->fetchColumn() ?: $booking['room_id']),
         'guest' => $booking['guest_name'] ?? '',
@@ -44,6 +47,7 @@ function build_staff_notification_email(string $event, array $payload): array
     };
     $escape = static fn($value): string => htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $rows = [
+        'Chi nhánh' => $payload['branchName'] ?? 'Chi nhánh 1',
         'Mã đơn' => $payload['code'],
         'Phòng' => $payload['room'],
         'Khách' => $payload['guest'],
@@ -68,7 +72,7 @@ function build_staff_notification_email(string $event, array $payload): array
             . '</td><td style="padding:6px 0"><strong>' . $escape($value) . '</strong></td></tr>';
     }
     $html .= '</table><p>Mở trang quản trị Mơ Home để kiểm tra chi tiết.</p></body></html>';
-    return ['subject' => 'Mơ Home · ' . $title . ' · ' . $payload['code'], 'html' => $html];
+    return ['subject' => 'Mơ Home · ' . ($payload['branchName'] ?? 'Chi nhánh 1') . ' · ' . $title . ' · ' . $payload['code'], 'html' => $html];
 }
 
 function send_staff_notification_message(array $message, string $recipient, ?callable $transport = null, ?string $messageId = null): bool

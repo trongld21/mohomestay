@@ -16,6 +16,7 @@ function render_permission_manager(array $accounts, string $error): void
             'name' => $account['name'],
             'email' => $account['email'],
             'active' => (bool)$account['is_active'],
+            'branchId' => (int)$account['branch_id'],
             'grants' => $grants,
         ];
         if ($account['id'] === $requested) {
@@ -65,7 +66,7 @@ function render_permission_manager(array $accounts, string $error): void
                             <a class="permission-account" href="?account=<?= e(urlencode($account['id'])) ?>" data-select-account="<?= e($account['id']) ?>" <?= $account['id'] === $selected['id'] ? 'aria-current="true"' : '' ?>>
                                 <span class="block break-words font-semibold"><?= e($account['name']) ?></span>
                                 <span class="mt-1 block break-all text-xs text-[#70645b]"><?= e($account['email']) ?></span>
-                                <span class="mt-2 block text-xs text-[#70645b]"><?= $account['active'] ? 'Đang hoạt động' : 'Đã khóa đăng nhập' ?> · <?= count($account['grants']) ?> quyền</span>
+                                <span class="mt-2 block text-xs text-[#70645b]">Chi nhánh <?= $account['branchId'] ?> · <?= $account['active'] ? 'Đang hoạt động' : 'Đã khóa đăng nhập' ?> · <?= count($account['grants']) ?> quyền</span>
                             </a>
                         <?php endforeach ?>
                     </nav>
@@ -79,6 +80,7 @@ function render_permission_manager(array $accounts, string $error): void
                             <div class="min-w-0">
                                 <h2 class="break-words text-xl font-semibold" data-selected-name><?= e($selected['name']) ?></h2>
                                 <p class="mt-1 break-all text-sm text-[#70645b]" data-selected-email><?= e($selected['email']) ?></p>
+                                <p class="mt-2 text-sm font-semibold text-[#79543e]" data-selected-branch>Chi nhánh <?= (int)$selected['branch_id'] ?></p>
                             </div>
                             <span class="rounded-md bg-[#f3eee6] px-3 py-2 text-xs font-medium" data-selected-status><?= $selected['is_active'] ? 'Đang hoạt động' : 'Đã khóa đăng nhập' ?></span>
                         </div>

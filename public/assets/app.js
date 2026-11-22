@@ -14,7 +14,7 @@ async function api(url, options = {}) {
         && ['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT'].includes(data.status)) {
         const credentials = JSON.parse(options.body || '{}');
         if (/^[a-f0-9]{64}$/.test(credentials.token || '')) {
-            location.replace('/booking-success/' + encodeURIComponent(data.bookingCode) + '#' + credentials.token);
+            location.replace(window.moBranchUrl('/booking-success/' + encodeURIComponent(data.bookingCode) + '#' + credentials.token));
         }
     }
     return data;
@@ -36,7 +36,34 @@ function initCalendar(){const root=$('#calendar-app');if(!root)return;const q=pa
 function initBooking(){const root=$('#booking-app');if(!root)return;const form=$('[data-booking-form]',root),q=parseParams(),summary=$('[data-summary]',root),message=$('[data-booking-message]',root),terms=$('[data-terms]',root);for(const key of ['roomId','stayPackage','date','time']){let el=form.elements[key],val=q[key]||q[key==='roomId'?'room':key==='stayPackage'?'package':key];if(el&&val)el.value=val}if(!form.elements.date.value)form.elements.date.value=LANG_HOME.today;let availability=null;
  function update(){let room=roomData[form.roomId.value],pkg=form.stayPackage.value,win=windowFor(form.date.value,form.time.value,pkg,availability?.overnight);form.time.disabled=pkg==='overnight';if(pkg==='overnight')form.time.value=availability?.overnight?.checkIn||'';summary.innerHTML=`<div class="summary-image"><img src="${room.image}" alt="Phòng ${room.name}"></div><h2>${room.name} Room</h2><p class="muted">${room.subtitle}</p><div class="summary-row"><span>Gói lưu trú</span><strong>${packageNames[pkg]}</strong></div><div class="summary-row"><span>Nhận phòng</span><span>${win?localDate(win.start):'Chờ xác nhận giờ'}</span></div><div class="summary-row"><span>Trả phòng</span><span>${win?localDate(win.end):'Chờ xác nhận giờ'}</span></div><div class="summary-row total"><span>Tổng tiền</span><strong>${money(room.prices[pkg])}</strong></div><p class="muted">Giữ phòng 15 phút khi tạo đơn.</p>`}
  async function check(){try{availability=await api('/api/availability?date='+form.date.value);terms.hidden=!availability.terms;terms.textContent=availability.terms?'Điều kiện đặt phòng: '+availability.terms:'';update()}catch(e){message.innerHTML=`<p class="notice error">${e.message}</p>`}}
- form.onchange=e=>{if(e.target.name==='date')check();else update()};form.onsubmit=async e=>{e.preventDefault();message.innerHTML='';let data=Object.fromEntries(new FormData(form));data.numberOfGuests=Number(data.numberOfGuests);data.acceptTerms=!!data.acceptTerms;try{let result=await api('/api/bookings',{method:'POST',body:JSON.stringify(data)});location.href='/payment?code='+encodeURIComponent(result.bookingCode)+'#'+result.token}catch(err){message.innerHTML=`<p class="notice error">${err.message}</p>`}};update();check()}
+    form.onchange = (event) => {
+        if (event.target.name === 'date') {
+            check();
+        } else {
+            update();
+        }
+    };
+    form.onsubmit = async (event) => {
+        event.preventDefault();
+        message.innerHTML = '';
+        const data = Object.fromEntries(new FormData(form));
+        data.numberOfGuests = Number(data.numberOfGuests);
+        data.acceptTerms = !!data.acceptTerms;
+        try {
+            const result = await api('/api/bookings', {
+                method: 'POST',
+                body: JSON.stringify(data),
+            });
+            location.href = window.moBranchUrl(
+                '/payment?code=' + encodeURIComponent(result.bookingCode) + '#' + result.token,
+            );
+        } catch (error) {
+            message.innerHTML = `<p class="notice error">${error.message}</p>`;
+        }
+    };
+    update();
+    check();
+}
 
 function renderLookup(booking) {
     const paymentLink = booking.status === 'PENDING' && booking.checkoutUrl
@@ -64,8 +91,9 @@ function initPayment() {
     const out = $('[data-payment-result]', root);
     const params = parseParams();
     const orderCode = String(params.orderCode || '');
+    const storageKey = globalThis.moBranchStorageKey?.('mo-payment-' + orderCode) || 'mo-payment-' + orderCode;
     let stored = null;
-    try { stored = JSON.parse(sessionStorage.getItem('mo-payment-' + orderCode) || 'null'); } catch {}
+    try { stored = JSON.parse(sessionStorage.getItem(storageKey) || 'null'); } catch {}
     const code = root.dataset.code || stored?.code || '';
     const token = location.hash.slice(1) || root.dataset.token || stored?.token || '';
     if (!token || (!code && !orderCode)) {
@@ -132,7 +160,7 @@ function initPayment() {
             if (['CONFIRMED', 'CANCELLED', 'EXPIRED', 'CHECKED_IN', 'CHECKED_OUT'].includes(booking.status)) {
                 clearInterval(timer);
                 if (orderCode) {
-                    try { sessionStorage.removeItem('mo-payment-' + orderCode); } catch {}
+                    try { sessionStorage.removeItem(storageKey); } catch {}
                 }
             }
         } catch (error) {

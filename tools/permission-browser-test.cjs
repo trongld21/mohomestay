@@ -11,8 +11,8 @@ const { chromium } = require("playwright");
 const output = process.env.PERMISSION_ARTIFACT_DIR || path.join(os.tmpdir(), "mo-permissions-qa");
 fs.mkdirSync(output, { recursive: true });
 const accounts = [
-    { id: "qa-one", name: "Lễ tân <kiểm thử>", email: "letan@example.test", is_active: 1, permissions: '["bookings.view","bookings.create"]' },
-    { id: "qa-two", name: "Quản lý kho", email: "kho@example.test", is_active: 0, permissions: "[]" },
+    { id: "qa-one", name: "Lễ tân <kiểm thử>", email: "letan@example.test", branch_id: 1, is_active: 1, permissions: '["bookings.view","bookings.create"]' },
+    { id: "qa-two", name: "Quản lý kho", email: "kho@example.test", branch_id: 2, is_active: 0, permissions: "[]" },
 ];
 
 function render(items) {
@@ -51,6 +51,7 @@ function render(items) {
             const form = page.locator("[data-permission-form]");
             const checkbox = (key) => form.locator(`input[value="${key}"]`);
             assert.equal(await page.locator("[data-selected-name]").innerText(), accounts[0].name);
+            assert.equal(await page.locator("[data-selected-branch]").innerText(), "Chi nhánh 1");
             assert.equal(await page.locator("kiểm").count(), 0, "Account names must be escaped as text.");
             assert.equal(await form.locator('[name="csrf"]').inputValue(), "fixture-csrf");
             assert.equal(await form.locator('[name="id"]').inputValue(), "qa-one");

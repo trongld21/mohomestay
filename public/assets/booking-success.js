@@ -6,7 +6,7 @@
     const title = root.querySelector("[data-success-title]");
     const intro = root.querySelector("[data-success-intro]");
     const code = root.dataset.code;
-    const key = "mo-success-" + code;
+    const key = globalThis.moBranchStorageKey?.("mo-success-" + code) || "mo-success-" + code;
     let token = location.hash.slice(1);
     try {
         if (token) sessionStorage.setItem(key, token);

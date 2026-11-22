@@ -10,7 +10,7 @@ function db(): PDO
     static $pdo;
     if (!$pdo) {
         $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
-        $pdo->exec('CREATE TABLE accounts (id TEXT PRIMARY KEY, name TEXT, email TEXT UNIQUE, password_hash TEXT, is_active INTEGER, permissions TEXT, session_version INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP)');
+        $pdo->exec('CREATE TABLE accounts (id TEXT PRIMARY KEY, name TEXT, email TEXT UNIQUE, password_hash TEXT, is_active INTEGER, permissions TEXT, branch_id INTEGER NOT NULL DEFAULT 1, session_version INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP)');
     }
     return $pdo;
 }
@@ -54,6 +54,7 @@ account_check(!array_key_exists('people-counter.view', account_permission_labels
 save_account(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'test-password-123', 'is_active' => 'on'], false);
 $row = db()->query('SELECT * FROM accounts')->fetch();
 account_check(password_verify('test-password-123', $row['password_hash']), 'Passwords must be hashed');
+account_check((int)$row['branch_id'] === 1, 'Existing/default staff must belong to branch 1');
 $id = $row['id'];
 $_SESSION['account_id'] = $id;
 $_SESSION['account_version'] = 1;
@@ -275,4 +276,44 @@ render_admin_navigation('/admin/payroll');
 $rootNavigation = ob_get_clean();
 account_check(str_contains($rootNavigation, 'href="/admin/personnel"') && str_contains($rootNavigation, 'href="/admin/payroll"'), 'Super Admin navigation must show the module.');
 
-echo "Account authorization tests: OK\n";
+$previousBranch = getenv('MO_BRANCH');
+try {
+    foreach ([0, 3, 'all', '', true, [1, 2]] as $invalidBranch) {
+        try {
+            validate_account_branch($invalidBranch);
+            throw new LogicException('Invalid branch accepted');
+        } catch (BookingException $error) {
+            account_check($error->httpStatus === 422, 'Invalid assignment must return 422');
+        }
+    }
+    save_account(['name' => 'Staff 2', 'email' => 'staff2@example.test', 'password' => 'test-password-123', 'is_active' => 'on', 'branch_id' => '2'], false);
+    $staffTwo = db()->query("SELECT * FROM accounts WHERE email='staff2@example.test'")->fetch();
+    save_account(['id' => $staffTwo['id'], 'permissions' => ['rooms.view']], true);
+    account_check((int)db()->query("SELECT branch_id FROM accounts WHERE email='staff2@example.test'")->fetchColumn() === 2, 'Permission save must preserve branch assignment');
+    $_SESSION['account_id'] = $staffTwo['id'];
+    $_SESSION['account_version'] = 1;
+    putenv('MO_BRANCH=1');
+    account_check(!account_branch_allowed() && !can_use('rooms.view'), 'Branch 2 staff must be denied branch 1');
+    account_check(account_admin_url(account_home()) === '/chi-nhanh/2/admin#rooms', 'Wrong-branch login must land in assigned branch with granted feature');
+    putenv('MO_BRANCH=2');
+    account_check(account_branch_allowed() && can_use('rooms.view') && !can_use('accounts'), 'Staff must retain only granted operations in assigned branch');
+    ob_start();
+    render_admin_navigation('/admin');
+    $navigation = ob_get_clean();
+    account_check(!str_contains($navigation, 'href="/admin"') && substr_count($navigation, 'data-branch-switch') === 1, 'Staff selector must only offer assigned branch');
+    unset($_SESSION['account_id'], $_SESSION['account_version']);
+    account_check(account_branch_allowed(null, 1) && account_branch_allowed(null, 2), 'Super Admin must access both branches');
+    save_account(['id' => $staffTwo['id'], 'name' => 'Staff 2', 'email' => 'staff2@example.test', 'is_active' => 'on', 'branch_id' => 1], false);
+    $_SESSION['account_id'] = $staffTwo['id'];
+    $_SESSION['account_version'] = 1;
+    account_check(current_account() === null, 'Changing branch must invalidate existing sessions');
+    $_SESSION['account_version'] = 2;
+    account_check(!account_branch_allowed() && !can_use('rooms.view'), 'Reassigned staff must lose old branch');
+    account_check(account_admin_url(account_home()) === '/chi-nhanh/1/admin#rooms', 'Branch 1 landing must stay explicit when current page is branch 2');
+    putenv('MO_BRANCH=1');
+    account_check(account_branch_allowed() && can_use('rooms.view'), 'Reassigned staff must gain only the assigned branch');
+} finally {
+    putenv($previousBranch === false ? 'MO_BRANCH' : 'MO_BRANCH=' . $previousBranch);
+}
+
+echo "Account authorization, branch assignment, scope and session invalidation tests: OK\n";

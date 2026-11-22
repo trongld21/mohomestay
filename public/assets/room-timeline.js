@@ -328,7 +328,7 @@
                     return;
                 }
                 const params = new URLSearchParams({ room: choice.room.id, package: fresh.id, date: fresh.date, time: fresh.time, fromTimeline: "1" });
-                location.href = "/bookings?" + params;
+                location.href = window.moBranchUrl("/bookings?" + params);
             } catch (error) {
                 if (active.signal.aborted || choiceController !== active) return;
                 packageStatus.textContent = "Chưa xác minh được lịch: " + error.message;

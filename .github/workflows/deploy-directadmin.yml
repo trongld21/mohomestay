@@ -49,6 +49,7 @@ jobs:
         run: |
           php tools/people-counter-migration-test.php
           php tools/booking-access-migration-test.php
+          BRANCH_TEST_PORT=3306 php tools/branch-test.php --mysql
       - name: Run unit tests
         run: |
           php tools/test.php
@@ -74,6 +75,8 @@ jobs:
           php tools/people-counter-preview-test.php
           php tools/people-counter-deploy-test.php
           php tools/imou-test.php
+          node --check public/assets/branches.js
+          node --check public/assets/permissions.js
           node --check public/assets/app.js
           node --check public/assets/ui.js
           node --check public/assets/admin.js

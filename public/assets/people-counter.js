@@ -57,7 +57,7 @@
     function startVideo() {
         if (root.dataset.counterVideoEnabled !== '1' || previewPaused || document.hidden) return;
         stopVideo();
-        const source = `/api/admin/people-counter/video?${new URLSearchParams({cameraId: form.elements.cameraId.value})}`;
+        const source = window.moBranchUrl(`/api/admin/people-counter/video?${new URLSearchParams({cameraId: form.elements.cameraId.value})}`);
         if (window.Hls?.isSupported()) {
             videoPlayer = new Hls({
                 liveSyncDuration: 2,

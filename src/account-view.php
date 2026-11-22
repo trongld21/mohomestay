@@ -2,7 +2,7 @@
 
 function render_accounts(bool $permissionsOnly, string $error): void
 {
-    $accounts = db()->query('SELECT id, name, email, is_active, permissions FROM accounts ORDER BY created_at, id')->fetchAll();
+    $accounts = db(1)->query('SELECT id, name, email, is_active, permissions, branch_id FROM accounts ORDER BY created_at, id')->fetchAll();
     if ($permissionsOnly) {
         require_once __DIR__ . '/permission-view.php';
         render_permission_manager($accounts, $error);
@@ -14,7 +14,7 @@ function render_accounts(bool $permissionsOnly, string $error): void
     <div class="mx-auto max-w-6xl space-y-6 p-4 text-stone-800 sm:p-8">
         <header>
             <h1 class="text-2xl font-semibold sm:text-3xl"><?= $permissionsOnly ? 'Phân quyền tài khoản' : 'Quản lý tài khoản' ?></h1>
-            <p class="mt-3 text-stone-600">Admin có toàn quyền. Tài khoản nhân viên chỉ được sử dụng chức năng đã được cấp.</p>
+            <p class="mt-3 text-stone-600">Super Admin quản lý cả hai chi nhánh. Mỗi tài khoản nhân viên chỉ được sử dụng chức năng đã cấp tại một chi nhánh được gán.</p>
         </header>
         <?php if ($error !== ''): ?>
             <p role="alert" class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-800"><?= e($error) ?></p>
@@ -22,9 +22,9 @@ function render_accounts(bool $permissionsOnly, string $error): void
             <p role="status" class="rounded-xl border border-green-300 bg-green-50 p-4 text-green-900">Đã lưu thay đổi.</p>
         <?php endif ?>
         <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-            <h2 class="text-lg font-semibold">Admin · Toàn quyền</h2>
+            <h2 class="text-lg font-semibold">Super Admin · Toàn quyền</h2>
             <p class="mt-2 break-words"><?= e(config('admin_email')) ?></p>
-            <p class="mt-2 text-sm">Tài khoản gốc được cấu hình trong môi trường máy chủ và luôn có tất cả quyền.</p>
+            <p class="mt-2 text-sm">Tài khoản gốc được cấu hình trong môi trường máy chủ và luôn có toàn quyền ở cả hai chi nhánh.</p>
         </section>
         <?php if (!$permissionsOnly): ?>
             <section class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
@@ -37,7 +37,7 @@ function render_accounts(bool $permissionsOnly, string $error): void
             <?php foreach ($accounts as $account): ?>
                 <section class="min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
                     <h2 class="break-words text-xl font-semibold"><?= e($account['name']) ?></h2>
-                    <p class="mt-2 break-words text-sm text-stone-600"><?= e($account['email']) ?> · <?= $account['is_active'] ? 'Đang hoạt động' : 'Đã khóa' ?></p>
+                    <p class="mt-2 break-words text-sm text-stone-600"><?= e($account['email']) ?> · Chi nhánh <?= (int)$account['branch_id'] ?> · <?= $account['is_active'] ? 'Đang hoạt động' : 'Đã khóa' ?></p>
                     <?php render_account_form($account, $field, $button) ?>
                 </section>
             <?php endforeach ?>
@@ -61,6 +61,15 @@ function render_account_form(array $account, string $field, string $button): voi
         <div>
             <label for="email-<?= e($suffix) ?>">Email đăng nhập</label>
             <input id="email-<?= e($suffix) ?>" class="<?= $field ?>" type="email" name="email" maxlength="254" value="<?= e($account['email'] ?? '') ?>" required autocomplete="off">
+        </div>
+        <div>
+            <label for="branch-<?= e($suffix) ?>">Chi nhánh được quản lý</label>
+            <select id="branch-<?= e($suffix) ?>" class="<?= $field ?>" name="branch_id" required aria-describedby="branch-help-<?= e($suffix) ?>">
+                <?php foreach ([1, 2] as $branch): ?>
+                    <option value="<?= $branch ?>" <?= (int)($account['branch_id'] ?? 1) === $branch ? 'selected' : '' ?>>Chi nhánh <?= $branch ?></option>
+                <?php endforeach ?>
+            </select>
+            <p id="branch-help-<?= e($suffix) ?>" class="mt-2 text-sm text-stone-600">Chỉ được quản lý chi nhánh này. Khi đổi chi nhánh, nhân viên cần đăng nhập lại.</p>
         </div>
         <div>
             <label for="password-<?= e($suffix) ?>"><?= $account ? 'Mật khẩu mới (để trống nếu giữ nguyên)' : 'Mật khẩu' ?></label>

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/branches.php';
+
 function booking_arrival_details(array $booking, PDO $pdo): ?array
 {
     if (($booking['payment_status'] ?? '') !== 'PAID'
@@ -34,9 +36,9 @@ function booking_arrival_details(array $booking, PDO $pdo): ?array
         'guideUrl' => $httpsUrl('CHECKIN_GUIDE_URL'),
         'rulesUrl' => $httpsUrl('HOUSE_RULES_URL'),
         'rules' => trim((string)config('booking_terms', '')),
-        'wifiName' => trim((string)env_value('WIFI_NAME', '')) ?: 'Mơ Home',
+        'wifiName' => trim((string)env_value('WIFI_NAME', '')) ?: (branch_id() === 2 ? '' : 'Mơ Home'),
         'wifiPassword' => trim((string)env_value('WIFI_PASSWORD', '')) !== ''
-            ? (string)env_value('WIFI_PASSWORD', '') : '82828282',
+            ? (string)env_value('WIFI_PASSWORD', '') : (branch_id() === 2 ? '' : '82828282'),
         'doorCodes' => array_map(static fn(array $code): array => [
             'code' => (string)$code['code'],
             'startsAt' => gmdate('c', strtotime($code['starts_at'] . ' UTC')),

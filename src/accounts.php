@@ -2,6 +2,34 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/branches.php';
+
+function account_branch_allowed(?array $account = null, ?int $branch = null): bool
+{
+    $account ??= current_account();
+    return $account !== null && (!empty($account['root'])
+        || (int)($account['branch_id'] ?? 0) === ($branch ?? branch_id()));
+}
+
+function account_admin_url(string $url): string
+{
+    $account = current_account();
+    if ($account !== null && empty($account['root'])) {
+        // Keep branch 1 explicit so redirects from a branch-2 login page cannot
+        // have the current URL's branch automatically prepended again.
+        return '/chi-nhanh/' . (int)$account['branch_id'] . $url;
+    }
+    return branch_url($url);
+}
+
+function validate_account_branch(mixed $value): int
+{
+    if (!in_array($value, [1, 2, '1', '2'], true)) {
+        throw new BookingException('Chọn chi nhánh 1 hoặc chi nhánh 2 cho tài khoản.', 422);
+    }
+    return (int)$value;
+}
+
 function account_permissions(): array
 {
     return [
@@ -25,10 +53,11 @@ function current_account(): ?array
     if (!isset($_SESSION['account_id'])) {
         return ['id' => 'admin', 'name' => 'Admin', 'email' => (string)config('admin_email'), 'root' => true];
     }
-    $stmt = db()->prepare('SELECT id, name, email, is_active, permissions, session_version FROM accounts WHERE id = ?');
+    $stmt = db(1)->prepare('SELECT id, name, email, is_active, permissions, session_version, branch_id FROM accounts WHERE id = ?');
     $stmt->execute([$_SESSION['account_id']]);
     $account = $stmt->fetch();
-    if (!$account || !$account['is_active'] || (int)$account['session_version'] !== (int)($_SESSION['account_version'] ?? 0)) {
+    if (!$account || !$account['is_active'] || (int)$account['session_version'] !== (int)($_SESSION['account_version'] ?? 0)
+        || !in_array((int)$account['branch_id'], [1, 2], true)) {
         return null;
     }
     $account['root'] = false;
@@ -38,15 +67,18 @@ function current_account(): ?array
 function can_use(string $permission): bool
 {
     $account = current_account();
-    if ($account === null) {
-        return false;
-    }
+    return $account !== null && account_branch_allowed($account)
+        && account_has_permission($account, $permission);
+}
+
+function account_has_permission(array $account, string $permission): bool
+{
     if ($account['root']) {
         return true;
     }
     // Camera imagery, occupancy reports and payroll are reserved for the root account,
     // including accounts that still carry a permission from an older release.
-    if ($permission === 'people-counter' || str_starts_with($permission, 'people-counter.')
+    if ($permission === 'accounts' || $permission === 'people-counter' || str_starts_with($permission, 'people-counter.')
         || $permission === 'payroll' || str_starts_with($permission, 'payroll.')) {
         return false;
     }
@@ -76,10 +108,11 @@ function account_login(string $email, string $password): bool
         }
         $account = null;
     } else {
-        $stmt = db()->prepare('SELECT * FROM accounts WHERE email = ? AND is_active = 1');
+        $stmt = db(1)->prepare('SELECT * FROM accounts WHERE email = ? AND is_active = 1');
         $stmt->execute([$email]);
         $account = $stmt->fetch();
-        if (!$account || !password_verify($password, $account['password_hash'])) {
+        if (!$account || !in_array((int)$account['branch_id'], [1, 2], true)
+            || !password_verify($password, $account['password_hash'])) {
             return false;
         }
     }
@@ -94,28 +127,40 @@ function account_login(string $email, string $password): bool
 
 function account_home(): string
 {
-    if (!can_use('bookings.view') && can_use('bookings.overview')) {
+    $account = current_account();
+    // Resolve the assigned landing page even when logging in from another
+    // branch. Actual permission checks still enforce the request's branch.
+    $can = static fn(string $permission): bool => $account !== null && account_has_permission($account, $permission);
+    if (!$can('bookings.view') && $can('bookings.overview')) {
         return '/admin/overview';
     }
     foreach (account_permissions() as $key => $label) {
-        if (can_use($key)) {
-            if ($key === 'sales' && !can_use('sales.create')) return '/admin/sales/history';
+        if ($can($key)) {
+            if ($key === 'sales' && !$can('sales.create')) {
+                return '/admin/sales/history';
+            }
             return in_array($key, ['door-codes', 'availability', 'sales', 'products', 'inventory', 'expenses', 'people-counter'], true) ? '/admin/' . $key : '/admin#' . $key;
         }
     }
-    if (can_use('sales.create')) return '/admin/sales';
-    if (can_use('products.create') || can_use('products.edit')) return '/admin/products';
-    return can_use('accounts') ? '/admin/accounts' : '/admin/no-access';
+    if ($can('sales.create')) {
+        return '/admin/sales';
+    }
+    if ($can('products.create') || $can('products.edit')) {
+        return '/admin/products';
+    }
+    return $can('accounts') ? '/admin/accounts' : '/admin/no-access';
 }
 
 function save_account(array $data, bool $permissionsOnly): void
 {
     require_permission('accounts');
     $id = (string)($data['id'] ?? '');
+    $existing = null;
     if ($id !== '' || $permissionsOnly) {
-        $stmt = db()->prepare('SELECT id FROM accounts WHERE id = ?');
+        $stmt = db(1)->prepare('SELECT id, branch_id FROM accounts WHERE id = ?');
         $stmt->execute([$id]);
-        if (!$stmt->fetch()) {
+        $existing = $stmt->fetch();
+        if (!$existing) {
             throw new BookingException('Không tìm thấy tài khoản.', 404);
         }
     }
@@ -130,7 +175,7 @@ function save_account(array $data, bool $permissionsOnly): void
             }
             $permissions[] = explode('.', $permission)[0] . '.view';
         }
-        $stmt = db()->prepare('UPDATE accounts SET permissions = ? WHERE id = ?');
+        $stmt = db(1)->prepare('UPDATE accounts SET permissions = ? WHERE id = ?');
         $stmt->execute([json_encode(array_values(array_unique($permissions))), $id]);
         return;
     }
@@ -147,19 +192,20 @@ function save_account(array $data, bool $permissionsOnly): void
         throw new BookingException('Mật khẩu cần từ 12 đến 72 byte.', 422);
     }
     $active = isset($data['is_active']) ? 1 : 0;
+    $branch = validate_account_branch($data['branch_id'] ?? ($existing['branch_id'] ?? 1));
     try {
         if ($id === '') {
-            $stmt = db()->prepare('INSERT INTO accounts (id, name, email, password_hash, is_active, permissions) VALUES (?, ?, ?, ?, ?, ?)');
-            $stmt->execute([uuid(), $name, $email, password_hash($password, PASSWORD_DEFAULT), $active, '[]']);
+            $stmt = db(1)->prepare('INSERT INTO accounts (id, name, email, password_hash, is_active, permissions, branch_id) VALUES (?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([uuid(), $name, $email, password_hash($password, PASSWORD_DEFAULT), $active, '[]', $branch]);
         } else {
-            $sql = 'UPDATE accounts SET name = ?, email = ?, is_active = ?, session_version = session_version + 1';
-            $values = [$name, $email, $active];
+            $sql = 'UPDATE accounts SET name = ?, email = ?, is_active = ?, branch_id = ?, session_version = session_version + 1';
+            $values = [$name, $email, $active, $branch];
             if ($password !== '') {
                 $sql .= ', password_hash = ?';
                 $values[] = password_hash($password, PASSWORD_DEFAULT);
             }
             $values[] = $id;
-            $stmt = db()->prepare($sql . ' WHERE id = ?');
+            $stmt = db(1)->prepare($sql . ' WHERE id = ?');
             $stmt->execute($values);
         }
     } catch (PDOException $error) {

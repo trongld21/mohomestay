@@ -7,6 +7,31 @@
 @source "../*.php";
 @source "../../public/assets/*.js";
 
+.branch-selector {
+    @apply flex flex-wrap items-center gap-2 rounded-xl border border-[#e3d5c5] bg-[#fffaf2] p-3 text-sm text-[#49382c];
+}
+.branch-selector .branch-link {
+    @apply inline-flex min-h-11 items-center rounded-lg border border-[#d8c6b1] bg-white px-4 py-2 font-medium text-[#49382c];
+}
+.branch-selector .branch-link:hover {
+    @apply bg-[#eadbc7];
+}
+.branch-selector .branch-link[aria-current="true"] {
+    @apply bg-[#79543e] text-white;
+}
+.branch-selector .branch-link[aria-current="true"]:hover {
+    @apply bg-[#65432e];
+}
+.branch-selector .branch-link:focus-visible {
+    @apply outline-2 outline-offset-2 outline-[#79543e];
+}
+.branch-empty h1 {
+    @apply mt-3 text-2xl font-semibold;
+}
+.branch-empty p {
+    @apply mt-4;
+}
+
 .overview-dashboard {
     @apply mx-auto grid w-full min-w-0 max-w-[1440px] gap-5 text-[#3e322b];
 }

@@ -294,7 +294,7 @@
         if (!["CONFIRMED", "CHECKED_IN", "CHECKED_OUT"].includes(booking.status)
             || !/^(?:MO|LANG)-[A-F0-9]{10}$/.test(booking.booking_code || "")
             || !/^[a-f0-9]{64}$/.test(booking.access_token || "")) return "";
-        return `${location.origin}/booking-success/${booking.booking_code}#${booking.access_token}`;
+        return `${location.origin}${window.moBranchUrl(`/booking-success/${booking.booking_code}#${booking.access_token}`)}`;
     }
     function renderBookingRow(booking) {
         const successLink = bookingSuccessLink(booking);
@@ -417,7 +417,7 @@
             viewer = document.createElement('dialog');
             viewer.dataset.identityViewer = '';
             viewer.className = 'm-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-4xl overflow-auto rounded-2xl border border-stone-200 bg-white p-5 text-stone-800 shadow-xl backdrop:bg-black/40';
-            viewer.innerHTML = `<div class="flex items-center justify-between gap-4"><h2 class="text-lg font-semibold" id="identity-viewer-title">CCCD của người thuê</h2><button type="button" data-identity-close class="min-h-11 rounded-lg border border-stone-300 px-4 py-2 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Đóng</button></div><div class="mt-4 grid gap-4 sm:grid-cols-2">${[['front', 'Mặt trước'], ['back', 'Mặt sau']].map(([side, label]) => `<section><h3 class="mb-2 font-medium">${label}</h3><img class="max-h-[60dvh] w-full rounded-lg border border-stone-200 object-contain" src="/api/admin/bookings/${encodeURIComponent(id)}/identity/${side}" alt="CCCD ${label.toLowerCase()}"><p data-identity-load-error class="mt-2 text-sm text-red-800" hidden>Không tải được ảnh. Kiểm tra phiên đăng nhập và quyền xem CCCD.</p></section>`).join('')}</div>`;
+            viewer.innerHTML = `<div class="flex items-center justify-between gap-4"><h2 class="text-lg font-semibold" id="identity-viewer-title">CCCD của người thuê</h2><button type="button" data-identity-close class="min-h-11 rounded-lg border border-stone-300 px-4 py-2 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-800">Đóng</button></div><div class="mt-4 grid gap-4 sm:grid-cols-2">${[['front', 'Mặt trước'], ['back', 'Mặt sau']].map(([side, label]) => `<section><h3 class="mb-2 font-medium">${label}</h3><img class="max-h-[60dvh] w-full rounded-lg border border-stone-200 object-contain" src="${window.moBranchUrl(`/api/admin/bookings/${encodeURIComponent(id)}/identity/${side}`)}" alt="CCCD ${label.toLowerCase()}"><p data-identity-load-error class="mt-2 text-sm text-red-800" hidden>Không tải được ảnh. Kiểm tra phiên đăng nhập và quyền xem CCCD.</p></section>`).join('')}</div>`;
             viewer.setAttribute('aria-labelledby', 'identity-viewer-title');
             viewer.querySelectorAll('img').forEach(image => image.addEventListener('error', () => {
                 image.hidden = true;
@@ -581,7 +581,7 @@
         error.hidden = !message;
         form.elements.slug.setAttribute("aria-invalid", String(duplicate));
         one("[data-room-url]").textContent = slug
-            ? location.origin + "/rooms/" + slug
+            ? location.origin + window.moBranchUrl("/rooms/" + slug)
             : "Đường dẫn sẽ được tạo từ tên phòng.";
         one("[data-slug-warning]").hidden = !editing || slug === editing.slug;
     }

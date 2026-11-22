@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 define('APP_ROOT', dirname(__DIR__));
 define('LOGIN_LIFETIME', 30 * 24 * 3600);
+require_once __DIR__ . '/branches.php';
 $envFile = APP_ROOT . '/.env';
 if (is_file($envFile)) {
     $values = parse_ini_file($envFile, false, INI_SCANNER_RAW);
@@ -17,7 +18,7 @@ if (is_file($envFile)) {
 date_default_timezone_set((string) config('timezone', 'Asia/Ho_Chi_Minh'));
 
 // Integration uses its server key and must not create an interactive user session.
-if (PHP_SAPI !== 'cli' && !in_array(rtrim((string)($requestedPath ?? ''), '/'), ['/api/integration/revenue', '/api/integration/people-counter'], true)) {
+if (PHP_SAPI !== 'cli' && !in_array(rtrim(branch_path((string)($requestedPath ?? '')), '/'), ['/api/integration/revenue', '/api/integration/people-counter'], true)) {
     start_app_session();
 }
 
@@ -49,6 +50,9 @@ function start_app_session(): void
 
 function config(string $key, mixed $default = null): mixed
 {
+    if ($key === 'app_url') {
+        return rtrim((string)env_value('APP_URL', $default), '/') . (branch_id() === 2 ? '/chi-nhanh/2' : '');
+    }
     if ($key === 'db') return [
         'host'=>env_value('DB_HOST','localhost'),'port'=>(int)env_value('DB_PORT','3306'),
         'name'=>env_value('DB_DATABASE',''),'user'=>env_value('DB_USERNAME',''),
@@ -74,26 +78,45 @@ function config(string $key, mixed $default = null): mixed
 
 function env_value(string $name, mixed $default = null): mixed
 {
+    if (branch_id() === 2 && preg_match('/^(?:TTLOCK_|PAYOS_|IMOU_|PEOPLE_COUNTER_|HOME_MAP_|CONTACT_|WIFI_|CHECKIN_GUIDE_URL$|HOUSE_RULES_URL$|BOOKINGS_ENABLED$|REVENUE_INTEGRATION_KEY$)/', $name)) {
+        $name = 'BRANCH2_' . $name;
+    }
     $value = $_ENV[$name] ?? getenv($name);
     return $value === false ? $default : $value;
 }
 
-function db(): PDO
+function db(?int $branch = null): PDO
 {
-    static $pdo;
-    if ($pdo instanceof PDO) return $pdo;
+    $branch ??= branch_id();
+    if (!in_array($branch, [1, 2], true)) {
+        throw new InvalidArgumentException('Chi nhánh không hợp lệ.');
+    }
+    static $connections = [];
+    if (isset($connections[$branch])) {
+        return $connections[$branch];
+    }
     $c = config('db', []);
     $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s', $c['host'], $c['port'] ?? 3306, $c['name'], $c['charset'] ?? 'utf8mb4');
-    $pdo = new PDO($dsn, $c['user'], $c['password'], [
+    $class = $branch === 2 ? BranchPDO::class : PDO::class;
+    $pdo = new $class($dsn, $c['user'], $c['password'], [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
-    return $pdo;
+    if ($branch === 2) {
+        $ready = $pdo->query("SELECT COUNT(*) FROM schema_migrations WHERE version='__branch_initialized'")->fetchColumn();
+        if (!(int)$ready) {
+            throw new RuntimeException('Chi nhánh 2 chưa được khởi tạo. Chạy migration trước khi sử dụng.');
+        }
+    }
+    return $connections[$branch] = $pdo;
 }
 
 function fallback_rooms(): array
 {
+    if (branch_id() === 2) {
+        return [];
+    }
     return [
         'pink' => fallback_room('pink','Pink','Một chút ngọt ngào, một chút mơ mộng.','Dành một khoảng thời gian thật riêng cho nhau, trong không gian dịu dàng và ấm áp.','/images/pink-illustration.jpg',[200000,380000,330000]),
         'white' => fallback_room('white','White','Nhẹ nhàng như một ngày không vội.','Một căn phòng sáng, tinh giản và dễ chịu. Tạm gác những bộn bề để tận hưởng khoảng thời gian của riêng bạn.','/images/white-illustration.jpg',[150000,350000,250000]),
@@ -164,7 +187,7 @@ function json_body(): array
     $parsed = $body;
     return $body;
 }
-function redirect(string $url): never { header('Location: ' . $url); exit; }
+function redirect(string $url): never { header('Location: ' . branch_url($url)); exit; }
 function csrf_token(): string
 {
     if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32));
@@ -176,7 +199,15 @@ function require_csrf(?string $token = null): void
     if (!hash_equals($_SESSION['csrf'] ?? '', $token)) json_response(['error'=>'Phiên làm việc không hợp lệ.'], 419);
 }
 function is_admin(): bool { return current_account() !== null; }
-function require_admin(): void { if (!is_admin()) json_response(['error'=>'Không có quyền truy cập.'], 401); }
+function require_admin(): void
+{
+    if (!is_admin()) {
+        json_response(['error' => 'Không có quyền truy cập.'], 401);
+    }
+    if (!account_branch_allowed()) {
+        json_response(['error' => 'Tài khoản chỉ được quản lý chi nhánh đã được gán.'], 403);
+    }
+}
 function uuid(): string { return bin2hex(random_bytes(16)); }
 function payment_enabled(): bool
 {

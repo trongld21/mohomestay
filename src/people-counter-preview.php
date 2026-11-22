@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/branches.php';
+
 function people_counter_overlay_validate(mixed $overlay, int $frameTime): array
 {
     $fail = static fn() => throw new BookingException('Dữ liệu nhận diện không hợp lệ.', 422);
@@ -143,7 +145,7 @@ function people_counter_preview_api(string $method): never
         $query = db()->prepare('SELECT enabled FROM people_counter_cameras WHERE id = ?');
         $query->execute([$cameraId]);
         if (!(int)$query->fetchColumn()) json_response(['available' => false, 'state' => 'DISABLED']);
-        $preview = people_counter_preview_read(APP_ROOT . '/storage/people-counter', $cameraId, time());
+        $preview = people_counter_preview_read(APP_ROOT . '/storage/people-counter' . (branch_id() === 2 ? '/branch2' : ''), $cameraId, time());
         if (($_GET['metadataOnly'] ?? '') === '1') unset($preview['jpeg']);
         json_response($preview);
     } catch (BookingException $error) {

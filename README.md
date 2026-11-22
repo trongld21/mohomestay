@@ -1,5 +1,57 @@
 # Mơ Home — PHP cho DirectAdmin
 
+## Hai chi nhánh
+
+Chi nhánh 1 giữ các URL hiện có (`/admin`, `/rooms`, `/bookings`) và toàn bộ dữ liệu cũ.
+Chi nhánh 2 dùng `/chi-nhanh/2/admin`, `/chi-nhanh/2/rooms`, `/chi-nhanh/2/bookings`.
+Chọn chi nhánh trong menu quản trị hoặc thanh chọn trên trang khách. Mỗi tab gắn với
+chi nhánh trong URL; chuyển tab không đổi nơi ghi dữ liệu của tab khác.
+
+Chạy `php tools/migrate.php` trước khi sử dụng. Migration giữ nguyên dữ liệu cũ và tạo
+**các bảng rỗng** có tiền tố `b2_` trong cùng database cho chi nhánh 2: phòng/gói giá,
+đặt phòng, thanh toán, bill bán hàng, kho, phiếu chi, ưu đãi, mã cửa, nhân sự và lương.
+Không sao chép phòng mẫu, mã TTLock, lịch sử hay tồn kho. Bảng tài khoản dùng chung,
+nhưng mỗi nhân viên được Super Admin gán đúng một chi nhánh trong **Quản lý tài khoản**.
+Migration `031_account_branches.sql` mặc định gán tài khoản nhân viên cũ cho chi nhánh 1.
+Quyền chức năng chỉ có hiệu lực tại chi nhánh được gán; chỉ Super Admin được quản lý cả hai.
+Đăng nhập từ bất kỳ trang đăng nhập nào đều đưa nhân viên về chi nhánh được gán.
+API quản trị trả 403 nếu truy cập sai chi nhánh. Đổi chi nhánh tài khoản sẽ vô hiệu phiên cũ,
+nhân viên cần đăng nhập lại. Việc xem các trang công khai vẫn hoạt động như khách truy cập.
+Báo cáo và CSV chỉ lấy dữ liệu của chi nhánh đang mở, không cộng chung hai chi nhánh.
+
+`BranchPDO` trong `src/branches.php` định tuyến các định danh bảng trong SQL sang
+namespace `b2_`; tham số, giá trị chuỗi, alias kết quả và bảng `accounts` giữ nguyên.
+Danh sách bảng lấy từ các migration đã triển khai. Mỗi chi nhánh có ledger migration riêng;
+lần khởi tạo đầu tiên sao chép schema hiện tại cùng foreign key, không chạy lại seed lịch sử.
+Các migration tiếp theo chạy cho cả hai chi nhánh. Runtime truy cập dữ liệu nghiệp vụ
+qua `db()`; không tự tạo kết nối PDO khác. Dùng alias ngắn (`b`, `r`, `p`) cho bảng trong SQL.
+
+Chi nhánh 2 chưa có cấu hình thanh toán/khóa/camera. Cấu hình riêng bằng tiền tố `BRANCH2_`
+cho các biến `PAYOS_*`, `TTLOCK_*`, `IMOU_*`, `PEOPLE_COUNTER_*`, `HOME_MAP_*`, `CONTACT_*`,
+`WIFI_*`, `CHECKIN_GUIDE_URL`, `HOUSE_RULES_URL`, `BOOKINGS_ENABLED`, `REVENUE_INTEGRATION_KEY`.
+Ví dụ `BRANCH2_TTLOCK_LOCK_ID`,
+`BRANCH2_PAYOS_CLIENT_ID`, `BRANCH2_BOOKINGS_ENABLED`. Không tự dùng khóa hoặc credentials
+thanh toán chi nhánh 1. Webhook payOS CN2: `/chi-nhanh/2/api/payments/webhook`;
+API doanh thu CN2: `/chi-nhanh/2/api/integration/revenue`. Các biến database, tài khoản
+Super Admin, khóa mã hóa và mail dùng chung. Không thêm secrets vào Git.
+
+Cron hiện có tự chạy lần lượt hai chi nhánh trong các tiến trình PHP riêng.
+Có thể chạy một chi nhánh bằng `MO_BRANCH=2 php src/payment-reconciliation-worker.php`
+(trên hosting Linux), tương tự cho worker mã cửa/email. Hosting cần bật `proc_open`
+để cron chạy cả hai; nếu bị tắt, cấu hình hai cron với `MO_BRANCH=1` và `MO_BRANCH=2`.
+
+Kiểm tra: `php tools/branch-test.php`, `php tools/branch-test.php --mysql`
+(MariaDB local thử nghiệm, mặc định cổng 3317; đặt `BRANCH_TEST_PORT` nếu cần),
+`node tools/branch-browser-test.cjs` (Playwright, máy chủ thử nghiệm qua `BRANCH_TEST_URL`).
+Bài test MySQL tạo/xóa schema riêng `mo_branch_test_<pid>`, không dùng database trong `.env`.
+Để chạy test trình duyệt, mở `php tools/branch-browser-fixture.php` trong terminal riêng:
+fixture tạo schema tạm `mo_branch_browser_test_<pid>` trên MariaDB thử nghiệm cổng 3317
+và chỉ phục vụ tại `127.0.0.1:8097`. Các dịch vụ thanh toán, khóa và mail đều tắt.
+Test dùng tài khoản giả cố định của fixture; không chạy bằng dữ liệu hay tài khoản thật.
+Kiểm tra phân quyền chi nhánh bằng `php tools/account-test.php` và
+`node tools/account-branch-browser-test.cjs` trên fixture mới. Bài test trình duyệt tạo
+tài khoản giả, gán chi nhánh, kiểm tra API bị chặn và thu hồi phiên khi đổi chi nhánh.
+
 ## Dashboard tổng quan kinh doanh
 
 `/admin/overview` dùng quyền `bookings.overview`, tổng hợp tiền phòng và phụ thu đã thanh toán

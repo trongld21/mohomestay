@@ -6,6 +6,8 @@ if (PHP_SAPI !== 'cli') {
     http_response_code(404);
     exit;
 }
+require_once __DIR__ . '/branch-workers.php';
+dispatch_branch_workers(__FILE__);
 require __DIR__ . '/bootstrap.php';
 $pdo = db();
 // Payment recovery must also run when TTLock is disabled or not configured.

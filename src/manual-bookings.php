@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/branches.php';
+
 require_once __DIR__ . '/promotions.php';
 require_once __DIR__ . '/promotion-booking.php';
 
@@ -273,5 +275,5 @@ function prepare_manual_guest_checkout(PDO $pdo, array $booking, ?callable $crea
                 ->execute([uuid(), $booking['id'], $booking['total_price'], $payment['qrCode'], $payment['checkoutUrl']]);
         }
     }
-    return '/payment?code=' . rawurlencode($booking['booking_code']) . '#' . $booking['access_token'];
+    return branch_url('/payment?code=' . rawurlencode($booking['booking_code']) . '#' . $booking['access_token']);
 }

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/branches.php';
+
 function booking_mail_local_time(string $utc): string
 {
     return (new DateTimeImmutable($utc, new DateTimeZone('UTC')))
@@ -34,7 +36,17 @@ function build_booking_confirmation_email(array $booking): array
         }
 
     }
-    $subject = 'Mơ Home xác nhận đặt phòng ' . $code;
+    $subject = 'Mơ Home xác nhận đặt phòng ' . $code . ' · ' . branch_label();
+    $wifiHtml = '<h2 style="margin:10px 0 6px;font-size:16px">Wi-Fi tại Mơ</h2>'
+        . '<p style="margin:6px 0">Tên Wi-Fi: <strong>Mơ Home</strong></p>'
+        . '<p style="margin:6px 0 10px">Mật khẩu: <strong style="font-family:Arial,sans-serif;letter-spacing:1px">82828282</strong></p>';
+    if (branch_id() === 2) {
+        $wifiName = trim((string)env_value('WIFI_NAME', ''));
+        $wifiPassword = trim((string)env_value('WIFI_PASSWORD', ''));
+        $wifiHtml = $wifiName !== '' && $wifiPassword !== ''
+            ? '<p>Wi-Fi: <strong>' . $escape($wifiName) . '</strong> · Mật khẩu: <strong>' . $escape($wifiPassword) . '</strong></p>'
+            : '<p>Mơ sẽ hướng dẫn kết nối Wi-Fi khi nhận phòng.</p>';
+    }
     $doorInstructions = 'Mã dùng được nhiều lần trong thời gian hiệu lực, bạn có thể ra ngoài rồi vào lại. ';
     if (!empty($booking['generated_door_code'])) {
         $doorInstructions .= 'Cần dùng lần đầu trong 24 giờ từ lúc mã bắt đầu hiệu lực để kích hoạt. ';
@@ -49,6 +61,7 @@ function build_booking_confirmation_email(array $booking): array
         .'<h1 class="whitespace-nowrap text-xl" style="margin:0 0 8px;font-size:20px;white-space:nowrap">Hẹn gặp bạn tại Mơ!</h1>'
         .'<p>Chào '.$escape($name).', Mơ đã xác nhận thanh toán.</p>'
         .'<table role="presentation" style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px">'
+        .'<tr><td style="padding:6px 0;border-bottom:1px solid #eee">Chi nhánh</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right"><strong>'.$escape(branch_label()).'</strong></td></tr>'
         .'<tr><td style="padding:6px 0;border-bottom:1px solid #eee">Mã đặt phòng</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right"><strong>'.$escape($code).'</strong></td></tr>'
         .'<tr><td style="padding:6px 0;border-bottom:1px solid #eee">Phòng</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right"><strong>'.$escape($room).'</strong></td></tr>'
         .'<tr><td style="padding:6px 0;border-bottom:1px solid #eee">Nhận phòng</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">'.$escape($checkIn).'</td></tr>'
@@ -56,9 +69,7 @@ function build_booking_confirmation_email(array $booking): array
         .'<tr><td style="padding:6px 0;border-bottom:1px solid #eee">Số khách</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">'.$guests.'</td></tr>'
         .'<tr><td style="padding:6px 0">Đã thanh toán</td><td style="padding:6px 0;text-align:right"><strong>'.$escape($total).'</strong></td></tr>'
         .'</table>'.$doorHtml
-        .'<h2 style="margin:10px 0 6px;font-size:16px">Wi-Fi tại Mơ</h2>'
-        .'<p style="margin:6px 0">Tên Wi-Fi: <strong>Mơ Home</strong></p>'
-        .'<p style="margin:6px 0 10px">Mật khẩu: <strong style="font-family:Arial,sans-serif;letter-spacing:1px">82828282</strong></p>'
+        .$wifiHtml
         .'<p style="margin:8px 0;font-size:12px">'.$doorInstructions.'</p>'
         .'<p style="margin:10px 0 0;padding:10px;font-size:13px;line-height:1.5;background:#edf4e9;border-radius:8px">Mơ sẽ liên hệ riêng để hướng dẫn nhận phòng. Cần hỗ trợ, gọi <a href="tel:0357907153" style="color:#70432c">0357 907 153</a>.</p>'
         .'</div></div></body></html>';
